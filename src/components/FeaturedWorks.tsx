@@ -7,31 +7,31 @@ import { Card, CardContent, CardFooter, CardTitle, CardDescription } from '@/com
 const featuredWorks = [
   {
     id: 1,
-    title: "Reclaimed Oak Dining Table",
-    description: "Handcrafted dining table made from 100-year-old reclaimed oak barn wood.",
-    image: "https://images.unsplash.com/photo-1503602642458-232111445657",
-    category: "Furniture"
+    title: "Corporate Brand Identity",
+    description: "Complete brand identity redesign for a technology startup including logo, website, and marketing materials.",
+    image: "https://images.unsplash.com/photo-1558655146-d09347e92766",
+    category: "Graphic Design"
   },
   {
     id: 2,
-    title: "Driftwood Wall Art",
-    description: "Unique wall sculpture created from beach-collected driftwood pieces.",
-    image: "https://images.unsplash.com/photo-1525974160448-038dacadcc71",
-    category: "Wall Art"
+    title: "Product Photography",
+    description: "Professional product photography for an e-commerce tech gadget collection.",
+    image: "https://images.unsplash.com/photo-1537434795255-f03bc82f46b5",
+    category: "Photography"
   },
   {
     id: 3,
-    title: "Industrial Coffee Table",
-    description: "Coffee table made from reclaimed factory floor wood and salvaged metal.",
-    image: "https://images.unsplash.com/photo-1532372320572-cda25653a58d",
-    category: "Furniture"
+    title: "Mobile App Development",
+    description: "Custom mobile application with intuitive UI/UX design for a health tech company.",
+    image: "https://images.unsplash.com/photo-1555774698-0b77e0d5fac6",
+    category: "Web Development"
   },
   {
     id: 4,
-    title: "Repurposed Window Frame Mirror",
-    description: "Antique window frame transformed into an elegant wall mirror.",
-    image: "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85",
-    category: "Home Decor"
+    title: "Corporate Event Video",
+    description: "Full cinematography and editing for a major tech conference keynote presentation.",
+    image: "https://images.unsplash.com/photo-1492724441997-5dc865305da7",
+    category: "Cinematography"
   }
 ];
 
@@ -42,8 +42,8 @@ const FeaturedWorks = () => {
         <div className="text-center mb-12">
           <h2 className="section-title">Featured Works</h2>
           <p className="text-lg text-earth-dark/80 max-w-2xl mx-auto">
-            Each piece tells a story of transformation, breathing new life into materials
-            that would otherwise be forgotten.
+            Each project showcases our expertise in digital media and ICT solutions, 
+            demonstrating our commitment to creativity and technical excellence.
           </p>
         </div>
         
