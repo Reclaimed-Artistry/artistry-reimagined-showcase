@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Settings, Tool, Repeat, Ruler } from 'lucide-react';
+import { Settings, Hammer, Repeat, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const services = [
@@ -14,7 +14,7 @@ const services = [
   {
     title: "Restoration",
     description: "Breathe new life into cherished pieces with our expert restoration services.",
-    icon: <Tool className="h-10 w-10 text-earth" />,
+    icon: <Hammer className="h-10 w-10 text-earth" />,
     link: "/services#restoration"
   },
   {
