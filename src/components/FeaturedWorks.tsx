@@ -9,28 +9,28 @@ const featuredWorks = [
     id: 1,
     title: "Corporate Brand Identity",
     description: "Complete brand identity redesign for a technology startup including logo, website, and marketing materials.",
-    image: "https://images.unsplash.com/photo-1558655146-d09347e92766?auto=format&fit=crop&w=800&q=80",
+    image: "https://images.unsplash.com/photo-1558655146-d09347e92766",
     category: "Graphic Design"
   },
   {
     id: 2,
     title: "Product Photography",
     description: "Professional product photography for an e-commerce tech gadget collection.",
-    image: "https://images.unsplash.com/photo-1537434795255-f03bc82f46b5?auto=format&fit=crop&w=800&q=80",
+    image: "https://images.unsplash.com/photo-1537434795255-f03bc82f46b5",
     category: "Photography"
   },
   {
     id: 3,
     title: "Mobile App Development",
     description: "Custom mobile application with intuitive UI/UX design for a health tech company.",
-    image: "https://images.unsplash.com/photo-1555774698-0b77e0d5fac6?auto=format&fit=crop&w=800&q=80",
+    image: "https://images.unsplash.com/photo-1555774698-0b77e0d5fac6",
     category: "Web Development"
   },
   {
     id: 4,
     title: "Corporate Event Video",
     description: "Full cinematography and editing for a major tech conference keynote presentation.",
-    image: "https://images.unsplash.com/photo-1492724441997-5dc865305da7?auto=format&fit=crop&w=800&q=80",
+    image: "https://images.unsplash.com/photo-1492724441997-5dc865305da7",
     category: "Cinematography"
   }
 ];
