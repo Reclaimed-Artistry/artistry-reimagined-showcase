@@ -1,33 +1,51 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Settings, Hammer, Repeat, Ruler } from 'lucide-react';
+import { Paintbrush, Camera, Video, Layout, Code, Headphones, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const services = [
   {
-    title: "Custom Furniture",
-    description: "Commission unique pieces tailored to your space, needs, and aesthetic preferences.",
-    icon: <Settings className="h-10 w-10 text-earth" />,
-    link: "/services#custom-furniture"
+    title: "Graphics Design",
+    description: "Creative visual solutions for your brand identity, marketing materials, and more.",
+    icon: <Paintbrush className="h-10 w-10 text-earth" />,
+    link: "/services#graphics-design"
   },
   {
-    title: "Restoration",
-    description: "Breathe new life into cherished pieces with our expert restoration services.",
-    icon: <Hammer className="h-10 w-10 text-earth" />,
-    link: "/services#restoration"
+    title: "Photography",
+    description: "Professional photography services to capture your important moments and showcase your products.",
+    icon: <Camera className="h-10 w-10 text-earth" />,
+    link: "/services#photography"
   },
   {
-    title: "Upcycling Workshops",
-    description: "Learn the art of upcycling and create your own sustainable pieces.",
-    icon: <Repeat className="h-10 w-10 text-earth" />,
-    link: "/services#workshops"
+    title: "Cinematography",
+    description: "High-quality video production for events, promotional content, and storytelling.",
+    icon: <Video className="h-10 w-10 text-earth" />,
+    link: "/services#cinematography"
   },
   {
-    title: "Interior Consultation",
-    description: "Get expert advice on incorporating sustainable design into your space.",
-    icon: <Ruler className="h-10 w-10 text-earth" />,
-    link: "/services#consultation"
+    title: "UI/UX Design",
+    description: "User-centered design solutions for websites and applications that enhance user experience.",
+    icon: <Layout className="h-10 w-10 text-earth" />,
+    link: "/services#ui-ux-design"
+  },
+  {
+    title: "Web Development",
+    description: "Full stack web development services to bring your digital presence to life.",
+    icon: <Code className="h-10 w-10 text-earth" />,
+    link: "/services#web-development"
+  },
+  {
+    title: "Audio Editing",
+    description: "Professional audio creation and editing for podcasts, music, and multimedia projects.",
+    icon: <Headphones className="h-10 w-10 text-earth" />,
+    link: "/services#audio-editing"
+  },
+  {
+    title: "Training",
+    description: "Comprehensive training programs in all our service areas to help you develop new skills.",
+    icon: <GraduationCap className="h-10 w-10 text-earth" />,
+    link: "/services#training"
   }
 ];
 
@@ -38,12 +56,12 @@ const ServicesSection = () => {
         <div className="text-center mb-12">
           <h2 className="section-title">Our Services</h2>
           <p className="text-lg text-earth-dark/80 max-w-2xl mx-auto">
-            From custom creations to expert restoration, we offer a range of services
-            to bring sustainable artistry into your space.
+            From creative design to technical development, we offer a range of services
+            to bring your vision to life with sustainable, mixed media artistry.
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {services.map((service, index) => (
             <div 
               key={index} 
