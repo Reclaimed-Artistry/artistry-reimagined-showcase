@@ -6,7 +6,7 @@ import { ArrowRight } from 'lucide-react';
 const Hero = () => {
   return (
     <section className="relative py-20 md:py-32 overflow-hidden">
-      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550745165-9bc0b252726f')] bg-cover bg-center opacity-15"></div>
+      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1488590528505-98d2b5aba04b')] bg-cover bg-center opacity-15"></div>
       <div className="container relative z-10">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-bold text-earth-dark mb-6 leading-tight">
