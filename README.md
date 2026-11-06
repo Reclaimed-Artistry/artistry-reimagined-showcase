@@ -1,73 +1,47 @@
-# Welcome to your Lovable project
+# Selah Bible — Multi-Version Offline Scripture, Reading Plans, Daily Reflection & AI Companion
 
-## Project info
+**Selah Bible** is a local-first, offline-capable multi-version Bible web application designed around editorial clarity, deep study, and daily spiritual rhythm.
 
-**URL**: https://lovable.dev/projects/35ed1dda-a049-4b34-900a-83171ac91657
+## Key Capabilities
 
-## How can I edit this code?
+- **1,300+ Online & Downloadable Bible Versions Across 700+ Languages**:
+  - **2 Complete 66-Book Starter Bibles Pre-Installed Offline**: **Berean Standard Bible (BSB)** and **King James Version (KJV)** work 100% offline immediately out of the box.
+  - **Global Multi-Source Catalog**: Aggregates **Open Scripture Global CDN** (141 full Bibles including NIV, NKJV, ESV, NLT, NASB, AMP, CSB, WEB, Yoruba `OYCB`, Igbo `BIUO`, Hausa `BSRK`, Swahili `SUV`, Reina-Valera, Hebrew `WLC`, Greek `TR`/`LXX`, Latin Vulgate), **Bolls Open Bible Archive** (146 translations including MSG, NET, RSV, LSB, CJB, YLT), and **HelloAO Free Use Bible API** (1,256+ translations across 700+ languages).
+  - **One-Click Full Offline Vault (`IndexedDB`)**: Download any translation once with live byte-level progress to read, compare, and search anytime without internet—plus portable `.json` export and custom `.json` Bible import.
+- **Synchronized Parallel Multi-Version Reader**:
+  - Read 1, 2, or 3 Bible versions side-by-side in synchronized columns, or compare any selected verse across all installed & featured translations in the **Multi-Version Parallel Drawer**.
+  - Customizable **Parchment**, **Monastic Sepia**, and **Obsidian Night** themes, 4 font voices, adjustable font sizing, Verse-by-Verse or Flowing Prose modes, Red-Letter Words of Jesus, and translator footnotes.
+- **Embedded AI Bible Reading Companion & Audio Read-Along**:
+  - **Selah AI Companion**: Context-aware Scripture guide right beside your open chapter—offering Chapter Walkthroughs, Plain-Language Explanations, Historical & Literary Context, Original Hebrew/Greek Word Studies (with live BDB/Thayer lexicon integration), Cross-References, Guided *Lectio Divina* Prayers, and Interactive Chapter Quizzes. Works 100% out of the box with optional custom OpenAI-compatible API key support.
+  - **AI Voice & Studio Audio Read-Along**: Synchronized verse-by-verse read-aloud highlighting using neural/browser speech synthesis (works offline on every version) plus studio human audio MP3s where available, playback speed control, sleep timer, and a WebAudio contemplative ambient pad.
+- **Structured Reading Plans & Custom Plan Builder**:
+  - Includes 7 complete reading plans (*Whole Bible in 365 Days*, *New Testament in 90 Days*, *Walk With Jesus: Four Gospels in 30 Days*, *31 Days of Psalms & Proverbs*, *14-Day Story of Scripture*, *7-Day Peace for an Anxious Heart*, and *21-Day Paul's Letters*) plus a **Custom Reading Plan Generator** for any combination of books and days.
+- **Daily Bible Reflection & Prayer Sanctuary**:
+  - Daily devotional meditations rendered dynamically in your chosen Bible version, a **Heart Mood Compass**, guided 4-step *Lectio Divina* journaling, and a personal Prayer Sanctuary with answered-prayer tracking.
+- **Full-Bible Instant Offline Search, Study Notebook, Verse Art & Memory Deck**:
+  - `<35ms` full-Bible concordance search across all 31,102 verses with book distribution breakdown, 6-color verse highlighting, bookmarks, margin study notes, a **Progressive Cloze Memorization Trainer**, a **66-Book Completion Mosaic**, and a **Canvas Shareable Verse Art Card Studio**.
 
-There are several ways of editing your application.
+## Running Locally
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/35ed1dda-a049-4b34-900a-83171ac91657) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Mobile Apps (Apple App Store iOS & Google Play Store Android)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Selah Bible (`app.selahbible.multiversion`) includes native **Capacitor 8** projects for both **iPhone/iPad (`ios/`)** and **Android (`android/`)**, plus full standalone PWA support for instant installation on iOS Safari and Android Chrome:
 
-**Use GitHub Codespaces**
+```bash
+# Sync web build + custom launcher icons to native iOS & Android projects
+npm run mobile:sync
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Open native Xcode project for Apple App Store archiving
+npm run mobile:ios
 
-## What technologies are used for this project?
+# Open native Android Studio project for Google Play Store AAB/APK builds
+npm run mobile:android
+```
 
-This project is built with:
+See [`MOBILE_PUBLISHING.md`](./MOBILE_PUBLISHING.md) and [`.github/workflows/mobile-builds.yml`](./.github/workflows/mobile-builds.yml) for automated cloud Android `.apk`/`.aab` and iOS Xcode builds.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/35ed1dda-a049-4b34-900a-83171ac91657) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes it is!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)

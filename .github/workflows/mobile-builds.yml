@@ -1,0 +1,85 @@
+name: Build iOS (App Store) & Android (Play Store) Mobile Apps
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  android-build:
+    name: Android APK & Google Play Bundle (.aab)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Java 21 (Required by Capacitor 8 / Android Gradle)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies & build web + Capacitor Android sync
+        run: |
+          npm ci
+          npm run build
+          node scripts/sync-mobile-icons.mjs
+          npx cap sync android
+
+      - name: Build Installable Android APK & Unsigned Release Play Store AAB
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug bundleRelease --no-daemon
+
+      - name: Upload Android Installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: selah-bible-android-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload Google Play Store Bundle (.aab)
+        uses: actions/upload-artifact@v4
+        with:
+          name: selah-bible-play-store-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+
+  ios-build:
+    name: Apple iOS Xcode Build (App Store Ready)
+    runs-on: macos-15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies & sync Capacitor iOS
+        run: |
+          npm ci
+          npm run build
+          node scripts/sync-mobile-icons.mjs
+          npx cap sync ios
+
+      - name: Verify Xcode Project Compilation (Code-Signing Disabled for CI)
+        working-directory: ios/App
+        run: |
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            ONLY_ACTIVE_ARCH=NO \
+            build

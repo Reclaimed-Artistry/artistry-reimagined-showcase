@@ -12,6 +12,18 @@ dist
 dist-ssr
 *.local
 
+# Capacitor synced web bundles & native build caches
+ios/App/App/public
+ios/App/Pods
+ios/DerivedData
+android/app/src/main/assets/public
+android/app/src/main/assets/capacitor.config.json
+ios/App/App/capacitor.config.json
+android/.gradle
+android/build
+android/app/build
+android/local.properties
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

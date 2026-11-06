@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Selah Bible</string>
+    <string name="title_activity_main">Selah Bible</string>
+    <string name="package_name">app.selahbible.multiversion</string>
+    <string name="custom_url_scheme">app.selahbible.multiversion</string>
+</resources>

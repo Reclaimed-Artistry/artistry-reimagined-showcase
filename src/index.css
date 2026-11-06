@@ -1,123 +1,238 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /* Warm Parchment Default Theme */
   :root {
-    --background: 60 30% 98%;
-    --foreground: 120 10% 20%;
+    --background: 38 36% 96.5%;
+    --foreground: 24 16% 11%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 120 10% 20%;
+    --card: 38 42% 98.5%;
+    --card-foreground: 24 16% 11%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 120 10% 20%;
+    --popover: 38 42% 98.5%;
+    --popover-foreground: 24 16% 11%;
 
-    --primary: 120 20% 35%;
-    --primary-foreground: 60 30% 98%;
+    --primary: 28 73% 36%;
+    --primary-foreground: 38 45% 98%;
 
-    --secondary: 40 40% 85%;
-    --secondary-foreground: 120 10% 20%;
+    --secondary: 35 26% 91.5%;
+    --secondary-foreground: 24 18% 18%;
 
-    --muted: 40 20% 96%;
-    --muted-foreground: 120 5% 45%;
+    --muted: 35 24% 92%;
+    --muted-foreground: 25 11% 41%;
 
-    --accent: 30 40% 65%;
-    --accent-foreground: 120 10% 20%;
+    --accent: 35 34% 89%;
+    --accent-foreground: 24 22% 15%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 60 30% 98%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 120 10% 85%;
-    --input: 120 10% 85%;
-    --ring: 120 20% 35%;
+    --border: 34 23% 85%;
+    --input: 34 23% 85%;
+    --ring: 28 73% 36%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 36 32% 94.5%;
+    --sidebar-foreground: 24 16% 16%;
+    --sidebar-primary: 28 73% 36%;
+    --sidebar-primary-foreground: 38 45% 98%;
+    --sidebar-accent: 35 28% 89%;
+    --sidebar-accent-foreground: 24 20% 14%;
+    --sidebar-border: 34 22% 84%;
+    --sidebar-ring: 28 73% 36%;
+
+    --red-letter: #991B1B;
   }
 
-  .dark {
-    --background: 120 10% 10%;
-    --foreground: 60 30% 98%;
+  /* Monastic Sepia Theme */
+  html.theme-sepia {
+    --background: 35 42% 90%;
+    --foreground: 24 28% 14%;
 
-    --card: 120 10% 15%;
-    --card-foreground: 60 30% 98%;
+    --card: 35 40% 93%;
+    --card-foreground: 24 28% 14%;
 
-    --popover: 120 10% 15%;
-    --popover-foreground: 60 30% 98%;
+    --popover: 35 42% 93%;
+    --popover-foreground: 24 28% 14%;
 
-    --primary: 120 20% 45%;
-    --primary-foreground: 120 10% 10%;
+    --primary: 25 72% 33%;
+    --primary-foreground: 36 45% 96%;
 
-    --secondary: 40 15% 25%;
-    --secondary-foreground: 60 30% 98%;
+    --secondary: 34 32% 84.5%;
+    --secondary-foreground: 24 28% 16%;
 
-    --muted: 40 15% 25%;
-    --muted-foreground: 40 20% 80%;
+    --muted: 34 28% 85%;
+    --muted-foreground: 25 18% 36%;
 
-    --accent: 30 40% 45%;
-    --accent-foreground: 60 30% 98%;
+    --accent: 34 35% 82%;
+    --accent-foreground: 24 28% 15%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 60 30% 98%;
+    --destructive: 0 68% 42%;
+    --destructive-foreground: 36 45% 96%;
 
-    --border: 120 10% 25%;
-    --input: 120 10% 25%;
-    --ring: 120 20% 45%;
-    
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 33 26% 77%;
+    --input: 33 26% 77%;
+    --ring: 25 72% 33%;
+
+    --sidebar-background: 34 36% 87.5%;
+    --sidebar-foreground: 24 28% 15%;
+    --sidebar-primary: 25 72% 33%;
+    --sidebar-primary-foreground: 36 45% 96%;
+    --sidebar-accent: 34 30% 82%;
+    --sidebar-accent-foreground: 24 28% 14%;
+    --sidebar-border: 33 25% 76%;
+    --sidebar-ring: 25 72% 33%;
+
+    --red-letter: #8F1919;
   }
-}
 
-@layer base {
+  /* Obsidian Night Theme */
+  html.dark {
+    --background: 24 10% 7.5%;
+    --foreground: 36 24% 91%;
+
+    --card: 24 10% 10%;
+    --card-foreground: 36 24% 91%;
+
+    --popover: 24 10% 10.5%;
+    --popover-foreground: 36 24% 91%;
+
+    --primary: 35 72% 58%;
+    --primary-foreground: 24 18% 9%;
+
+    --secondary: 24 9% 14.5%;
+    --secondary-foreground: 36 20% 88%;
+
+    --muted: 24 9% 14%;
+    --muted-foreground: 32 10% 60%;
+
+    --accent: 24 11% 16.5%;
+    --accent-foreground: 36 24% 92%;
+
+    --destructive: 0 65% 52%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 24 9% 18%;
+    --input: 24 9% 18%;
+    --ring: 35 72% 58%;
+
+    --sidebar-background: 24 11% 6.5%;
+    --sidebar-foreground: 36 20% 88%;
+    --sidebar-primary: 35 72% 58%;
+    --sidebar-primary-foreground: 24 18% 9%;
+    --sidebar-accent: 24 10% 14%;
+    --sidebar-accent-foreground: 36 24% 92%;
+    --sidebar-border: 24 9% 16%;
+    --sidebar-ring: 35 72% 58%;
+
+    --red-letter: #F38B8B;
+  }
+
   * {
     @apply border-border;
   }
 
   body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    @apply bg-background text-foreground font-sans antialiased selection:bg-primary/20 selection:text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
   }
-  
-  .container {
-    @apply px-4 md:px-6 max-w-7xl mx-auto;
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
   }
 }
 
-@layer components {
-  .section-title {
-    @apply text-4xl md:text-5xl font-bold mb-8 text-earth-dark;
-  }
-  
-  .section-subtitle {
-    @apply text-2xl md:text-3xl font-semibold mb-4 text-earth;
-  }
-  
-  .card-hover {
-    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
-  }
-  
-  .btn-primary {
-    @apply bg-earth text-white hover:bg-earth-dark transition-colors;
-  }
-  
-  .eco-divider {
-    @apply w-full h-1 my-10 bg-gradient-to-r from-earth-light via-earth to-earth-accent;
-  }
+/* Native iPhone (Dynamic Island / Home Indicator) & Android Safe-Area Utilities */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-bottom {
+  padding-bottom: max(0.375rem, env(safe-area-inset-bottom, 0px));
+}
+
+.pb-mobile-safe {
+  padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Editorial Scripture Highlight Palettes */
+.hl-amber {
+  background-color: rgba(245, 184, 65, 0.34);
+  border-bottom: 1.5px solid rgba(202, 138, 4, 0.55);
+}
+html.dark .hl-amber {
+  background-color: rgba(234, 179, 8, 0.24);
+  border-bottom-color: rgba(234, 179, 8, 0.55);
+}
+
+.hl-sage {
+  background-color: rgba(116, 178, 118, 0.3);
+  border-bottom: 1.5px solid rgba(77, 138, 80, 0.55);
+}
+html.dark .hl-sage {
+  background-color: rgba(74, 222, 128, 0.2);
+  border-bottom-color: rgba(74, 222, 128, 0.5);
+}
+
+.hl-sky {
+  background-color: rgba(96, 165, 250, 0.27);
+  border-bottom: 1.5px solid rgba(37, 99, 235, 0.45);
+}
+html.dark .hl-sky {
+  background-color: rgba(56, 189, 248, 0.22);
+  border-bottom-color: rgba(56, 189, 248, 0.5);
+}
+
+.hl-rose {
+  background-color: rgba(251, 113, 133, 0.27);
+  border-bottom: 1.5px solid rgba(225, 29, 72, 0.45);
+}
+html.dark .hl-rose {
+  background-color: rgba(251, 113, 133, 0.22);
+  border-bottom-color: rgba(251, 113, 133, 0.5);
+}
+
+.hl-lavender {
+  background-color: rgba(167, 139, 250, 0.27);
+  border-bottom: 1.5px solid rgba(124, 58, 237, 0.45);
+}
+html.dark .hl-lavender {
+  background-color: rgba(167, 139, 250, 0.22);
+  border-bottom-color: rgba(167, 139, 250, 0.5);
+}
+
+.hl-terracotta {
+  background-color: rgba(234, 138, 92, 0.3);
+  border-bottom: 1.5px solid rgba(194, 65, 12, 0.5);
+}
+html.dark .hl-terracotta {
+  background-color: rgba(251, 146, 60, 0.22);
+  border-bottom-color: rgba(251, 146, 60, 0.5);
+}
+
+.words-of-jesus {
+  color: var(--red-letter);
+}
+
+/* Subtle custom scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.45);
 }
