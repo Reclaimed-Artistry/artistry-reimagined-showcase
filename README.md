@@ -1,73 +1,57 @@
-# Welcome to your Lovable project
+# Learn it yourself
 
-## Project info
+A responsive, self-guided digital-skills learning site built with React, TypeScript, Vite, Tailwind CSS, and shadcn/ui.
 
-**URL**: https://lovable.dev/projects/35ed1dda-a049-4b34-900a-83171ac91657
+## Run locally
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/35ed1dda-a049-4b34-900a-83171ac91657) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Requires Node.js 20.19+ or 22.12+ and npm.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm ci
+npm run dev -- --host 0.0.0.0
 ```
 
-**Edit a file directly in GitHub**
+The development server uses port 8080. For production:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+npm run build
+npm run preview -- --host 0.0.0.0
+```
 
-**Use GitHub Codespaces**
+Deploy the generated `dist/` directory to a static host. Configure an SPA fallback to `index.html` for client-side routes such as `/paths` and `/dashboard`. Keep real asset requests intact.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Included
 
-## What technologies are used for this project?
+- A category chooser for complete beginners, students/job seekers, and working professionals.
+- Category-specific recommendations; every learning path remains available to everyone.
+- Searchable, level-filtered path catalogue.
+- Four starter paths: Digital Workplace Essentials, Spreadsheets & Data Fundamentals, Design & Digital Content, and Web & No-Code Fundamentals.
+- Twelve original text lessons with practical exercises and knowledge checks.
+- Four project briefs, a downloadable deliberately imperfect practice sales dataset, self-review checklists, and saved reflections.
+- A personal learning dashboard, progress export, and confirmed progress reset.
+- Responsive navigation, keyboard-accessible controls, reduced-motion support, a system font stack, and a privacy page.
 
-This project is built with:
+## Important scope boundaries
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+This is a working **frontend starter edition**, not a production learning-management or payment system. Progress is stored in this browser under `learn-it-yourself:v1`. There are no accounts, server persistence, cross-device syncing, file submissions, public portfolios, assessed certificates, or payments. Project checklists are self-reviews. No employment outcomes are guaranteed.
 
-## How can I deploy this project?
+Changing category preserves learning progress. Clearing browser storage removes it. If storage is unavailable, the app remains usable in memory and displays a warning. The JSON export is a readable record, not an import/restore format.
 
-Simply open [Lovable](https://lovable.dev/projects/35ed1dda-a049-4b34-900a-83171ac91657) and click on Share -> Publish.
+The original showcase components remain in the repository but are no longer mounted. The active application starts at `src/App.tsx`; new learning content is in `src/data/learning.ts`.
 
-## Can I connect a custom domain to my Lovable project?
+## Validation
 
-Yes it is!
+```sh
+npx tsc --noEmit
+npm run lint
+npm run build
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Next production steps
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+1. Validate the category language, recommendations, and starter content with real learners and employers.
+2. Add managed authentication, a database, and row-level access controls before syncing progress.
+3. Add reviewed project submissions, object storage, and accessible public portfolios if needed.
+4. Add an instructor content/review workflow and expand the reviewed curriculum.
+5. Integrate a suitable hosted checkout and server-verified payment webhooks before selling paid paths. Never collect raw bank credentials in the browser.
+6. Publish an updated privacy notice and assessment/certificate policy before introducing those features.

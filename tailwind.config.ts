@@ -1,5 +1,6 @@
 
 import type { Config } from "tailwindcss";
+import animate from "tailwindcss-animate";
 
 export default {
 	darkMode: ["class"],
@@ -19,7 +20,20 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
+				display: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
+			},
 			colors: {
+				forest: '#1d1d1f',
+				canvas: '#ffffff',
+				apple: {
+					blue: '#0071e3',
+					gray: '#f5f5f7',
+					ink: '#1d1d1f',
+					muted: '#6e6e73',
+					line: '#d2d2d7',
+				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
@@ -115,5 +129,5 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [animate],
 } satisfies Config;

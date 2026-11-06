@@ -1,0 +1,11 @@
+import { BookOpen, Check, ChevronRight, CirclePlay, FileCheck2, LayoutDashboard } from 'lucide-react';
+
+/** A static product preview, not a live chart or a claim about learner outcomes. */
+export function LearningPreview({ compact = false }: { compact?: boolean }) {
+  return <div className={`learning-preview ${compact ? 'compact-preview' : ''}`} role="img" aria-label="Preview of the learning workspace, showing a spreadsheet lesson and a practice sales chart">
+    <div className="preview-app-bar"><div className="mini-window-dots"><i /><i /><i /></div><span>Learn it yourself</span><span className="preview-app-label">Learning workspace</span></div>
+    <div className="preview-app-body"><div className="preview-app-sidebar"><div className="preview-sidebar-brand"><BookOpen size={16} /><span>Your learning</span></div><div className="preview-sidebar-item selected"><CirclePlay size={13} />Your lessons</div><div className="preview-sidebar-item"><LayoutDashboard size={13} />My progress</div><div className="preview-sidebar-item"><FileCheck2 size={13} />My project</div><div className="preview-sidebar-progress"><span>YOUR PATH</span><b>Spreadsheets & data</b><div><i /></div><small>2 of 3 lessons complete</small></div></div>
+      <div className="preview-lesson"><p className="preview-lesson-eyebrow">LESSON 03 · DATA & SPREADSHEETS</p><h3>Make the finding clear.</h3><p className="preview-lesson-intro">A useful chart helps someone understand a specific finding.</p><div className="preview-chart-card"><div className="preview-chart-heading"><div><span>PRACTICE PROJECT</span><h4>Revenue by region</h4></div><span className="preview-chart-unit">Sample data</span></div><div className="preview-chart-area"><div className="preview-chart-grid"><i /><i /><i /></div><div className="preview-chart-columns"><div><span style={{ height: '67%' }} /><small>North</small></div><div><span style={{ height: '88%' }} /><small>South</small></div><div><span style={{ height: '39%' }} /><small>East</small></div><div><span style={{ height: '76%' }} /><small>West</small></div></div></div></div><div className="preview-lesson-bottom"><span><Check size={12} />Learn. Practise. Apply.</span><span>Continue <ChevronRight size={12} /></span></div></div>
+    </div>
+  </div>;
+}
