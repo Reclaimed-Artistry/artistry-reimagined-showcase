@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   BookHeart,
@@ -120,6 +120,7 @@ export const KidsStoriesView: React.FC = () => {
   const [query, setQuery] = useState("");
   const [testamentFilter, setTestamentFilter] = useState<"all" | "old" | "new">("all");
   const [readStories, setReadStories] = useState<string[]>(readStoriesFromStorage);
+  const storyDetailRef = useRef<HTMLElement | null>(null);
   const selectedStory = STORIES.find((story) => story.id === selectedId) || STORIES[0];
   const filteredStories = useMemo(() => {
     const value = query.trim().toLowerCase();
@@ -131,6 +132,14 @@ export const KidsStoriesView: React.FC = () => {
       return matchesTestament && matchesQuery;
     });
   }, [query, testamentFilter]);
+
+  const openFullStory = (id: string) => {
+    setSelectedId(id);
+    window.requestAnimationFrame(() => {
+      storyDetailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      storyDetailRef.current?.focus({ preventScroll: true });
+    });
+  };
 
   const toggleRead = (id: string) => {
     setReadStories((previous) => {
@@ -203,7 +212,7 @@ export const KidsStoriesView: React.FC = () => {
           </div>
           <div className="max-h-[34rem] space-y-2 overflow-y-auto pr-1">
             {filteredStories.map((story, index) => (
-              <button key={story.id} type="button" onClick={() => setSelectedId(story.id)} className={`group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${selectedId === story.id ? "border-primary/40 bg-primary/8 shadow-sm" : "border-border/70 bg-card/70 hover:border-primary/25 hover:bg-card"}`}>
+              <button key={story.id} type="button" aria-label={`Open full story: ${story.title}`} aria-pressed={selectedId === story.id} onClick={() => openFullStory(story.id)} className={`group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${selectedId === story.id ? "border-primary/40 bg-primary/8 shadow-sm" : "border-border/70 bg-card/70 hover:border-primary/25 hover:bg-card"}`}>
                 <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] bg-gradient-to-br ${story.colors} text-2xl shadow-inner shadow-white/10`}>{story.icon}</span>
                 <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{story.title}</span><span className="mt-1 block truncate text-xs text-muted-foreground">{story.journey ? `${story.reference} · Book journey` : `${story.theme} · ${story.minutes} min · Ages ${story.age}`}</span></span>
                 {readStories.includes(story.id) ? <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"><Check className="h-4 w-4" /></span> : <ChevronRight className={`h-4 w-4 text-muted-foreground transition group-hover:translate-x-0.5 ${selectedId === story.id ? "text-primary" : ""}`} />}
@@ -218,7 +227,13 @@ export const KidsStoriesView: React.FC = () => {
           </div>
         </aside>
 
-        <article className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-[0_24px_70px_-48px_rgba(15,23,42,.4)]">
+        <article
+          id="selected-story"
+          ref={storyDetailRef}
+          tabIndex={-1}
+          aria-label={`Full story: ${selectedStory.title}`}
+          className="scroll-mt-24 overflow-hidden rounded-[2rem] border border-border bg-card shadow-[0_24px_70px_-48px_rgba(15,23,42,.4)] focus:outline-none"
+        >
           <div className={`relative overflow-hidden bg-gradient-to-br ${selectedStory.colors} px-6 py-7 text-white sm:px-9 sm:py-9`}>
             {selectedStory.illustrated && <img src="/kids-story-hero.webp" alt="A calm lake and boat from the story" className="absolute inset-0 h-full w-full object-cover opacity-45 mix-blend-screen" />}
             <div className="absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-transparent" />
