@@ -226,4 +226,6 @@ export type AppSection =
   | "versions"
   | "plans"
   | "reflection"
-  | "study";
+  | "study"
+  | "kids"
+  | "about";

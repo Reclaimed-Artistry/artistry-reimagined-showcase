@@ -149,6 +149,15 @@
   }
 }
 
+/* Quiet horizontal navigation on narrow screens */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Native iPhone (Dynamic Island / Home Indicator) & Android Safe-Area Utilities */
 .safe-top {
   padding-top: env(safe-area-inset-top, 0px);

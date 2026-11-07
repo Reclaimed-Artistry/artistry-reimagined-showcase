@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
+  BookHeart,
   BookOpen,
   Calendar,
+  CircleHelp,
   Command,
   Database,
   Feather,
@@ -9,6 +11,8 @@ import {
   Search,
   Smartphone,
   Sparkles,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useBibleApp } from "@/context/BibleAppContext";
 import {
@@ -29,6 +33,8 @@ import { SearchAndStudyView } from "./SearchAndStudyView";
 import { VerseArtModal } from "./VerseArtModal";
 import { VerseCompareDrawer } from "./VerseCompareDrawer";
 import { VersionVaultView } from "./VersionVaultView";
+import { KidsStoriesView } from "./KidsStoriesView";
+import { ExplainerView } from "./ExplainerView";
 import type { AppSection } from "@/types/bible";
 
 export const AppShell: React.FC = () => {
@@ -38,6 +44,7 @@ export const AppShell: React.FC = () => {
     catalog,
     streakCount,
     prefs,
+    updatePrefs,
     aiPanelOpen,
     setAiPanelOpen,
     commandPaletteOpen,
@@ -60,7 +67,7 @@ export const AppShell: React.FC = () => {
     const sec = params.get("section") as AppSection | null;
     if (
       sec &&
-      ["reader", "versions", "plans", "reflection", "study"].includes(sec)
+      ["reader", "versions", "plans", "reflection", "study", "kids", "about"].includes(sec)
     ) {
       setActiveSection(sec);
     }
@@ -132,14 +139,14 @@ export const AppShell: React.FC = () => {
   }[] = [
     {
       id: "reader",
-      label: "Read Bible",
+      label: "Bible",
       shortLabel: "Read",
       icon: <BookOpen className="h-4 w-4" />,
     },
     {
       id: "versions",
-      label: "Versions Vault",
-      shortLabel: "Versions",
+      label: "Vault",
+      shortLabel: "Vault",
       icon: <Database className="h-4 w-4" />,
       badge: `${catalog.length.toLocaleString()}+`,
     },
@@ -151,15 +158,27 @@ export const AppShell: React.FC = () => {
     },
     {
       id: "reflection",
-      label: "Daily Reflection",
+      label: "Reflect",
       shortLabel: "Reflect",
       icon: <Feather className="h-4 w-4" />,
     },
     {
       id: "study",
-      label: "Search & Memory",
+      label: "Study",
       shortLabel: "Study",
       icon: <Search className="h-4 w-4" />,
+    },
+    {
+      id: "kids",
+      label: "Kids’ Storybook",
+      shortLabel: "Kids",
+      icon: <BookHeart className="h-4 w-4" />,
+    },
+    {
+      id: "about",
+      label: "How Selah Works",
+      shortLabel: "About",
+      icon: <CircleHelp className="h-4 w-4" />,
     },
   ];
 
@@ -205,7 +224,7 @@ export const AppShell: React.FC = () => {
                 Selah Bible
               </div>
               <div className="text-[10px] font-medium tracking-wider uppercase text-muted-foreground">
-                Every Version • Offline &amp; AI
+                Read • Reflect • Rest
               </div>
             </div>
           </button>
@@ -218,6 +237,7 @@ export const AppShell: React.FC = () => {
                 <button
                   key={item.id}
                   type="button"
+                  title={item.label}
                   onClick={() => handleSelectSection(item.id)}
                   className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
                     active
@@ -256,6 +276,16 @@ export const AppShell: React.FC = () => {
               <kbd className="hidden items-center gap-0.5 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] md:inline-flex">
                 <Command className="h-2.5 w-2.5" />K
               </kbd>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => updatePrefs({ theme: prefs.theme === "night" ? "parchment" : "night" })}
+              aria-label={prefs.theme === "night" ? "Switch to light mode" : "Switch to dark mode"}
+              title={prefs.theme === "night" ? "Switch to warm light mode" : "Switch to dark mode"}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition hover:border-primary/40 hover:bg-accent hover:text-primary"
+            >
+              {prefs.theme === "night" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
 
             <button
@@ -301,6 +331,8 @@ export const AppShell: React.FC = () => {
           {activeSection === "plans" && <ReadingPlansView />}
           {activeSection === "reflection" && <DailyReflectionView />}
           {activeSection === "study" && <SearchAndStudyView />}
+          {activeSection === "kids" && <KidsStoriesView />}
+          {activeSection === "about" && <ExplainerView />}
         </main>
 
         <AiCompanionPanel />
@@ -310,15 +342,16 @@ export const AppShell: React.FC = () => {
       <AudioReadAlongBar />
 
       {/* Mobile Bottom Navigation Bar (with iPhone Home Indicator safe-bottom padding) */}
-      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-20 flex items-center justify-around border-t border-border bg-card/95 pt-1.5 backdrop-blur-md lg:hidden">
+      <nav className="safe-bottom hide-scrollbar fixed inset-x-0 bottom-0 z-20 flex items-center justify-start gap-0.5 overflow-x-auto border-t border-border bg-card/95 px-1 pt-1.5 backdrop-blur-md lg:hidden">
         {navItems.map((item) => {
           const active = activeSection === item.id;
           return (
             <button
               key={item.id}
               type="button"
+              title={item.label}
               onClick={() => handleSelectSection(item.id)}
-              className={`flex min-w-[56px] flex-col items-center gap-0.5 rounded-xl px-2.5 py-1 text-[10px] font-semibold transition ${
+              className={`flex min-w-[48px] shrink-0 flex-col items-center gap-0.5 rounded-xl px-1.5 py-1 text-[9px] font-semibold transition ${
                 active ? "text-primary" : "text-muted-foreground"
               }`}
             >

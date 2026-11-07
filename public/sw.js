@@ -1,9 +1,10 @@
-const CACHE_NAME = "selah-bible-shell-v2";
+const CACHE_NAME = "selah-bible-shell-v3";
 const PRECACHE_URLS = [
   "/",
   "/index.html",
   "/favicon.svg",
   "/manifest.webmanifest",
+  "/kids-story-hero.webp",
   "/icons/apple-touch-icon.png",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
