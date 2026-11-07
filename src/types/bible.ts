@@ -1,4 +1,4 @@
-export type BibleProviderType = "bundled" | "cdn" | "bolls" | "helloao" | "custom";
+export type BibleProviderType = "bundled" | "cdn" | "bolls" | "helloao" | "custom" | "external";
 
 export interface BibleVersionMeta {
   id: string;
@@ -17,6 +17,8 @@ export interface BibleVersionMeta {
   hasFootnotes?: boolean;
   licenseNotice?: string;
   licenseUrl?: string;
+  /** Official third-party reader for editions that cannot be redistributed in-app. */
+  sourceUrl?: string;
   featured?: boolean;
 }
 

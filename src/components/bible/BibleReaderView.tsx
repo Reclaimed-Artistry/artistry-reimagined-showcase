@@ -105,10 +105,11 @@ const VersionQuickPicker: React.FC<{
     const q = search.toLowerCase().trim();
     const matches = catalog.filter(
       (v) =>
-        !q ||
+        v.provider !== "external" &&
+        (!q ||
         v.shortName.toLowerCase().includes(q) ||
         v.name.toLowerCase().includes(q) ||
-        v.language.toLowerCase().includes(q)
+        v.language.toLowerCase().includes(q))
     );
     const off = matches.filter((v) => isVersionOffline(v.id));
     const onl = matches.filter((v) => !isVersionOffline(v.id)).slice(0, 35);

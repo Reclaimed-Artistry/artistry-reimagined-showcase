@@ -66,6 +66,28 @@ export const BUNDLED_VERSIONS: BibleVersionMeta[] = [
   },
 ];
 
+// Copyrighted versions are listed with an official reader link, not copied into our app.
+const OFFICIAL_EXTERNAL_VERSIONS: BibleVersionMeta[] = [
+  {
+    id: "external:pcm-pcmwbt",
+    shortName: "PCM",
+    name: "Nigerian Pidgin English Bible — 2012 Edition",
+    language: "Nigerian Pidgin",
+    languageCode: "pcm",
+    textDirection: "ltr",
+    provider: "external",
+    providerSlug: "2516",
+    estimatedSizeMB: 0,
+    description:
+      "Official online edition hosted by YouVersion. The text is copyrighted by Wycliffe Bible Translators, Inc., so it is opened at the publisher rather than copied or stored by Selah.",
+    regionTag: "African & Nigerian",
+    featured: true,
+    licenseNotice: "© Wycliffe Bible Translators, Inc. — read the official edition online.",
+    licenseUrl: "https://www.bible.com/versions/2516-pcm-holy-bible-nigerian-pidgin-english",
+    sourceUrl: "https://www.bible.com/bible/2516/GEN.1.PCM",
+  },
+];
+
 const FEATURED_SHORT_MAP: Record<string, { short: string; featured?: boolean; desc?: string }> = {
   en_niv: { short: "NIV", featured: true, desc: "New International Version — balanced thought-for-thought modern English." },
   en_nkjv: { short: "NKJV", featured: true, desc: "New King James Version — classic cadence updated for modern clarity." },
@@ -141,6 +163,9 @@ export async function loadUnifiedCatalog(
 ): Promise<BibleVersionMeta[]> {
   const map = new Map<string, BibleVersionMeta>();
   for (const v of BUNDLED_VERSIONS) {
+    map.set(v.id, v);
+  }
+  for (const v of OFFICIAL_EXTERNAL_VERSIONS) {
     map.set(v.id, v);
   }
 
@@ -639,6 +664,10 @@ export async function downloadVersionOffline(
   meta: BibleVersionMeta,
   onProgress?: (update: VersionDownloadProgress) => void
 ): Promise<NormalizedBible> {
+  if (meta.provider === "external") {
+    throw new Error("This copyrighted edition is available through its official online source only.");
+  }
+
   if (meta.provider === "bundled") {
     const b = await getInstalledFullBible(meta);
     if (!b) throw new Error("Bundled Bible unavailable");
@@ -864,6 +893,11 @@ export async function getChapterContent(
   const cachedChapter = await getCachedStreamedChapter(meta.id, bookNumber, chapter);
   if (cachedChapter) {
     return { chapterData: cachedChapter, isOfflineInstalled: false };
+  }
+
+  // Copyrighted translations stay on their official publisher's reading site.
+  if (meta.provider === "external") {
+    throw new Error("Open this copyrighted edition from its official online source in the Versions Vault.");
   }
 
   // 3. Stream online!

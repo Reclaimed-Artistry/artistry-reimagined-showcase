@@ -550,6 +550,10 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const triggerDownloadVersion = useCallback(
     async (meta: BibleVersionMeta) => {
+      if (meta.provider === "external") {
+        if (meta.sourceUrl) window.open(meta.sourceUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
       if (meta.provider === "bundled") {
         toast.success(`${meta.shortName} is pre-installed and ready offline.`);
         return;

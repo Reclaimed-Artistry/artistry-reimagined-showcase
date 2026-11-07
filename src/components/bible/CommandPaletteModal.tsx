@@ -40,10 +40,11 @@ export const CommandPaletteModal: React.FC = () => {
 
   const matchingVersions = useMemo(() => {
     const q = query.toLowerCase().trim();
-    if (!q) return catalog.filter((v) => isVersionOffline(v.id)).slice(0, 4);
+    if (!q) return catalog.filter((v) => v.provider !== "external" && isVersionOffline(v.id)).slice(0, 4);
     return catalog
       .filter(
         (v) =>
+          v.provider !== "external" &&
           v.shortName.toLowerCase().includes(q) ||
           v.name.toLowerCase().includes(q) ||
           v.language.toLowerCase().includes(q)
