@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Radiant Cross above Open Scripture (within 66dp Android Adaptive Icon safe zone) -->
+    <path
+        android:pathData="M54,26 L54,37 M49,30.5 L59,30.5"
+        android:strokeWidth="3.2"
+        android:strokeColor="#E2A856"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <!-- Open Bible Left & Right Pages -->
+    <path
+        android:pathData="M33,42 C40,39.5 48,41 54,45 C60,41 68,39.5 75,42 L75,74 C68,71.5 60,73 54,77 C48,73 40,71.5 33,74 Z"
+        android:strokeWidth="3.2"
+        android:strokeColor="#E2A856"
+        android:strokeLineJoin="round"
+        android:fillColor="#26211D" />
+    <!-- Central Spine -->
+    <path
+        android:pathData="M54,45 L54,77"
+        android:strokeWidth="3.0"
+        android:strokeColor="#E2A856"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+</vector>

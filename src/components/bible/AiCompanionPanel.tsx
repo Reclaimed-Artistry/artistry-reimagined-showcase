@@ -1,0 +1,493 @@
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ArrowUpRight,
+  BookOpen,
+  CheckCircle2,
+  Compass,
+  HelpCircle,
+  Languages,
+  Link2,
+  Loader2,
+  Send,
+  Settings2,
+  Sparkles,
+  Volume2,
+  X,
+} from "lucide-react";
+import { formatReference, getBookMeta } from "@/data/canonicalBooks";
+import { useBibleApp } from "@/context/BibleAppContext";
+import {
+  AiCompanionMessage,
+  AiQuickAction,
+  AiQuizQuestion,
+  generateAiBibleResponse,
+} from "@/lib/aiBibleCompanion";
+
+function renderFormattedMarkdownText(raw: string): React.ReactNode {
+  const lines = raw.split("\n");
+  return (
+    <div className="space-y-2 text-xs leading-relaxed">
+      {lines.map((line, i) => {
+        const trimmed = line.trim();
+        if (!trimmed) return <div key={i} className="h-1" />;
+        if (trimmed.startsWith("### ")) {
+          return (
+            <h4 key={i} className="font-display text-base font-bold text-foreground pt-1">
+              {trimmed.slice(4)}
+            </h4>
+          );
+        }
+        if (trimmed.startsWith("> ")) {
+          return (
+            <blockquote
+              key={i}
+              className="border-l-2 border-primary bg-primary/8 py-1.5 pl-3 pr-2 font-scripture italic text-foreground/90 rounded-r-lg"
+            >
+              {renderInlineBold(trimmed.slice(2))}
+            </blockquote>
+          );
+        }
+        if (trimmed.startsWith("- ") || /^\d+\.\s/.test(trimmed)) {
+          return (
+            <div key={i} className="pl-2 text-foreground/90">
+              {renderInlineBold(trimmed)}
+            </div>
+          );
+        }
+        return (
+          <p key={i} className="text-foreground/90">
+            {renderInlineBold(trimmed)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function renderInlineBold(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={idx} className="font-semibold text-foreground">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith("*") && part.endsWith("*")) {
+      return (
+        <em key={idx} className="italic">
+          {part.slice(1, -1)}
+        </em>
+      );
+    }
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return (
+        <code key={idx} className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    return <React.Fragment key={idx}>{part}</React.Fragment>;
+  });
+}
+
+const QuizInteractiveWidget: React.FC<{ quiz: AiQuizQuestion[] }> = ({ quiz }) => {
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+
+  return (
+    <div className="mt-3 space-y-3">
+      {quiz.map((q, qIdx) => {
+        const picked = answers[qIdx];
+        const answered = picked !== undefined;
+        return (
+          <div
+            key={qIdx}
+            className="rounded-xl border border-border bg-background/80 p-3 text-xs"
+          >
+            <p className="mb-2 font-medium whitespace-pre-line text-foreground">{q.question}</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {q.options.map((opt, oIdx) => {
+                const isCorrect = oIdx === q.correctIndex;
+                const isPicked = picked === oIdx;
+                let style = "border-border bg-card hover:bg-accent";
+                if (answered) {
+                  if (isCorrect) {
+                    style = "border-emerald-500 bg-emerald-500/15 font-semibold text-emerald-800 dark:text-emerald-300";
+                  } else if (isPicked) {
+                    style = "border-destructive bg-destructive/15 text-destructive";
+                  }
+                }
+                return (
+                  <button
+                    key={oIdx}
+                    type="button"
+                    disabled={answered}
+                    onClick={() => setAnswers((prev) => ({ ...prev, [qIdx]: oIdx }))}
+                    className={`rounded-lg border px-2.5 py-1.5 text-left text-xs transition ${style}`}
+                  >
+                    {opt}
+                  </button>
+                );
+              })}
+            </div>
+            {answered && (
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                <CheckCircle2 className="mr-1 inline h-3 w-3 text-emerald-600" />
+                {q.explanation}
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+export const AiCompanionPanel: React.FC = () => {
+  const {
+    aiPanelOpen,
+    setAiPanelOpen,
+    bookNumber,
+    chapter,
+    selectedVerses,
+    primaryChapterData,
+    activeVersion,
+    navigateTo,
+    startAudioFromVerse,
+    prefs,
+    updatePrefs,
+  } = useBibleApp();
+
+  const [messages, setMessages] = useState<AiCompanionMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  const scrollEndRef = useRef<HTMLDivElement | null>(null);
+  const bookMeta = getBookMeta(bookNumber);
+
+  const activeRefLabel =
+    selectedVerses.length > 0
+      ? formatReference(
+          bookNumber,
+          chapter,
+          Math.min(...selectedVerses),
+          selectedVerses.length > 1 ? Math.max(...selectedVerses) : undefined
+        )
+      : `${bookMeta.name} ${chapter}`;
+
+  // Seed initial welcome walkthrough on first open
+  useEffect(() => {
+    if (aiPanelOpen && messages.length === 0 && primaryChapterData) {
+      handleTriggerAction("walkthrough", "Walk me through this chapter");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiPanelOpen]);
+
+  useEffect(() => {
+    scrollEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  const handleTriggerAction = async (actionOrText: AiQuickAction | string, userLabel?: string) => {
+    const userMsg: AiCompanionMessage = {
+      id: `u-${Date.now()}`,
+      role: "user",
+      content: userLabel || actionOrText,
+      timestamp: Date.now(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setLoading(true);
+
+    try {
+      const reply = await generateAiBibleResponse(actionOrText, {
+        bookNumber,
+        chapter,
+        selectedVerses,
+        chapterData: primaryChapterData,
+        versionMeta: activeVersion,
+        aiSettings: prefs.aiSettings,
+      });
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          ...reply,
+          timestamp: Date.now(),
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = input.trim();
+    if (!q || loading) return;
+    setInput("");
+    handleTriggerAction(q);
+  };
+
+  if (!aiPanelOpen) return null;
+
+  const quickActions: { id: AiQuickAction; label: string; icon: React.ReactNode; promptLabel: string }[] = [
+    {
+      id: "walkthrough",
+      label: "Walkthrough",
+      icon: <Compass className="h-3 w-3" />,
+      promptLabel: `Walk me through ${bookMeta.name} ${chapter}`,
+    },
+    {
+      id: "explain",
+      label: "Explain Simply",
+      icon: <BookOpen className="h-3 w-3" />,
+      promptLabel: `Explain ${activeRefLabel} in simple everyday words`,
+    },
+    {
+      id: "context",
+      label: "Historical Context",
+      icon: <Sparkles className="h-3 w-3" />,
+      promptLabel: `Historical & literary background of ${bookMeta.name}`,
+    },
+    {
+      id: "word_study",
+      label: "Greek / Hebrew",
+      icon: <Languages className="h-3 w-3" />,
+      promptLabel: `Original Hebrew/Greek word insights in ${activeRefLabel}`,
+    },
+    {
+      id: "cross_refs",
+      label: "Cross-Refs",
+      icon: <Link2 className="h-3 w-3" />,
+      promptLabel: `Show connected passages across Scripture for ${activeRefLabel}`,
+    },
+    {
+      id: "quiz",
+      label: "Quiz Me",
+      icon: <HelpCircle className="h-3 w-3" />,
+      promptLabel: `Quiz me on ${bookMeta.name} ${chapter}`,
+    },
+  ];
+
+  return (
+    <aside className="fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col border-l border-border bg-card shadow-2xl xl:static xl:z-10 xl:w-[390px] xl:shadow-none">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-border/80 bg-muted/40 px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Sparkles className="h-4 w-4" />
+          </div>
+          <div>
+            <h2 className="font-display text-lg font-bold leading-none text-foreground">
+              Selah AI Companion
+            </h2>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Reading <strong>{activeRefLabel}</strong> ({activeVersion.shortName})
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => startAudioFromVerse(selectedVerses[0] || 1)}
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-primary"
+            title="Read Chapter Aloud"
+          >
+            <Volume2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSettings((s) => !s)}
+            className={`rounded-lg p-1.5 transition ${
+              showSettings
+                ? "bg-primary/15 text-primary"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+            title="AI Engine Settings (Built-in Offline + Custom API Key)"
+          >
+            <Settings2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setAiPanelOpen(false)}
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+            title="Close AI Panel"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Optional Custom LLM Settings Drawer */}
+      {showSettings && (
+        <div className="space-y-2.5 border-b border-border bg-secondary/40 p-4 text-xs">
+          <div className="font-semibold text-foreground">AI Reading Engine Mode</div>
+          <p className="text-[11px] text-muted-foreground">
+            Selah AI works <strong>100% instantly &amp; offline</strong> out of the box using its
+            built-in Scripture Intelligence &amp; Lexicon engine. Optionally connect an
+            OpenAI-compatible endpoint for open-ended generative study:
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              onClick={() =>
+                updatePrefs({ aiSettings: { ...prefs.aiSettings, mode: "hybrid" } })
+              }
+              className={`rounded-lg border py-1.5 font-semibold ${
+                prefs.aiSettings.mode === "hybrid"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card"
+              }`}
+            >
+              Built-in Instant AI
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                updatePrefs({ aiSettings: { ...prefs.aiSettings, mode: "custom_llm" } })
+              }
+              className={`rounded-lg border py-1.5 font-semibold ${
+                prefs.aiSettings.mode === "custom_llm"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card"
+              }`}
+            >
+              Custom LLM API
+            </button>
+          </div>
+
+          {prefs.aiSettings.mode === "custom_llm" && (
+            <div className="space-y-2 pt-1">
+              <input
+                type="text"
+                value={prefs.aiSettings.endpointUrl}
+                onChange={(e) =>
+                  updatePrefs({
+                    aiSettings: { ...prefs.aiSettings, endpointUrl: e.target.value },
+                  })
+                }
+                placeholder="https://api.openai.com/v1/chat/completions"
+                className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs"
+              />
+              <input
+                type="password"
+                value={prefs.aiSettings.apiKey}
+                onChange={(e) =>
+                  updatePrefs({
+                    aiSettings: { ...prefs.aiSettings, apiKey: e.target.value },
+                  })
+                }
+                placeholder="API Key (stored locally on your device)"
+                className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs"
+              />
+              <input
+                type="text"
+                value={prefs.aiSettings.model}
+                onChange={(e) =>
+                  updatePrefs({
+                    aiSettings: { ...prefs.aiSettings, model: e.target.value },
+                  })
+                }
+                placeholder="Model (e.g. gpt-4o-mini)"
+                className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Quick Study Chips */}
+      <div className="flex flex-wrap gap-1.5 border-b border-border/60 bg-background/60 p-3">
+        {quickActions.map((qa) => (
+          <button
+            key={qa.id}
+            type="button"
+            disabled={loading}
+            onClick={() => handleTriggerAction(qa.id, qa.promptLabel)}
+            className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground transition hover:border-primary/50 hover:bg-primary/10 disabled:opacity-50"
+          >
+            <span className="text-primary">{qa.icon}</span>
+            {qa.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Conversation Stream */}
+      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+        {messages.map((m) => (
+          <div
+            key={m.id}
+            className={`rounded-2xl p-3.5 ${
+              m.role === "user"
+                ? "ml-8 bg-primary text-primary-foreground text-xs font-medium"
+                : "border border-border/80 bg-background/80 shadow-sm"
+            }`}
+          >
+            {m.role === "user" ? (
+              <p>{m.content}</p>
+            ) : (
+              <>
+                {renderFormattedMarkdownText(m.content)}
+
+                {m.quiz && m.quiz.length > 0 && <QuizInteractiveWidget quiz={m.quiz} />}
+
+                {m.citations && m.citations.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border/60 pt-2.5">
+                    {m.citations.map((cit, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => navigateTo(cit.bookNumber, cit.chapter, cit.verse)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-primary/12 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20"
+                      >
+                        {cit.label}
+                        <ArrowUpRight className="h-3 w-3" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ))}
+
+        {loading && (
+          <div className="flex items-center gap-2 rounded-2xl border border-border bg-background/80 p-3.5 text-xs text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            Studying {activeRefLabel}...
+          </div>
+        )}
+
+        <div ref={scrollEndRef} />
+      </div>
+
+      {/* Input Footer */}
+      <form
+        onSubmit={handleSubmitForm}
+        className="border-t border-border bg-muted/30 p-3"
+      >
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask about this passage, a topic, or verse..."
+            className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || loading}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition hover:opacity-95 disabled:opacity-40"
+            title="Ask Selah AI"
+          >
+            <Send className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </form>
+    </aside>
+  );
+};
