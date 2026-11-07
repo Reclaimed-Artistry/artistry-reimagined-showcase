@@ -3,46 +3,46 @@
 @tailwind utilities;
 
 @layer base {
-  /* Warm Parchment Default Theme */
+  /* Navy & white light theme */
   :root {
-    --background: 38 36% 96.5%;
-    --foreground: 24 16% 11%;
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
 
-    --card: 38 42% 98.5%;
-    --card-foreground: 24 16% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
-    --popover: 38 42% 98.5%;
-    --popover-foreground: 24 16% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 28 73% 36%;
-    --primary-foreground: 38 45% 98%;
+    --primary: 220 67% 28%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 35 26% 91.5%;
-    --secondary-foreground: 24 18% 18%;
+    --secondary: 214 32% 95%;
+    --secondary-foreground: 222 47% 14%;
 
-    --muted: 35 24% 92%;
-    --muted-foreground: 25 11% 41%;
+    --muted: 214 28% 95%;
+    --muted-foreground: 215 16% 43%;
 
-    --accent: 35 34% 89%;
-    --accent-foreground: 24 22% 15%;
+    --accent: 214 38% 92%;
+    --accent-foreground: 222 47% 14%;
 
     --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 34 23% 85%;
-    --input: 34 23% 85%;
-    --ring: 28 73% 36%;
+    --border: 214 24% 86%;
+    --input: 214 24% 86%;
+    --ring: 220 67% 35%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 36 32% 94.5%;
-    --sidebar-foreground: 24 16% 16%;
-    --sidebar-primary: 28 73% 36%;
-    --sidebar-primary-foreground: 38 45% 98%;
-    --sidebar-accent: 35 28% 89%;
-    --sidebar-accent-foreground: 24 20% 14%;
-    --sidebar-border: 34 22% 84%;
-    --sidebar-ring: 28 73% 36%;
+    --sidebar-background: 216 36% 97%;
+    --sidebar-foreground: 222 38% 17%;
+    --sidebar-primary: 220 67% 28%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 214 38% 92%;
+    --sidebar-accent-foreground: 222 47% 14%;
+    --sidebar-border: 214 24% 87%;
+    --sidebar-ring: 220 67% 35%;
 
     --red-letter: #991B1B;
   }
@@ -89,46 +89,46 @@
     --red-letter: #8F1919;
   }
 
-  /* Obsidian Night Theme */
+  /* Rich blue on near-black dark theme */
   html.dark {
-    --background: 24 10% 7.5%;
-    --foreground: 36 24% 91%;
+    --background: 222 36% 5%;
+    --foreground: 214 32% 92%;
 
-    --card: 24 10% 10%;
-    --card-foreground: 36 24% 91%;
+    --card: 222 31% 8%;
+    --card-foreground: 214 32% 92%;
 
-    --popover: 24 10% 10.5%;
-    --popover-foreground: 36 24% 91%;
+    --popover: 222 31% 9%;
+    --popover-foreground: 214 32% 92%;
 
-    --primary: 35 72% 58%;
-    --primary-foreground: 24 18% 9%;
+    --primary: 217 91% 62%;
+    --primary-foreground: 222 47% 8%;
 
-    --secondary: 24 9% 14.5%;
-    --secondary-foreground: 36 20% 88%;
+    --secondary: 221 30% 13%;
+    --secondary-foreground: 214 32% 91%;
 
-    --muted: 24 9% 14%;
-    --muted-foreground: 32 10% 60%;
+    --muted: 221 28% 12%;
+    --muted-foreground: 215 18% 66%;
 
-    --accent: 24 11% 16.5%;
-    --accent-foreground: 36 24% 92%;
+    --accent: 220 31% 17%;
+    --accent-foreground: 214 32% 94%;
 
     --destructive: 0 65% 52%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 24 9% 18%;
-    --input: 24 9% 18%;
-    --ring: 35 72% 58%;
+    --border: 220 24% 19%;
+    --input: 220 24% 19%;
+    --ring: 217 91% 62%;
 
-    --sidebar-background: 24 11% 6.5%;
-    --sidebar-foreground: 36 20% 88%;
-    --sidebar-primary: 35 72% 58%;
-    --sidebar-primary-foreground: 24 18% 9%;
-    --sidebar-accent: 24 10% 14%;
-    --sidebar-accent-foreground: 36 24% 92%;
-    --sidebar-border: 24 9% 16%;
-    --sidebar-ring: 35 72% 58%;
+    --sidebar-background: 222 38% 4%;
+    --sidebar-foreground: 214 32% 90%;
+    --sidebar-primary: 217 91% 62%;
+    --sidebar-primary-foreground: 222 47% 8%;
+    --sidebar-accent: 220 31% 14%;
+    --sidebar-accent-foreground: 214 32% 94%;
+    --sidebar-border: 220 24% 16%;
+    --sidebar-ring: 217 91% 62%;
 
-    --red-letter: #F38B8B;
+    --red-letter: #FFA3A3;
   }
 
   * {
@@ -147,6 +147,26 @@
   [role="button"] {
     touch-action: manipulation;
   }
+}
+
+/* User-customizable canvas behind translucent app chrome */
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+}
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--app-wallpaper-color, hsl(var(--background)));
+  background-image:
+    linear-gradient(rgba(0, 0, 0, var(--app-wallpaper-darken, 0)), rgba(0, 0, 0, var(--app-wallpaper-darken, 0))),
+    var(--app-wallpaper-image, none);
+  background-position: center;
+  background-size: cover;
 }
 
 /* Quiet horizontal navigation on narrow screens */

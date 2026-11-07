@@ -2,16 +2,16 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "app.selahbible.multiversion",
-  appName: "Selah Bible",
+  appName: "Selah MVB",
   webDir: "dist",
   ios: {
     contentInset: "automatic",
     preferredContentMode: "mobile",
     scheme: "SelahBible",
-    backgroundColor: "#1C1917",
+    backgroundColor: "#FFFFFF",
   },
   android: {
-    backgroundColor: "#1C1917",
+    backgroundColor: "#FFFFFF",
     allowMixedContent: false,
     captureInput: true,
     webContentsDebuggingEnabled: false,
@@ -20,7 +20,7 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 1200,
       launchAutoHide: true,
-      backgroundColor: "#1C1917",
+      backgroundColor: "#FFFFFF",
       androidScaleType: "CENTER_CROP",
       showSpinner: false,
       splashFullScreen: true,
@@ -29,7 +29,7 @@ const config: CapacitorConfig = {
     StatusBar: {
       overlaysWebView: false,
       style: "DARK",
-      backgroundColor: "#1C1917",
+      backgroundColor: "#FFFFFF",
     },
   },
 };

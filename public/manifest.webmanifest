@@ -1,14 +1,14 @@
 {
   "id": "/",
-  "name": "Selah Bible — Every Version, Offline & AI Study",
-  "short_name": "Selah Bible",
+  "name": "Selah Multi Versions Bible",
+  "short_name": "Selah MVB",
   "description": "Multi-version offline-first Bible for iPhone, Android, and Web with 1,300+ downloadable translations, reading plans, daily reflections, audio read-along, and embedded AI Scripture companion.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#1C1917",
-  "theme_color": "#1C1917",
+  "background_color": "#FFFFFF",
+  "theme_color": "#173B70",
   "categories": ["books", "education", "lifestyle"],
   "icons": [
     {

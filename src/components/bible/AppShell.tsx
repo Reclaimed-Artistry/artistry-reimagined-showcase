@@ -11,8 +11,6 @@ import {
   Search,
   Smartphone,
   Sparkles,
-  Sun,
-  Moon,
 } from "lucide-react";
 import { useBibleApp } from "@/context/BibleAppContext";
 import {
@@ -35,6 +33,7 @@ import { VerseCompareDrawer } from "./VerseCompareDrawer";
 import { VersionVaultView } from "./VersionVaultView";
 import { KidsStoriesView } from "./KidsStoriesView";
 import { ExplainerView } from "./ExplainerView";
+import { TypographyPopover } from "./TypographyPopover";
 import type { AppSection } from "@/types/bible";
 
 export const AppShell: React.FC = () => {
@@ -44,7 +43,6 @@ export const AppShell: React.FC = () => {
     catalog,
     streakCount,
     prefs,
-    updatePrefs,
     aiPanelOpen,
     setAiPanelOpen,
     commandPaletteOpen,
@@ -187,8 +185,18 @@ export const AppShell: React.FC = () => {
     setActiveSection(id);
   };
 
+  const appShellStyle = {
+    "--app-wallpaper-color": prefs.appearanceBackgroundColor || (prefs.theme === "night" ? "#050914" : prefs.theme === "sepia" ? "#EDE6D5" : "#FFFFFF"),
+    "--app-wallpaper-image": prefs.appearanceBackgroundImage
+      ? `url("${prefs.appearanceBackgroundImage}")`
+      : "none",
+    "--app-wallpaper-darken": prefs.appearanceBackgroundImage
+      ? String(Math.max(0, Math.min(80, prefs.appearanceImageDarken)) / 100)
+      : "0",
+  } as React.CSSProperties;
+
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
+    <div className="app-shell flex min-h-screen flex-col text-foreground" style={appShellStyle}>
       {/* Top Global Sanctuary Bar (with iPhone Notch / Dynamic Island safe-top padding) */}
       <header className="safe-top sticky top-0 z-30 border-b border-border/80 bg-sidebar/95 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2.5 px-4 sm:px-6">
@@ -197,6 +205,7 @@ export const AppShell: React.FC = () => {
             type="button"
             onClick={() => handleSelectSection("reader")}
             className="flex items-center gap-2.5 text-left"
+            title="Selah Multi Versions Bible (Selah MVB)"
           >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-foreground text-background shadow-sm">
               <svg
@@ -221,7 +230,7 @@ export const AppShell: React.FC = () => {
             </div>
             <div>
               <div className="font-display text-xl font-bold leading-none tracking-tight text-foreground">
-                Selah Bible
+                Selah MVB
               </div>
               <div className="text-[10px] font-medium tracking-wider uppercase text-muted-foreground">
                 Read • Reflect • Rest
@@ -278,15 +287,7 @@ export const AppShell: React.FC = () => {
               </kbd>
             </button>
 
-            <button
-              type="button"
-              onClick={() => updatePrefs({ theme: prefs.theme === "night" ? "parchment" : "night" })}
-              aria-label={prefs.theme === "night" ? "Switch to light mode" : "Switch to dark mode"}
-              title={prefs.theme === "night" ? "Switch to warm light mode" : "Switch to dark mode"}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition hover:border-primary/40 hover:bg-accent hover:text-primary"
-            >
-              {prefs.theme === "night" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
+            <TypographyPopover />
 
             <button
               type="button"

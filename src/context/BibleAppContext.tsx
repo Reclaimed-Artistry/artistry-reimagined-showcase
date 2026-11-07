@@ -60,6 +60,9 @@ const STORAGE_KEYS = {
 const DEFAULT_PREFS: ReaderPreferences = {
   theme: "parchment",
   fontFamily: "scripture",
+  appearanceBackgroundColor: null,
+  appearanceBackgroundImage: "",
+  appearanceImageDarken: 28,
   fontSize: 19,
   lineHeight: 1.85,
   layoutMode: "verse",

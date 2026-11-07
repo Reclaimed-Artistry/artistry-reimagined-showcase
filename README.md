@@ -1,6 +1,6 @@
-# Selah Bible — Multi-Version Offline Scripture, Reading Plans, Daily Reflection & AI Companion
+# Selah Multi Versions Bible (Selah MVB) — Multi-Version Offline Scripture, Reading Plans, Daily Reflection & AI Companion
 
-**Selah Bible** is a local-first, offline-capable multi-version Bible web application designed around editorial clarity, deep study, and daily spiritual rhythm.
+**Selah Multi Versions Bible (Selah MVB)** is a local-first, offline-capable multi-version Bible web application designed around editorial clarity, deep study, and daily spiritual rhythm.
 
 ## Key Capabilities
 
@@ -10,7 +10,7 @@
   - **One-Click Full Offline Vault (`IndexedDB`)**: Download any translation once with live byte-level progress to read, compare, and search anytime without internet—plus portable `.json` export and custom `.json` Bible import.
 - **Synchronized Parallel Multi-Version Reader**:
   - Read 1, 2, or 3 Bible versions side-by-side in synchronized columns, or compare any selected verse across all installed & featured translations in the **Multi-Version Parallel Drawer**.
-  - Customizable **Parchment**, **Monastic Sepia**, and **Obsidian Night** themes, 4 font voices, adjustable font sizing, Verse-by-Verse or Flowing Prose modes, Red-Letter Words of Jesus, and translator footnotes.
+  - Navy-and-white light and rich-blue-on-black dark themes, optional sepia, custom background colors or personal images with an adjustable dim overlay, 4 font styles, adjustable text size, Verse-by-Verse or Flowing Prose modes, Red-Letter Words of Jesus, and translator footnotes.
 - **Embedded AI Bible Reading Companion & Audio Read-Along**:
   - **Selah AI Companion**: Context-aware Scripture guide right beside your open chapter—offering Chapter Walkthroughs, Plain-Language Explanations, Historical & Literary Context, Original Hebrew/Greek Word Studies (with live BDB/Thayer lexicon integration), Cross-References, Guided *Lectio Divina* Prayers, and Interactive Chapter Quizzes. Works 100% out of the box with optional custom OpenAI-compatible API key support.
   - **AI Voice & Studio Audio Read-Along**: Synchronized verse-by-verse read-aloud highlighting using neural/browser speech synthesis (works offline on every version) plus studio human audio MP3s where available, playback speed control, sleep timer, and a WebAudio contemplative ambient pad.
@@ -30,7 +30,7 @@ npm run dev
 
 ## Mobile Apps (Apple App Store iOS & Google Play Store Android)
 
-Selah Bible (`app.selahbible.multiversion`) includes native **Capacitor 8** projects for both **iPhone/iPad (`ios/`)** and **Android (`android/`)**, plus full standalone PWA support for instant installation on iOS Safari and Android Chrome:
+Selah MVB (`app.selahbible.multiversion`), formally Selah Multi Versions Bible, includes native **Capacitor 8** projects for both **iPhone/iPad (`ios/`)** and **Android (`android/`)**, plus full standalone PWA support for instant installation on iOS Safari and Android Chrome:
 
 ```bash
 # Sync web build + custom launcher icons to native iOS & Android projects

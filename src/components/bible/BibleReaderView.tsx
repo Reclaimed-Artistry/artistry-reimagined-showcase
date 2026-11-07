@@ -26,7 +26,6 @@ import { formatReference, getBookMeta } from "@/data/canonicalBooks";
 import { formatPassageRangeLabel } from "@/data/readingPlans";
 import { useBibleApp } from "@/context/BibleAppContext";
 import { BookChapterSelector } from "./BookChapterSelector";
-import { TypographyPopover } from "./TypographyPopover";
 import {
   Dialog,
   DialogContent,
@@ -671,7 +670,6 @@ export const BibleReaderView: React.FC = () => {
               <span className="hidden md:inline">AI Guide</span>
             </button>
 
-            <TypographyPopover />
           </div>
         </div>
       </div>

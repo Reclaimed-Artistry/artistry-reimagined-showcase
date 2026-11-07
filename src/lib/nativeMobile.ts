@@ -78,11 +78,11 @@ export async function initMobileRuntime(): Promise<void> {
  */
 export async function syncStatusBarWithTheme(theme: ReaderTheme): Promise<void> {
   const hexByTheme: Record<ReaderTheme, string> = {
-    parchment: "#F7F3EB",
+    parchment: "#FFFFFF",
     sepia: "#EDE3D2",
-    night: "#131110",
+    night: "#050914",
   };
-  const hex = hexByTheme[theme] || "#1C1917";
+  const hex = hexByTheme[theme] || "#FFFFFF";
 
   if (typeof document !== "undefined") {
     const meta = document.querySelector('meta[name="theme-color"]');
@@ -94,7 +94,7 @@ export async function syncStatusBarWithTheme(theme: ReaderTheme): Promise<void> 
   if (isNativeCapacitor()) {
     try {
       await StatusBar.setStyle({
-        style: theme === "night" ? Style.Dark : Style.Light,
+        style: theme === "night" ? Style.Light : Style.Dark,
       });
       if (Capacitor.getPlatform() === "android") {
         await StatusBar.setBackgroundColor({ color: hex });

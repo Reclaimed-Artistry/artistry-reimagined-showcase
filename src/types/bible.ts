@@ -208,6 +208,9 @@ export interface AiConnectionSettings {
 export interface ReaderPreferences {
   theme: ReaderTheme;
   fontFamily: ReaderFont;
+  appearanceBackgroundColor: string | null;
+  appearanceBackgroundImage: string;
+  appearanceImageDarken: number;
   fontSize: number;
   lineHeight: number;
   layoutMode: ReaderLayoutMode;

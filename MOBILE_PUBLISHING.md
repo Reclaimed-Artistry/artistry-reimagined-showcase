@@ -1,6 +1,6 @@
-# Selah Bible — Apple App Store (iOS) & Google Play Store (Android) Guide
+# Selah Multi Versions Bible (Selah MVB) — Apple App Store (iOS) & Google Play Store (Android) Guide
 
-Selah Bible (`app.selahbible.multiversion`) is packaged as both:
+Selah Multi Versions Bible (Selah MVB) (`app.selahbible.multiversion`) is packaged as both:
 1. **A Native Capacitor 8 iOS & Android App** (`ios/` Xcode project + `android/` Gradle project) ready for **Apple App Store Connect** and **Google Play Console**.
 2. **An Installable Offline-First Mobile App (PWA)** that works immediately on **iPhones, iPads, and Android phones** via Vercel HTTPS with zero store wait time.
 
@@ -10,7 +10,7 @@ Selah Bible (`app.selahbible.multiversion`) is packaged as both:
 
 Visit the live Vercel deployment on your phone:
 - **On iPhone / iPad (Safari)**: Tap **Share** (`↑`) → **Add to Home Screen** → **Add**. Launches full-screen with Dynamic Island / Home Indicator safe-area support and 100% offline BSB + KJV Bibles.
-- **On Android (Chrome / Samsung Internet / Edge)**: Tap the **iOS & Android** button in the top bar → **Install Selah Bible App Now** (or browser menu `⋮` → **Install app**).
+- **On Android (Chrome / Samsung Internet / Edge)**: Tap the **iOS & Android** button in the top bar → **Install Selah MVB App Now** (or browser menu `⋮` → **Install app**).
 
 ---
 
@@ -29,7 +29,7 @@ Inside Android Studio:
 1. Choose **Build → Generate Signed App Bundle / APK…** → select **Android App Bundle (`.aab`)**.
 2. Create or select your upload keystore (`.jks`), choose **release**, and build `app-release.aab`.
 3. Upload `app-release.aab` in [Google Play Console](https://play.google.com/console) under **Production → Create new release**.
-   - **Data Safety**: Selah Bible stores highlights, notes, reading plans, and offline Bibles locally on-device (`No user data collected or shared with third parties`).
+   - **Data Safety**: Selah MVB stores highlights, notes, reading plans, and offline Bibles locally on-device (`No user data collected or shared with third parties`).
 
 ---
 
