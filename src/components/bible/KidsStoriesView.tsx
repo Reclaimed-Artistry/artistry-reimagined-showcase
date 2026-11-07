@@ -14,6 +14,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import { useBibleApp } from "@/context/BibleAppContext";
+import { KIDS_BIBLE_TRAIL } from "@/data/kidsBibleTrail";
 
 type Story = {
   id: string;
@@ -33,9 +34,10 @@ type Story = {
   activity: string;
   prayer: string;
   illustrated?: boolean;
+  journey?: boolean;
 };
 
-const STORIES: Story[] = [
+const FEATURED_STORIES: Story[] = [
   {
     id: "storm", title: "Jesus Calms the Storm", subtitle: "Peace in the middle of a big, scary storm", reference: "Mark 4:35–41", book: 41, chapter: 4, age: "4–9", minutes: 4, theme: "Courage", icon: "⛵", colors: "from-sky-900 via-blue-800 to-indigo-950",
     story: ["One evening, Jesus and His friends climbed into a boat to cross the lake. Jesus was so tired that He lay down and fell asleep.", "Suddenly, a strong wind rushed over the water. Waves splashed into the boat, and the friends were frightened. They woke Jesus: ‘Teacher, don’t You care if we drown?’", "Jesus stood up and spoke to the wind and waves. ‘Quiet! Be still!’ At once, the wind stopped and the lake became calm. Jesus reminded His friends that they could trust Him, even when they felt afraid."],
@@ -80,20 +82,55 @@ const STORIES: Story[] = [
   },
 ];
 
+const JOURNEY_COLORS = [
+  "from-blue-800 via-indigo-700 to-violet-900",
+  "from-emerald-800 via-teal-700 to-cyan-900",
+  "from-amber-700 via-orange-700 to-rose-900",
+  "from-violet-800 via-purple-700 to-fuchsia-900",
+  "from-sky-800 via-blue-700 to-slate-900",
+  "from-rose-800 via-pink-700 to-red-900",
+];
+const JOURNEY_ICONS = ["📜", "🕊️", "🌿", "✨", "🧭", "🌈", "🪴", "💛"];
+
+const BOOK_JOURNEY_STORIES: Story[] = KIDS_BIBLE_TRAIL.map((entry) => ({
+  ...entry,
+  id: `book-journey-${entry.book}`,
+  age: "5–11",
+  minutes: Math.max(2, Math.min(5, Math.ceil(entry.story[0].split(/\s+/).length / 35))),
+  icon: JOURNEY_ICONS[(entry.book - 1) % JOURNEY_ICONS.length],
+  colors: JOURNEY_COLORS[(entry.book - 1) % JOURNEY_COLORS.length],
+  journey: true,
+}));
+
+const STORIES: Story[] = [...FEATURED_STORIES, ...BOOK_JOURNEY_STORIES];
+const STORY_SHELF = [...STORIES].sort(
+  (first, second) => first.book - second.book || first.chapter - second.chapter
+);
+const COVERED_BOOK_COUNT = new Set(STORIES.map((story) => story.book)).size;
+const OLD_TESTAMENT_BOOK_COUNT = new Set(STORIES.filter((story) => story.book <= 39).map((story) => story.book)).size;
+const NEW_TESTAMENT_BOOK_COUNT = new Set(STORIES.filter((story) => story.book >= 40).map((story) => story.book)).size;
+
 const readStoriesFromStorage = (): string[] => {
   try { return JSON.parse(localStorage.getItem("selah_kids_read_v1") || "[]") as string[]; } catch { return []; }
 };
 
 export const KidsStoriesView: React.FC = () => {
   const { navigateTo, setActiveSection } = useBibleApp();
-  const [selectedId, setSelectedId] = useState("storm");
+  const [selectedId, setSelectedId] = useState("creation");
   const [query, setQuery] = useState("");
+  const [testamentFilter, setTestamentFilter] = useState<"all" | "old" | "new">("all");
   const [readStories, setReadStories] = useState<string[]>(readStoriesFromStorage);
   const selectedStory = STORIES.find((story) => story.id === selectedId) || STORIES[0];
   const filteredStories = useMemo(() => {
     const value = query.trim().toLowerCase();
-    return STORIES.filter((story) => !value || `${story.title} ${story.subtitle} ${story.theme} ${story.reference}`.toLowerCase().includes(value));
-  }, [query]);
+    return STORY_SHELF.filter((story) => {
+      const matchesTestament =
+        testamentFilter === "all" || (testamentFilter === "old" ? story.book <= 39 : story.book >= 40);
+      const matchesQuery =
+        !value || `${story.title} ${story.subtitle} ${story.theme} ${story.reference}`.toLowerCase().includes(value);
+      return matchesTestament && matchesQuery;
+    });
+  }, [query, testamentFilter]);
 
   const toggleRead = (id: string) => {
     setReadStories((previous) => {
@@ -115,15 +152,15 @@ export const KidsStoriesView: React.FC = () => {
               Big stories. <span className="text-amber-700 dark:text-amber-300">Gentle beginnings.</span>
             </h1>
             <p className="mt-5 max-w-lg text-sm leading-7 text-stone-600 dark:text-stone-300 sm:text-base">
-              Meet brave, kind, and surprising people from the Bible. Every story is retold in child-friendly words, with a big idea, a question to share, and a little activity.
+              Explore all 66 books of the Bible through child-friendly book journeys and memorable stories, each with a big idea, a question to share, and a simple activity.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <a href="#story-time" className="inline-flex items-center gap-2 rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-stone-900/15 transition hover:-translate-y-0.5 dark:bg-amber-200 dark:text-stone-900">
                 <BookOpen className="h-4 w-4" /> Start story time <ArrowRight className="h-4 w-4" />
               </a>
-              <span className="text-xs font-medium text-stone-500 dark:text-stone-400">{STORIES.length} stories · made to read together</span>
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400">{COVERED_BOOK_COUNT} of 66 books · Old and New Testaments</span>
             </div>
-            <p className="mt-6 max-w-lg text-[11px] leading-5 text-stone-500 dark:text-stone-400">A parent or caregiver can read aloud, explore the Bible reference together, and adapt each story for the child’s age. These are simplified retellings, not a replacement for the Bible text.</p>
+            <p className="mt-6 max-w-lg text-[11px] leading-5 text-stone-500 dark:text-stone-400">A parent or caregiver can read aloud, explore the Bible reference together, and adapt each guide for the child’s age. These introductions and retellings are not a replacement for the Bible text.</p>
           </div>
           <div className="relative min-h-[260px] overflow-hidden bg-slate-950 sm:min-h-[360px] lg:min-h-[470px]">
             <img src="/kids-story-hero.webp" alt="Jesus and friends sharing a peaceful moment in a boat on the lake" className="absolute inset-0 h-full w-full object-cover object-center" />
@@ -139,23 +176,41 @@ export const KidsStoriesView: React.FC = () => {
       <section id="story-time" className="grid gap-7 lg:grid-cols-[.85fr_1.15fr]">
         <aside className="space-y-4">
           <div className="flex items-end justify-between gap-4">
-            <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-primary">Choose a story</p><h2 className="mt-1 font-display text-2xl font-semibold">The story shelf</h2></div>
+            <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-primary">Explore the Bible</p><h2 className="mt-1 font-display text-2xl font-semibold">Story shelf</h2></div>
             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{readStories.length}/{STORIES.length} read</span>
           </div>
+          <p className="-mt-2 text-xs text-muted-foreground">{COVERED_BOOK_COUNT}/66 books · {STORIES.length} story paths</p>
           <label className="flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-primary/30">
             <Search className="h-4 w-4 text-muted-foreground" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a story or big idea" className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a Bible book, story, or idea" className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
           </label>
-          <div className="space-y-2">
+          <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted/70 p-1">
+            {([
+              ["all", `All ${COVERED_BOOK_COUNT}`],
+              ["old", `Old ${OLD_TESTAMENT_BOOK_COUNT}`],
+              ["new", `New ${NEW_TESTAMENT_BOOK_COUNT}`],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={testamentFilter === value}
+                onClick={() => setTestamentFilter(value)}
+                className={`rounded-lg px-2 py-2 text-[11px] font-semibold transition ${testamentFilter === value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="max-h-[34rem] space-y-2 overflow-y-auto pr-1">
             {filteredStories.map((story, index) => (
               <button key={story.id} type="button" onClick={() => setSelectedId(story.id)} className={`group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${selectedId === story.id ? "border-primary/40 bg-primary/8 shadow-sm" : "border-border/70 bg-card/70 hover:border-primary/25 hover:bg-card"}`}>
                 <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] bg-gradient-to-br ${story.colors} text-2xl shadow-inner shadow-white/10`}>{story.icon}</span>
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{story.title}</span><span className="mt-1 block text-xs text-muted-foreground">{story.theme} · {story.minutes} min · Ages {story.age}</span></span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{story.title}</span><span className="mt-1 block truncate text-xs text-muted-foreground">{story.journey ? `${story.reference} · Book journey` : `${story.theme} · ${story.minutes} min · Ages ${story.age}`}</span></span>
                 {readStories.includes(story.id) ? <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"><Check className="h-4 w-4" /></span> : <ChevronRight className={`h-4 w-4 text-muted-foreground transition group-hover:translate-x-0.5 ${selectedId === story.id ? "text-primary" : ""}`} />}
                 <span className="sr-only">Story {index + 1}</span>
               </button>
             ))}
-            {filteredStories.length === 0 && <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No story matches that search yet.</p>}
+            {filteredStories.length === 0 && <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No story or book matches that search yet.</p>}
           </div>
           <div className="rounded-2xl border border-violet-200/70 bg-violet-50/80 p-4 text-violet-950 dark:border-violet-200/10 dark:bg-violet-300/5 dark:text-violet-100">
             <div className="flex items-center gap-2 text-sm font-semibold"><Heart className="h-4 w-4 text-violet-600 dark:text-violet-300" /> Grown-up note</div>
@@ -168,7 +223,7 @@ export const KidsStoriesView: React.FC = () => {
             {selectedStory.illustrated && <img src="/kids-story-hero.webp" alt="A calm lake and boat from the story" className="absolute inset-0 h-full w-full object-cover opacity-45 mix-blend-screen" />}
             <div className="absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-transparent" />
             <div className="relative max-w-xl">
-              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-white/75"><Star className="h-3.5 w-3.5 fill-amber-300 text-amber-300" /> {selectedStory.theme} · {selectedStory.minutes} minute read</div>
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-white/75"><Star className="h-3.5 w-3.5 fill-amber-300 text-amber-300" /> {selectedStory.journey ? "Book journey" : selectedStory.theme} · {selectedStory.minutes} minute read</div>
               <h2 className="mt-3 font-display text-3xl font-semibold leading-tight sm:text-4xl">{selectedStory.title}</h2>
               <p className="mt-2 text-sm text-white/80">{selectedStory.subtitle}</p>
               <div className="mt-5 flex flex-wrap gap-2"><span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs">{selectedStory.reference}</span><span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs">Ages {selectedStory.age}</span></div>
@@ -176,7 +231,7 @@ export const KidsStoriesView: React.FC = () => {
           </div>
           <div className="space-y-7 p-6 sm:p-9">
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-primary"><BookHeart className="h-4 w-4" /> The story</div>
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-primary"><BookHeart className="h-4 w-4" /> {selectedStory.journey ? "The book at a glance" : "The story"}</div>
               <div className="space-y-4 font-scripture text-[17px] leading-8 text-foreground/90 sm:text-lg sm:leading-9">{selectedStory.story.map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">

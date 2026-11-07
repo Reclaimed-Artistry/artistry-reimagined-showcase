@@ -16,6 +16,8 @@
   - **AI Voice & Studio Audio Read-Along**: Synchronized verse-by-verse read-aloud highlighting using neural/browser speech synthesis (works offline on every version) plus studio human audio MP3s where available, playback speed control, sleep timer, and a WebAudio contemplative ambient pad.
 - **Structured Reading Plans & Custom Plan Builder**:
   - Includes 7 complete reading plans (*Whole Bible in 365 Days*, *New Testament in 90 Days*, *Walk With Jesus: Four Gospels in 30 Days*, *31 Days of Psalms & Proverbs*, *14-Day Story of Scripture*, *7-Day Peace for an Anxious Heart*, and *21-Day Paul's Letters*) plus a **Custom Reading Plan Generator** for any combination of books and days.
+- **Kids Bible Story Trail**:
+  - Child-friendly introductions to all **66 books** across both testaments, alongside featured retellings, Bible references, conversation prompts, simple activities, and prayers.
 - **Daily Bible Reflection & Prayer Sanctuary**:
   - Daily devotional meditations rendered dynamically in your chosen Bible version, a **Heart Mood Compass**, guided 4-step *Lectio Divina* journaling, and a personal Prayer Sanctuary with answered-prayer tracking.
 - **Full-Bible Instant Offline Search, Study Notebook, Verse Art & Memory Deck**:
