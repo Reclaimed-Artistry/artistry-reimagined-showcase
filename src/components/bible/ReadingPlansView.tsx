@@ -16,7 +16,7 @@ import {
   buildCustomReadingPlan,
   formatPassageRangeLabel,
 } from "@/data/readingPlans";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import {
   Dialog,
   DialogContent,

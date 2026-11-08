@@ -18,7 +18,7 @@ import {
   BibleSearchResponse,
   searchInstalledBible,
 } from "@/lib/bibleProviders";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import type { MemoryVerseCard } from "@/types/bible";
 import { CloudWorkspacePanel } from "./CloudWorkspacePanel";
 
@@ -461,17 +461,17 @@ export const SearchAndStudyView: React.FC = () => {
                   <div
                     key={`${r.bookNumber}-${r.chapter}-${r.verse}-${idx}`}
                     onClick={() => navigateTo(r.bookNumber, r.chapter, r.verse)}
-                    className="cursor-pointer rounded-2xl border border-border/75 bg-card p-4 transition hover:border-primary/50 hover:shadow-sm"
+                    className="flex h-32 cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border border-border/75 bg-card p-4 transition hover:border-primary/50 hover:shadow-sm"
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-xs font-bold text-primary">
                         {r.bookName} {r.chapter}:{r.verse}
                       </span>
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="shrink-0 text-[11px] text-muted-foreground">
                         Open in Reader →
                       </span>
                     </div>
-                    <p className="mt-1.5 font-scripture text-sm leading-relaxed text-foreground">
+                    <p className="mt-1.5 line-clamp-3 font-scripture text-sm leading-relaxed text-foreground">
                       {r.text}
                     </p>
                   </div>
@@ -480,18 +480,18 @@ export const SearchAndStudyView: React.FC = () => {
             </div>
           ) : (
             /* Curated Life Topics Explorer when search is idle */
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {TOPICAL_LIFE_GUIDES.map((topic) => (
                 <div
                   key={topic.id}
-                  className="rounded-2xl border border-border/80 bg-card p-5 shadow-sm"
+                  className="flex h-[21rem] flex-col rounded-2xl border border-border/80 bg-card p-5 shadow-sm"
                 >
-                  <div className="text-2xl">{topic.emoji}</div>
-                  <h3 className="mt-2 font-display text-xl font-bold text-foreground">
+                  <div className="h-8 text-2xl">{topic.emoji}</div>
+                  <h3 className="mt-2 line-clamp-2 min-h-14 font-display text-xl font-bold text-foreground">
                     {topic.label}
                   </h3>
-                  <p className="mt-1 text-xs text-muted-foreground">{topic.summary}</p>
-                  <div className="mt-3 space-y-1.5">
+                  <p className="mt-1 line-clamp-3 min-h-[3.75rem] text-xs text-muted-foreground">{topic.summary}</p>
+                  <div className="mt-auto space-y-1.5 pt-3">
                     {topic.passages.slice(0, 3).map((p, idx) => (
                       <button
                         key={idx}

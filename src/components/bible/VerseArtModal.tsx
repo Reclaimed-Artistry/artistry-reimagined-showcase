@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Download, Image as ImageIcon, Share2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatReference } from "@/data/canonicalBooks";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import { shareScriptureNative } from "@/lib/nativeMobile";
 import {
   Dialog,

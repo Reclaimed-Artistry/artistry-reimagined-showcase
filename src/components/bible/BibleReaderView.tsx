@@ -24,7 +24,7 @@ import {
 import { toast } from "sonner";
 import { formatReference, getBookMeta } from "@/data/canonicalBooks";
 import { formatPassageRangeLabel } from "@/data/readingPlans";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import { BookChapterSelector } from "./BookChapterSelector";
 import {
   Dialog,
@@ -660,15 +660,18 @@ export const BibleReaderView: React.FC = () => {
               <span className="hidden sm:inline">Listen</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => setAiPanelOpen((v) => !v)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-xs font-semibold text-foreground shadow-sm transition hover:bg-primary/20"
-              title="Open Embedded AI Bible Reading Companion"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              <span className="hidden md:inline">AI Guide</span>
-            </button>
+            {prefs.showBibleCompanion && (
+              <button
+                type="button"
+                onClick={() => setAiPanelOpen((v) => !v)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-xs font-semibold text-foreground shadow-sm transition hover:bg-primary/20"
+                title="Open Selah Bible Companion"
+                aria-label="Open Selah Bible Companion"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <span className="hidden md:inline">Bible Companion</span>
+              </button>
+            )}
 
           </div>
         </div>
@@ -922,7 +925,7 @@ export const BibleReaderView: React.FC = () => {
                   Finished reading {bookMeta.name} {chapter}?
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Track your progress across all 1,189 chapters or explore deeper with AI Guide.
+                  Track your progress across all 1,189 chapters.
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -941,14 +944,16 @@ export const BibleReaderView: React.FC = () => {
                   <CheckCircle2 className="h-4 w-4" />
                   {isChapterMarkedRead ? "Chapter Completed" : "Mark Chapter Read"}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setAiPanelOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-semibold hover:bg-accent"
-                >
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  Reflect with AI
-                </button>
+                {prefs.showBibleCompanion && (
+                  <button
+                    type="button"
+                    onClick={() => setAiPanelOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-semibold hover:bg-accent"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    Reflect with Companion
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1032,14 +1037,16 @@ export const BibleReaderView: React.FC = () => {
               <Layers className="h-3.5 w-3.5" />
               Compare Versions
             </button>
-            <button
-              type="button"
-              onClick={() => setAiPanelOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-primary/20"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              Ask AI Guide
-            </button>
+            {prefs.showBibleCompanion && (
+              <button
+                type="button"
+                onClick={() => setAiPanelOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-primary/20"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                Ask Bible Companion
+              </button>
+            )}
             <button
               type="button"
               onClick={() => startAudioFromVerse(Math.min(...selectedVerses))}

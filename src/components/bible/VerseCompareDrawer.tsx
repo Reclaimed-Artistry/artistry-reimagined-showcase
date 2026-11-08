@@ -3,7 +3,7 @@ import { Columns2, Copy, Download, Layers, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatReference } from "@/data/canonicalBooks";
 import { getChapterContent } from "@/lib/bibleProviders";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import {
   Sheet,
   SheetContent,

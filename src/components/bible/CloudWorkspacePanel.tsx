@@ -16,7 +16,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import {
   cloudSyncConfigured,
   EMPTY_STUDY_SNAPSHOT,

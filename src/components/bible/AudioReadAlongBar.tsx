@@ -11,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { getBookMeta } from "@/data/canonicalBooks";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 
 export const AudioReadAlongBar: React.FC = () => {
   const {
@@ -384,7 +384,7 @@ export const AudioReadAlongBar: React.FC = () => {
   const speeds = [0.85, 1.0, 1.15, 1.3, 1.5];
 
   return (
-    <div className="sticky bottom-0 z-20 border-t border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur-md">
+    <div className="sticky z-20 border-t border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur-md" style={{ bottom: "calc(4.75rem + env(safe-area-inset-bottom, 0px))" }}>
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
         {/* Left: Now Reading Info */}
         <div className="flex items-center gap-3">

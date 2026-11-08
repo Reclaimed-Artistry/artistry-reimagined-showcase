@@ -6,6 +6,7 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 8080,
+    allowedHosts: [".e2b.app"],
     watch: {
       ignored: ["**/ios/**", "**/android/**"],
     },
@@ -13,6 +14,7 @@ export default defineConfig({
   preview: {
     host: "0.0.0.0",
     port: 8080,
+    allowedHosts: [".e2b.app"],
   },
   plugins: [react()],
   resolve: {

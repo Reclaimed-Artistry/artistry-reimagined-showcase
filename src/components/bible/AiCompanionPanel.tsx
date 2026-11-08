@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { formatReference, getBookMeta } from "@/data/canonicalBooks";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import {
   AiCompanionMessage,
   AiQuickAction,
@@ -295,7 +295,7 @@ export const AiCompanionPanel: React.FC = () => {
   ];
 
   return (
-    <aside className="fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col border-l border-border bg-card shadow-2xl xl:static xl:z-10 xl:w-[390px] xl:shadow-none">
+    <aside className="fixed right-0 top-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-40 flex w-full max-w-md flex-col border-l border-border bg-card shadow-2xl xl:static xl:z-10 xl:w-[390px] xl:shadow-none">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border/80 bg-muted/40 px-4 py-3">
         <div className="flex items-center gap-2.5">
@@ -304,7 +304,7 @@ export const AiCompanionPanel: React.FC = () => {
           </div>
           <div>
             <h2 className="font-display text-lg font-bold leading-none text-foreground">
-              Selah AI Companion
+              Selah Bible Companion
             </h2>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
               Reading <strong>{activeRefLabel}</strong> ({activeVersion.shortName})
@@ -336,7 +336,7 @@ export const AiCompanionPanel: React.FC = () => {
         <div className="flex items-start gap-2.5">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
           <div>
-            <p className="text-xs font-semibold text-foreground">Selah’s Bible Knowledge Centre is ready</p>
+            <p className="text-xs font-semibold text-foreground">Selah Bible Companion is ready</p>
             <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
               Searches Bible text, prepares sermon drafts with linked passages, and uses curated study notes on this device. No AI sign-in, external model, or API key is needed.
             </p>
@@ -376,7 +376,7 @@ export const AiCompanionPanel: React.FC = () => {
             ) : (
               <>
                 <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {m.quiz ? "Interactive Bible quiz" : "Selah Bible Knowledge Centre"}
+                  {m.quiz ? "Interactive Bible quiz" : "Selah Bible Companion"}
                 </div>
                 {renderFormattedMarkdownText(m.content)}
 
@@ -454,7 +454,7 @@ export const AiCompanionPanel: React.FC = () => {
             type="submit"
             disabled={!input.trim() || loading}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition hover:opacity-95 disabled:opacity-40"
-            title="Ask Selah AI"
+            title="Ask Selah Bible Companion"
           >
             <Send className="h-3.5 w-3.5" />
           </button>

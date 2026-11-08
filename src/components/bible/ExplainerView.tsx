@@ -16,7 +16,7 @@ import {
   Sparkles,
   Sun,
 } from "lucide-react";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 
 const FEATURES = [
   { icon: BookOpen, title: "Read at your pace", body: "Open a passage, choose a translation, and make the page comfortable with adjustable type and reading layouts." },
@@ -24,7 +24,7 @@ const FEATURES = [
   { icon: CloudDownload, title: "Take Scripture offline", body: "Keep selected Bible translations on your device so your reading can continue without a connection." },
   { icon: Feather, title: "Build a quiet rhythm", body: "Use reflections, reading plans, prayer notes, and saved verses to create a practice that fits real life." },
   { icon: AudioLines, title: "Listen as you read", body: "Use read-along audio and speech tools when listening works better than looking at a screen." },
-  { icon: MessageCircleHeart, title: "Explore with care", body: "The optional Selah AI companion can help explain context and prompt reflection. It is a study aid, not a substitute for Scripture or trusted pastoral guidance." },
+  { icon: MessageCircleHeart, title: "Explore with care", body: "The optional Selah Bible Companion can help explain context and prompt reflection using local Bible texts and curated notes. It is a study aid, not a substitute for Scripture or trusted pastoral guidance." },
 ];
 
 const STEPS = [

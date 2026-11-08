@@ -100,8 +100,8 @@ export const MobileAppModal: React.FC<MobileAppModalProps> = ({
             </div>
             <div className="rounded-xl border border-border bg-muted/40 p-2.5">
               <Sparkles className="mx-auto mb-1 h-4 w-4 text-primary" />
-              <div className="text-[11px] font-bold">Embedded AI</div>
-              <div className="text-[10px] text-muted-foreground">Zero API Setup</div>
+              <div className="text-[11px] font-bold">Bible Companion</div>
+              <div className="text-[10px] text-muted-foreground">Local Study Tools</div>
             </div>
             <div className="rounded-xl border border-border bg-muted/40 p-2.5">
               <ShieldCheck className="mx-auto mb-1 h-4 w-4 text-primary" />

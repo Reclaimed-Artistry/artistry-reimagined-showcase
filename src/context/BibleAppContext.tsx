@@ -1,12 +1,11 @@
 import React, {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
 import { toast } from "sonner";
+import { BibleAppContext } from "./BibleAppContextInstance";
 import { getBookMeta } from "@/data/canonicalBooks";
 import type { StudySnapshot } from "@/lib/cloudWorkspace";
 import { BUILTIN_READING_PLANS } from "@/data/readingPlans";
@@ -77,6 +76,9 @@ const DEFAULT_PREFS: ReaderPreferences = {
   preferredVoiceURI: "",
   autoAdvanceChapter: true,
   ambientSound: false,
+  showBibleCompanion: true,
+  dailyStudyReminderEnabled: false,
+  dailyStudyReminderTime: "19:00",
 };
 
 function readLocal<T>(key: string, fallback: T): T {
@@ -102,7 +104,7 @@ export interface ActivePlanReadingSession {
   day: number;
 }
 
-interface BibleAppContextValue {
+export interface BibleAppContextValue {
   activeSection: AppSection;
   setActiveSection: (s: AppSection) => void;
 
@@ -206,8 +208,6 @@ interface BibleAppContextValue {
   setVerseArtModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const BibleAppContext = createContext<BibleAppContextValue | null>(null);
-
 function getTodayIso(): string {
   const d = new Date();
   const y = d.getFullYear();
@@ -217,7 +217,7 @@ function getTodayIso(): string {
 }
 
 export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeSection, setActiveSection] = useState<AppSection>("reader");
+  const [activeSection, setActiveSection] = useState<AppSection>("home");
 
   const initialLoc = useMemo(
     () => readLocal<{ bookNumber: number; chapter: number }>(STORAGE_KEYS.LOCATION, { bookNumber: 43, chapter: 1 }),
@@ -1123,11 +1123,3 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     <BibleAppContext.Provider value={value}>{children}</BibleAppContext.Provider>
   );
 };
-
-export function useBibleApp(): BibleAppContextValue {
-  const ctx = useContext(BibleAppContext);
-  if (!ctx) {
-    throw new Error("useBibleApp must be used inside BibleAppProvider");
-  }
-  return ctx;
-}

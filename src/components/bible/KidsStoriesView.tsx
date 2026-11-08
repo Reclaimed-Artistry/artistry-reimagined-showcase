@@ -13,8 +13,9 @@ import {
   Star,
   WandSparkles,
 } from "lucide-react";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import { KIDS_BIBLE_TRAIL } from "@/data/kidsBibleTrail";
+import { KIDS_BIBLE_EPISODES } from "@/data/kidsBibleEpisodes";
 
 type Story = {
   id: string;
@@ -102,13 +103,30 @@ const BOOK_JOURNEY_STORIES: Story[] = KIDS_BIBLE_TRAIL.map((entry) => ({
   journey: true,
 }));
 
-const STORIES: Story[] = [...FEATURED_STORIES, ...BOOK_JOURNEY_STORIES];
+const EPISODE_COLORS = [
+  "from-cyan-800 via-blue-700 to-indigo-900",
+  "from-emerald-800 via-teal-700 to-cyan-900",
+  "from-amber-700 via-orange-700 to-rose-900",
+  "from-violet-800 via-purple-700 to-fuchsia-900",
+  "from-sky-800 via-blue-700 to-slate-900",
+  "from-rose-800 via-pink-700 to-red-900",
+];
+const EPISODE_ICONS = ["✨", "🧭", "🌿", "🕊️", "⭐", "💛", "🌈", "📖"];
+const STORY_EPISODES: Story[] = KIDS_BIBLE_EPISODES.map((entry, index) => ({
+  ...entry,
+  age: "4–11",
+  minutes: Math.max(2, Math.min(6, Math.ceil(entry.story.join(" ").split(/\s+/).length / 45))),
+  icon: EPISODE_ICONS[index % EPISODE_ICONS.length],
+  colors: EPISODE_COLORS[index % EPISODE_COLORS.length],
+}));
+
+const STORIES: Story[] = [...FEATURED_STORIES, ...STORY_EPISODES, ...BOOK_JOURNEY_STORIES];
 const STORY_SHELF = [...STORIES].sort(
   (first, second) => first.book - second.book || first.chapter - second.chapter
 );
 const COVERED_BOOK_COUNT = new Set(STORIES.map((story) => story.book)).size;
-const OLD_TESTAMENT_BOOK_COUNT = new Set(STORIES.filter((story) => story.book <= 39).map((story) => story.book)).size;
-const NEW_TESTAMENT_BOOK_COUNT = new Set(STORIES.filter((story) => story.book >= 40).map((story) => story.book)).size;
+const OLD_TESTAMENT_STORY_COUNT = STORIES.filter((story) => story.book <= 39).length;
+const NEW_TESTAMENT_STORY_COUNT = STORIES.filter((story) => story.book >= 40).length;
 
 const readStoriesFromStorage = (): string[] => {
   try { return JSON.parse(localStorage.getItem("selah_kids_read_v1") || "[]") as string[]; } catch { return []; }
@@ -122,6 +140,7 @@ export const KidsStoriesView: React.FC = () => {
   const [readStories, setReadStories] = useState<string[]>(readStoriesFromStorage);
   const storyDetailRef = useRef<HTMLElement | null>(null);
   const selectedStory = STORIES.find((story) => story.id === selectedId) || STORIES[0];
+  const completedStoryCount = STORIES.filter((story) => readStories.includes(story.id)).length;
   const filteredStories = useMemo(() => {
     const value = query.trim().toLowerCase();
     return STORY_SHELF.filter((story) => {
@@ -161,13 +180,13 @@ export const KidsStoriesView: React.FC = () => {
               Big stories. <span className="text-amber-700 dark:text-amber-300">Gentle beginnings.</span>
             </h1>
             <p className="mt-5 max-w-lg text-sm leading-7 text-stone-600 dark:text-stone-300 sm:text-base">
-              Explore all 66 books of the Bible through child-friendly book journeys and memorable stories, each with a big idea, a question to share, and a simple activity.
+              Explore major Bible stories from across the Old and New Testaments, plus a child-friendly journey through every one of the 66 books. Each guide includes a big idea, a question to share, and a simple activity.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <a href="#story-time" className="inline-flex items-center gap-2 rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-stone-900/15 transition hover:-translate-y-0.5 dark:bg-amber-200 dark:text-stone-900">
                 <BookOpen className="h-4 w-4" /> Start story time <ArrowRight className="h-4 w-4" />
               </a>
-              <span className="text-xs font-medium text-stone-500 dark:text-stone-400">{COVERED_BOOK_COUNT} of 66 books · Old and New Testaments</span>
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400">{COVERED_BOOK_COUNT} books · {STORIES.length} story guides</span>
             </div>
             <p className="mt-6 max-w-lg text-[11px] leading-5 text-stone-500 dark:text-stone-400">A parent or caregiver can read aloud, explore the Bible reference together, and adapt each guide for the child’s age. These introductions and retellings are not a replacement for the Bible text.</p>
           </div>
@@ -186,18 +205,18 @@ export const KidsStoriesView: React.FC = () => {
         <aside className="space-y-4">
           <div className="flex items-end justify-between gap-4">
             <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-primary">Explore the Bible</p><h2 className="mt-1 font-display text-2xl font-semibold">Story shelf</h2></div>
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{readStories.length}/{STORIES.length} read</span>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{completedStoryCount}/{STORIES.length} read</span>
           </div>
-          <p className="-mt-2 text-xs text-muted-foreground">{COVERED_BOOK_COUNT}/66 books · {STORIES.length} story paths</p>
+          <p className="-mt-2 text-xs text-muted-foreground">{COVERED_BOOK_COUNT}/66 books · {STORY_EPISODES.length + FEATURED_STORIES.length} Bible stories · {BOOK_JOURNEY_STORIES.length} book journeys</p>
           <label className="flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-primary/30">
             <Search className="h-4 w-4 text-muted-foreground" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a Bible book, story, or idea" className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
           </label>
           <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted/70 p-1">
             {([
-              ["all", `All ${COVERED_BOOK_COUNT}`],
-              ["old", `Old ${OLD_TESTAMENT_BOOK_COUNT}`],
-              ["new", `New ${NEW_TESTAMENT_BOOK_COUNT}`],
+              ["all", `All ${STORIES.length}`],
+              ["old", `OT ${OLD_TESTAMENT_STORY_COUNT}`],
+              ["new", `NT ${NEW_TESTAMENT_STORY_COUNT}`],
             ] as const).map(([value, label]) => (
               <button
                 key={value}

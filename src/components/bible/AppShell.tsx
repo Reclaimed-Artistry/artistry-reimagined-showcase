@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { lazy, Suspense, useEffect, useState } from "react";
 import {
   BookHeart,
   BookOpen,
@@ -8,11 +8,12 @@ import {
   Database,
   Feather,
   Flame,
+  House,
   Search,
   Smartphone,
   Sparkles,
 } from "lucide-react";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import {
   type BeforeInstallPromptEvent,
   initMobileRuntime,
@@ -21,21 +22,24 @@ import {
   syncStatusBarWithTheme,
   triggerHaptic,
 } from "@/lib/nativeMobile";
-import { AiCompanionPanel } from "./AiCompanionPanel";
-import { AudioReadAlongBar } from "./AudioReadAlongBar";
-import { BibleReaderView } from "./BibleReaderView";
-import { CommandPaletteModal } from "./CommandPaletteModal";
-import { DailyReflectionView } from "./DailyReflectionView";
-import { MobileAppModal } from "./MobileAppModal";
-import { ReadingPlansView } from "./ReadingPlansView";
-import { SearchAndStudyView } from "./SearchAndStudyView";
-import { VerseArtModal } from "./VerseArtModal";
-import { VerseCompareDrawer } from "./VerseCompareDrawer";
-import { VersionVaultView } from "./VersionVaultView";
-import { KidsStoriesView } from "./KidsStoriesView";
-import { ExplainerView } from "./ExplainerView";
 import { TypographyPopover } from "./TypographyPopover";
+import { HomeDashboard } from "./HomeDashboard";
+import { ReadingReminderScheduler } from "./ReadingReminderScheduler";
 import type { AppSection } from "@/types/bible";
+
+const AiCompanionPanel = lazy(() => import("./AiCompanionPanel").then((module) => ({ default: module.AiCompanionPanel })));
+const AudioReadAlongBar = lazy(() => import("./AudioReadAlongBar").then((module) => ({ default: module.AudioReadAlongBar })));
+const BibleReaderView = lazy(() => import("./BibleReaderView").then((module) => ({ default: module.BibleReaderView })));
+const CommandPaletteModal = lazy(() => import("./CommandPaletteModal").then((module) => ({ default: module.CommandPaletteModal })));
+const DailyReflectionView = lazy(() => import("./DailyReflectionView").then((module) => ({ default: module.DailyReflectionView })));
+const MobileAppModal = lazy(() => import("./MobileAppModal").then((module) => ({ default: module.MobileAppModal })));
+const ReadingPlansView = lazy(() => import("./ReadingPlansView").then((module) => ({ default: module.ReadingPlansView })));
+const SearchAndStudyView = lazy(() => import("./SearchAndStudyView").then((module) => ({ default: module.SearchAndStudyView })));
+const VerseArtModal = lazy(() => import("./VerseArtModal").then((module) => ({ default: module.VerseArtModal })));
+const VerseCompareDrawer = lazy(() => import("./VerseCompareDrawer").then((module) => ({ default: module.VerseCompareDrawer })));
+const VersionVaultView = lazy(() => import("./VersionVaultView").then((module) => ({ default: module.VersionVaultView })));
+const KidsStoriesView = lazy(() => import("./KidsStoriesView").then((module) => ({ default: module.KidsStoriesView })));
+const ExplainerView = lazy(() => import("./ExplainerView").then((module) => ({ default: module.ExplainerView })));
 
 export const AppShell: React.FC = () => {
   const {
@@ -66,9 +70,14 @@ export const AppShell: React.FC = () => {
     const sec = params.get("section") as AppSection | null;
     if (
       sec &&
-      ["reader", "versions", "plans", "reflection", "study", "kids", "about"].includes(sec)
+      ["home", "reader", "companion", "versions", "plans", "reflection", "study", "kids", "about"].includes(sec)
     ) {
-      setActiveSection(sec);
+      if (sec === "companion" && prefs.showBibleCompanion) {
+        setActiveSection("companion");
+        setAiPanelOpen(true);
+      } else {
+        setActiveSection(sec);
+      }
     }
 
     const onBeforeInstall = (e: Event) => {
@@ -79,12 +88,29 @@ export const AppShell: React.FC = () => {
     return () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
     };
-  }, [setActiveSection]);
+  }, [prefs.showBibleCompanion, setActiveSection, setAiPanelOpen]);
 
   // Sync iOS/Android StatusBar & browser theme-color whenever theme changes
   useEffect(() => {
     void syncStatusBarWithTheme(prefs.theme);
   }, [prefs.theme]);
+
+  useEffect(() => {
+    if (!prefs.showBibleCompanion) {
+      setAiPanelOpen(false);
+      if (activeSection === "companion") setActiveSection("reader");
+    }
+  }, [prefs.showBibleCompanion, activeSection, setActiveSection, setAiPanelOpen]);
+
+  useEffect(() => {
+    if (activeSection === "companion" && !aiPanelOpen) setActiveSection("reader");
+  }, [activeSection, aiPanelOpen, setActiveSection]);
+
+  useEffect(() => {
+    const openReader = () => setActiveSection("reader");
+    window.addEventListener("selah:open-reader", openReader);
+    return () => window.removeEventListener("selah:open-reader", openReader);
+  }, [setActiveSection]);
 
   // Handle Android hardware Back button inside native Capacitor APK/AAB builds
   useEffect(() => {
@@ -109,8 +135,8 @@ export const AppShell: React.FC = () => {
         setAiPanelOpen(false);
         return true;
       }
-      if (activeSection !== "reader") {
-        setActiveSection("reader");
+      if (activeSection !== "home") {
+        setActiveSection("home");
         return true;
       }
       return false;
@@ -137,11 +163,25 @@ export const AppShell: React.FC = () => {
     badge?: string;
   }[] = [
     {
+      id: "home",
+      label: "Home",
+      shortLabel: "Home",
+      icon: <House className="h-4 w-4" />,
+    },
+    {
       id: "reader",
-      label: "Bible",
+      label: "Read",
       shortLabel: "Read",
       icon: <BookOpen className="h-4 w-4" />,
     },
+    ...(prefs.showBibleCompanion
+      ? [{
+          id: "companion" as const,
+          label: "Selah Bible Companion",
+          shortLabel: "Selah",
+          icon: <Sparkles className="h-4 w-4" />,
+        }]
+      : []),
     {
       id: "versions",
       label: "Vault",
@@ -183,6 +223,13 @@ export const AppShell: React.FC = () => {
 
   const handleSelectSection = (id: AppSection) => {
     void triggerHaptic("light");
+    if (id === "companion") {
+      if (!prefs.showBibleCompanion) return;
+      setActiveSection("companion");
+      setAiPanelOpen(true);
+      return;
+    }
+    if (id !== "reader" || activeSection === "companion") setAiPanelOpen(false);
     setActiveSection(id);
   };
 
@@ -199,13 +246,14 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="app-shell flex min-h-screen flex-col text-foreground" style={appShellStyle}>
+      <ReadingReminderScheduler />
       {/* Top Global Sanctuary Bar (with iPhone Notch / Dynamic Island safe-top padding) */}
       <header className="safe-top sticky top-0 z-30 border-b border-border/80 bg-sidebar/95 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2.5 px-4 sm:px-6">
           {/* Brand Identity */}
           <button
             type="button"
-            onClick={() => handleSelectSection("reader")}
+            onClick={() => handleSelectSection("home")}
             className="flex items-center gap-2.5 text-left"
             title="Selah Multi version Bible"
           >
@@ -311,43 +359,55 @@ export const AppShell: React.FC = () => {
               <span>{streakCount}d</span>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setAiPanelOpen((v) => !v)}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold transition sm:px-3 ${
-                aiPanelOpen
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "border border-primary/35 bg-primary/12 text-primary hover:bg-primary/20"
-              }`}
-              title="Toggle Embedded AI Bible Companion"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Selah AI</span>
-            </button>
+            {prefs.showBibleCompanion && (
+              <button
+                type="button"
+                onClick={() => aiPanelOpen ? setAiPanelOpen(false) : handleSelectSection("companion")}
+                className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold transition sm:px-3 ${
+                  aiPanelOpen
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "border border-primary/35 bg-primary/12 text-primary hover:bg-primary/20"
+                }`}
+                title="Toggle Selah Bible Companion"
+                aria-label="Toggle Selah Bible Companion"
+                aria-expanded={aiPanelOpen}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Bible Companion</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Main Workspace + Embedded AI Sidebar */}
+      {/* Main Workspace + Selah Bible Companion Sidebar */}
       <div className="flex flex-1">
-        <main className="pb-mobile-safe min-w-0 flex-1 lg:pb-0">
-          {activeSection === "reader" && <BibleReaderView />}
-          {activeSection === "versions" && <VersionVaultView />}
-          {activeSection === "plans" && <ReadingPlansView />}
-          {activeSection === "reflection" && <DailyReflectionView />}
-          {activeSection === "study" && <SearchAndStudyView />}
-          {activeSection === "kids" && <KidsStoriesView />}
-          {activeSection === "about" && <ExplainerView />}
+        <main className="pb-mobile-safe min-w-0 flex-1">
+          <Suspense fallback={<div role="status" className="mx-auto max-w-6xl px-6 py-12 text-sm text-muted-foreground">Opening your Selah space…</div>}>
+            {activeSection === "home" && (
+              <HomeDashboard
+                onSelectSection={handleSelectSection}
+                onOpenCompanion={() => handleSelectSection("companion")}
+              />
+            )}
+            {(activeSection === "reader" || activeSection === "companion") && <BibleReaderView />}
+            {activeSection === "versions" && <VersionVaultView />}
+            {activeSection === "plans" && <ReadingPlansView />}
+            {activeSection === "reflection" && <DailyReflectionView />}
+            {activeSection === "study" && <SearchAndStudyView />}
+            {activeSection === "kids" && <KidsStoriesView />}
+            {activeSection === "about" && <ExplainerView />}
+          </Suspense>
         </main>
 
-        <AiCompanionPanel />
+        <Suspense fallback={null}>{prefs.showBibleCompanion && <AiCompanionPanel />}</Suspense>
       </div>
 
       {/* Synchronized Audio Read-Along Dock */}
-      <AudioReadAlongBar />
+      <Suspense fallback={null}><AudioReadAlongBar /></Suspense>
 
-      {/* Mobile Bottom Navigation Bar (with iPhone Home Indicator safe-bottom padding) */}
-      <nav className="safe-bottom hide-scrollbar fixed inset-x-0 bottom-0 z-20 flex items-center justify-start gap-0.5 overflow-x-auto border-t border-border bg-card/95 px-1 pt-1.5 backdrop-blur-md lg:hidden">
+      {/* Persistent bottom navigation (with iPhone Home Indicator safe-bottom padding) */}
+      <nav aria-label="Main navigation" className="safe-bottom hide-scrollbar fixed inset-x-0 bottom-0 z-40 flex items-center justify-start gap-0.5 overflow-x-auto border-t border-border bg-card/95 px-1 pt-1.5 backdrop-blur-md lg:justify-center lg:gap-2 lg:px-4">
         {navItems.map((item) => {
           const active = activeSection === item.id;
           return (
@@ -355,30 +415,34 @@ export const AppShell: React.FC = () => {
               key={item.id}
               type="button"
               title={item.label}
+              aria-current={active ? "page" : undefined}
               onClick={() => handleSelectSection(item.id)}
-              className={`flex min-w-[48px] shrink-0 flex-col items-center gap-0.5 rounded-xl px-1.5 py-1 text-[9px] font-semibold transition ${
+              className={`flex min-h-11 min-w-[40px] shrink-0 flex-col items-center gap-0.5 rounded-xl px-1 py-1 text-[9px] font-semibold transition lg:min-w-0 lg:flex-row lg:gap-2 lg:rounded-lg lg:px-3 lg:py-2 lg:text-xs ${
                 active ? "text-primary" : "text-muted-foreground"
               }`}
             >
               {item.icon}
-              <span>{item.shortLabel}</span>
+              <span className="lg:hidden">{item.shortLabel}</span>
+              <span className="hidden lg:inline">{item.label}</span>
             </button>
           );
         })}
       </nav>
 
       {/* Drawers & Modals */}
-      <VerseCompareDrawer />
-      <VerseArtModal />
-      <CommandPaletteModal />
-      {!isStandaloneApp && (
-        <MobileAppModal
-          open={mobileModalOpen}
-          onOpenChange={setMobileModalOpen}
-          deferredPrompt={deferredInstallPrompt}
-          onInstalled={() => setDeferredInstallPrompt(null)}
-        />
-      )}
+      <Suspense fallback={null}>
+        <VerseCompareDrawer />
+        <VerseArtModal />
+        <CommandPaletteModal />
+        {!isStandaloneApp && (
+          <MobileAppModal
+            open={mobileModalOpen}
+            onOpenChange={setMobileModalOpen}
+            deferredPrompt={deferredInstallPrompt}
+            onInstalled={() => setDeferredInstallPrompt(null)}
+          />
+        )}
+      </Suspense>
     </div>
   );
 };

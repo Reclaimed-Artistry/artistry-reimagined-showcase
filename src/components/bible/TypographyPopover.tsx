@@ -10,7 +10,7 @@ import {
   Type,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import {
   Popover,
   PopoverContent,
@@ -125,6 +125,18 @@ export const TypographyPopover: React.FC = () => {
       </PopoverTrigger>
 
       <PopoverContent align="end" className="max-h-[82vh] w-[min(22rem,calc(100vw-1rem))] space-y-4 overflow-y-auto p-4">
+        <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+          <div>
+            <div className="text-xs font-semibold">Selah Bible Companion</div>
+            <div className="mt-0.5 text-[10px] leading-4 text-muted-foreground">Show or hide the companion panel and its header shortcut.</div>
+          </div>
+          <Switch
+            aria-label="Show Selah Bible Companion"
+            checked={prefs.showBibleCompanion}
+            onCheckedChange={(value) => updatePrefs({ showBibleCompanion: value })}
+          />
+        </div>
+
         <div>
           <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Theme

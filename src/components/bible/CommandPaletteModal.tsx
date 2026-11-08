@@ -14,7 +14,7 @@ import {
   CANONICAL_BOOKS,
   parseScriptureReference,
 } from "@/data/canonicalBooks";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import {
   Dialog,
   DialogContent,
@@ -206,19 +206,21 @@ export const CommandPaletteModal: React.FC = () => {
                 <Feather className="h-3.5 w-3.5 text-primary" />
                 Daily Reflection
               </button>
-              <button
-                type="button"
-                onClick={() =>
-                  closeAndRun(() => {
-                    setActiveSection("reader");
-                    setAiPanelOpen(true);
-                  })
-                }
-                className="flex items-center gap-2 rounded-xl border border-border/70 bg-card px-3 py-2 font-medium hover:bg-accent"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-                Ask Selah AI Guide
-              </button>
+              {prefs.showBibleCompanion && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    closeAndRun(() => {
+                      setActiveSection("reader");
+                      setAiPanelOpen(true);
+                    })
+                  }
+                  className="flex items-center gap-2 rounded-xl border border-border/70 bg-card px-3 py-2 font-medium hover:bg-accent"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  Open Selah Bible Companion
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() =>

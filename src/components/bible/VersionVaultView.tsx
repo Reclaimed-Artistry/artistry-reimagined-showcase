@@ -17,7 +17,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import { estimateDeviceStorage } from "@/lib/offlineDb";
 import type { BibleVersionMeta } from "@/types/bible";
 

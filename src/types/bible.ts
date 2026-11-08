@@ -216,10 +216,15 @@ export interface ReaderPreferences {
   preferredVoiceURI: string;
   autoAdvanceChapter: boolean;
   ambientSound: boolean;
+  showBibleCompanion: boolean;
+  dailyStudyReminderEnabled: boolean;
+  dailyStudyReminderTime: string;
 }
 
 export type AppSection =
+  | "home"
   | "reader"
+  | "companion"
   | "versions"
   | "plans"
   | "reflection"
