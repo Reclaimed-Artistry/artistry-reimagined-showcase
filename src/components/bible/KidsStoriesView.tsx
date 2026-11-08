@@ -16,6 +16,7 @@ import {
 import { useBibleApp } from "@/context/useBibleApp";
 import { KIDS_BIBLE_TRAIL } from "@/data/kidsBibleTrail";
 import { KIDS_BIBLE_EPISODES } from "@/data/kidsBibleEpisodes";
+import "./KidsStoriesView.css";
 
 type Story = {
   id: string;
