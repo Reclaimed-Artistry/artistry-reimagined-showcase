@@ -2,7 +2,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "app.selahbible.multiversion",
-  appName: "Selah MVB",
+  appName: "Selah",
   webDir: "dist",
   ios: {
     contentInset: "automatic",

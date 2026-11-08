@@ -48,14 +48,14 @@ export const MobileAppModal: React.FC<MobileAppModalProps> = ({
   const handleInstallAndroidPwa = async () => {
     if (!deferredPrompt) {
       toast.info(
-        "Open your browser menu (⋮) and tap 'Install app' or 'Add to Home screen'."
+        "In Chrome, choose ⋮ → Install app. 'Add to Home screen' may create a Chrome shortcut instead of the Selah app."
       );
       return;
     }
     await deferredPrompt.prompt();
     const choice = await deferredPrompt.userChoice;
     if (choice.outcome === "accepted") {
-      toast.success("Selah Multi version Bible installed on your home screen!");
+      toast.success("Selah installed. Launch it from your app drawer for the standalone app window.");
       onInstalled();
       onOpenChange(false);
     }
@@ -219,7 +219,7 @@ export const MobileAppModal: React.FC<MobileAppModalProps> = ({
                       2
                     </span>
                     <div>
-                      Tap <strong>Install app</strong> (or <strong>Add to Home screen</strong>) to add Selah Multi version Bible to your Android app drawer.
+                      Choose <strong>Install app</strong> to add Selah to your app drawer. Avoid <strong>Add to Home screen</strong> if it only creates a browser shortcut.
                     </div>
                   </li>
                 </ol>
