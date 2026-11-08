@@ -232,7 +232,7 @@ export const KidsStoriesView: React.FC = () => {
 
       <section id="story-time" className="grid gap-7 lg:grid-cols-[.85fr_1.15fr]">
         <aside className="space-y-4">
-          <div className="flex items-end justify-between gap-4">
+          <div className="flex flex-col items-start gap-2">
             <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-primary">Explore the Bible</p><h2 className="mt-1 font-display text-2xl font-semibold">Story shelf</h2></div>
             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{completedStoryCount}/{STORIES.length} read</span>
           </div>
