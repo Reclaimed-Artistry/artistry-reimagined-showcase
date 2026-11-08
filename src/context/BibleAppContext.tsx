@@ -77,7 +77,6 @@ const DEFAULT_PREFS: ReaderPreferences = {
   preferredVoiceURI: "",
   autoAdvanceChapter: true,
   ambientSound: false,
-  aiSettings: { mode: "hybrid" },
 };
 
 function readLocal<T>(key: string, fallback: T): T {
@@ -230,13 +229,9 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [focusedVerse, setFocusedVerse] = useState<number | null>(null);
 
   const [prefs, setPrefs] = useState<ReaderPreferences>(() => {
-    const storedPrefs = readLocal<Partial<ReaderPreferences>>(STORAGE_KEYS.PREFS, {});
-    return {
-      ...DEFAULT_PREFS,
-      ...storedPrefs,
-      // Ignore legacy direct-provider settings and local API keys from older versions.
-      aiSettings: { mode: "hybrid" },
-    };
+    const storedPrefs = readLocal<Partial<ReaderPreferences> & { aiSettings?: unknown }>(STORAGE_KEYS.PREFS, {});
+    delete storedPrefs.aiSettings; // Ignore legacy provider settings from earlier app builds.
+    return { ...DEFAULT_PREFS, ...storedPrefs };
   });
 
   const [customVersions, setCustomVersions] = useState<BibleVersionMeta[]>(() =>

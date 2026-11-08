@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
 import {
   ArrowUpRight,
   BookOpen,
@@ -9,7 +8,6 @@ import {
   Languages,
   Link2,
   Loader2,
-  LogOut,
   Send,
   Sparkles,
   Volume2,
@@ -17,7 +15,6 @@ import {
 } from "lucide-react";
 import { formatReference, getBookMeta } from "@/data/canonicalBooks";
 import { useBibleApp } from "@/context/BibleAppContext";
-import { supabase } from "@/lib/cloudWorkspace";
 import {
   AiCompanionMessage,
   AiQuickAction,
@@ -155,78 +152,21 @@ export const AiCompanionPanel: React.FC = () => {
     selectedVerses,
     primaryChapterData,
     activeVersion,
+    catalog,
+    offlineSummaries,
     navigateTo,
     startAudioFromVerse,
-    prefs,
   } = useBibleApp();
 
   const [messages, setMessages] = useState<AiCompanionMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [session, setSession] = useState<Session | null>(null);
-  const [sessionReady, setSessionReady] = useState(false);
-  const [authBusy, setAuthBusy] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
 
   const scrollEndRef = useRef<HTMLDivElement | null>(null);
   const bookMeta = getBookMeta(bookNumber);
-
-  useEffect(() => {
-    if (!supabase) {
-      setSessionReady(true);
-      return;
-    }
-    let mounted = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setSession(data.session);
-      setSessionReady(true);
-    }).catch(() => {
-      if (mounted) setSessionReady(true);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setSessionReady(true);
-    });
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const signInWithGoogle = async () => {
-    if (!supabase) {
-      setAuthError("Online AI sign-in is not configured in this app.");
-      return;
-    }
-    setAuthBusy(true);
-    setAuthError(null);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: window.location.href },
-      });
-      if (error) {
-        const providerDisabled = /provider.*(not enabled|unsupported)|not enabled.*provider/i.test(error.message);
-        setAuthError(providerDisabled
-          ? "Google sign-in is not enabled yet. The Selah administrator must configure Google OAuth in Supabase Auth."
-          : error.message);
-      }
-    } catch {
-      setAuthError("Could not start Google sign-in. Please check your connection and try again.");
-    } finally {
-      setAuthBusy(false);
-    }
-  };
-
-  const signOut = async () => {
-    if (!supabase) return;
-    setAuthBusy(true);
-    setAuthError(null);
-    const { error } = await supabase.auth.signOut();
-    if (error) setAuthError(error.message);
-    setAuthBusy(false);
-  };
+  const availableOfflineVersions = catalog.filter(
+    (version) => version.provider === "bundled" || offlineSummaries.some((summary) => summary.versionId === version.id)
+  );
 
   const activeRefLabel =
     selectedVerses.length > 0
@@ -240,12 +180,12 @@ export const AiCompanionPanel: React.FC = () => {
 
   // Seed initial welcome walkthrough on first open
   useEffect(() => {
-    if (aiPanelOpen && sessionReady && messages.length === 0 && primaryChapterData) {
+    if (aiPanelOpen && messages.length === 0 && primaryChapterData) {
       handleTriggerAction("walkthrough", "Walk me through this chapter");
     }
     // Wait for the chapter data too, in case the panel opens before the reader finishes loading.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aiPanelOpen, primaryChapterData, messages.length, sessionReady]);
+  }, [aiPanelOpen, primaryChapterData, messages.length]);
 
   useEffect(() => {
     scrollEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -268,7 +208,7 @@ export const AiCompanionPanel: React.FC = () => {
         selectedVerses,
         chapterData: primaryChapterData,
         versionMeta: activeVersion,
-        aiSettings: prefs.aiSettings,
+        availableOfflineVersions,
         userPrompt: userLabel || actionOrText,
         conversationHistory: messages.slice(-6).map(({ role, content }) => ({ role, content })),
       });
@@ -279,6 +219,7 @@ export const AiCompanionPanel: React.FC = () => {
           id: `a-${Date.now()}`,
           role: "assistant",
           ...reply,
+          source: "knowledge",
           timestamp: Date.now(),
         },
       ]);
@@ -385,47 +326,15 @@ export const AiCompanionPanel: React.FC = () => {
       </div>
 
       <div className="border-b border-border bg-secondary/40 px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-2.5">
-            {session ? (
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-            ) : (
-              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            )}
-            <div>
-              <p className="text-xs font-semibold text-foreground">
-                {session ? "Online Selah AI is ready" : "Sign in to use online Selah AI"}
-              </p>
-              <p className="mt-0.5 max-w-xl text-[11px] leading-4 text-muted-foreground">
-                {session
-                  ? `Signed in as ${session.user.email || "your account"}. Your question and passage are sent securely to Selah’s AI service.`
-                  : "Sign in with Google for conversational online answers. Offline study remains available without signing in."}
-              </p>
-            </div>
+        <div className="flex items-start gap-2.5">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+          <div>
+            <p className="text-xs font-semibold text-foreground">Selah’s Bible Knowledge Centre is ready</p>
+            <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+              Searches Bible text and curated study notes on this device. No AI sign-in, external model, or API key is needed.
+            </p>
           </div>
-          {session ? (
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              disabled={authBusy}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold hover:bg-accent disabled:opacity-50"
-            >
-              {authBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
-              Sign out
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => void signInWithGoogle()}
-              disabled={authBusy || !supabase}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
-            >
-              {authBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span aria-hidden="true" className="grid h-4 w-4 place-items-center rounded-full bg-white text-[11px] font-bold text-[#4285F4]">G</span>}
-              Continue with Google
-            </button>
-          )}
         </div>
-        {authError && <p role="alert" className="mt-2 text-xs text-destructive">{authError}</p>}
       </div>
 
       {/* Quick Study Chips */}
@@ -460,13 +369,8 @@ export const AiCompanionPanel: React.FC = () => {
             ) : (
               <>
                 <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {m.source === "online" ? "Online Selah AI" : m.quiz ? "Interactive Bible quiz" : session ? "Offline fallback" : "Offline study"}
+                  {m.quiz ? "Interactive Bible quiz" : "Selah Bible Knowledge Centre"}
                 </div>
-                {session && !m.source && !m.quiz && (
-                  <p className="mb-2 text-[11px] text-muted-foreground">
-                    The online model was unavailable for this turn, so this response uses Selah’s offline study tools. You can retry your question.
-                  </p>
-                )}
                 {renderFormattedMarkdownText(m.content)}
 
                 {m.clarifyingQuestion && (
@@ -519,7 +423,7 @@ export const AiCompanionPanel: React.FC = () => {
         {loading && (
           <div className="flex items-center gap-2 rounded-2xl border border-border bg-background/80 p-3.5 text-xs text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            Searching Scripture and preparing a response...
+            Searching installed Bible text and study notes...
           </div>
         )}
 
@@ -536,7 +440,7 @@ export const AiCompanionPanel: React.FC = () => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask Selah anything or explore Scripture..."
+            placeholder="Ask about a Bible passage, person, word, or theme..."
             className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
           />
           <button

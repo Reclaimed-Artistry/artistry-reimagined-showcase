@@ -11,12 +11,9 @@ import {
 } from "@/data/scholarlyKnowledge";
 import {
   getInstalledFullBible,
-  lookupOriginalLexiconOnline,
   searchInstalledBible,
 } from "./bibleProviders";
-import { requestSecureBibleAnswer } from "@/lib/secureBibleAi";
 import type {
-  AiConnectionSettings,
   BibleVersionMeta,
   NormalizedChapter,
 } from "@/types/bible";
@@ -52,7 +49,7 @@ export interface AiCompanionMessage {
   quiz?: AiQuizQuestion[];
   clarifyingQuestion?: string | null;
   suggestions?: string[];
-  source?: "online" | "offline";
+  source?: "knowledge";
   timestamp: number;
 }
 
@@ -62,7 +59,7 @@ export interface AiContextPayload {
   selectedVerses: number[];
   chapterData: NormalizedChapter | null;
   versionMeta: BibleVersionMeta;
-  aiSettings: AiConnectionSettings;
+  availableOfflineVersions?: BibleVersionMeta[];
   userPrompt?: string;
   conversationHistory?: { role: "user" | "assistant"; content: string }[];
 }
@@ -91,6 +88,157 @@ function extractKeyThemesFromVerses(texts: string[]): string[] {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([w]) => w.charAt(0).toUpperCase() + w.slice(1));
+}
+
+const SEARCH_STOP_WORDS = new Set([
+  ...STOP_WORDS,
+  "bible", "verse", "verses", "scripture", "passage", "about", "mean", "means",
+  "meaning", "explain", "tell", "where", "does", "say", "says", "chapter", "help",
+  "read", "what", "which", "who", "when", "why", "how", "can", "could", "would",
+  "should", "please", "show", "find", "give", "me", "the", "a", "an", "is", "are",
+]);
+
+interface RankedVerseEvidence {
+  bookNumber: number;
+  bookName: string;
+  chapter: number;
+  verse: number;
+  text: string;
+  versionShortName: string;
+  score: number;
+}
+
+function normalizeWords(text: string): string[] {
+  return text
+    .toLocaleLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length >= 3 && !SEARCH_STOP_WORDS.has(word));
+}
+
+async function rankLocalBibleEvidence(
+  question: string,
+  ctx: AiContextPayload,
+  limit = 5,
+): Promise<RankedVerseEvidence[]> {
+  const terms = [...new Set(normalizeWords(question))].slice(0, 8);
+  if (terms.length === 0) return [];
+
+  try {
+    const versions = [
+      ctx.versionMeta,
+      ...(ctx.availableOfflineVersions || []).filter((version) => version.id !== ctx.versionMeta.id),
+    ];
+    const ranked: RankedVerseEvidence[] = [];
+    const phrase = terms.length > 1 ? terms.slice(0, 3).join(" ") : "";
+
+    for (const version of versions) {
+      let bible: Awaited<ReturnType<typeof getInstalledFullBible>>;
+      try {
+        bible = await getInstalledFullBible(version);
+      } catch {
+        continue;
+      }
+      if (!bible) continue;
+
+      for (const item of bible.books) {
+        const canonical = getBookMeta(item.bookNumber);
+        for (const chapter of item.chapters) {
+          for (const verse of chapter.verses) {
+            const normalized = verse.text
+              .toLocaleLowerCase()
+              .normalize("NFKD")
+              .replace(/[\u0300-\u036f]/g, "");
+            const words = new Set(normalizeWords(verse.text));
+            const matched = terms.filter((term) => words.has(term));
+            if (matched.length === 0) continue;
+
+            let score = matched.length * 3 + matched.length / terms.length;
+            if (phrase && normalized.includes(phrase)) score += 5;
+            if (version.id === ctx.versionMeta.id) score += 1.5;
+            if (version.id === ctx.versionMeta.id && item.bookNumber === ctx.bookNumber && chapter.chapter === ctx.chapter) score += 1.5;
+            if (version.id === ctx.versionMeta.id && ctx.selectedVerses.includes(verse.verse) && item.bookNumber === ctx.bookNumber && chapter.chapter === ctx.chapter) score += 1;
+            ranked.push({
+              bookNumber: item.bookNumber,
+              bookName: canonical.name,
+              chapter: chapter.chapter,
+              verse: verse.verse,
+              text: verse.text,
+              versionShortName: version.shortName,
+              score,
+            });
+          }
+        }
+      }
+    }
+
+    // Use the visible chapter as evidence when the selected edition streams chapters but is not fully downloaded.
+    const selectedVersionIsFullyLocal = ctx.versionMeta.provider === "bundled" ||
+      Boolean(ctx.availableOfflineVersions?.some((version) => version.id === ctx.versionMeta.id));
+    if (!selectedVersionIsFullyLocal) {
+      for (const verse of ctx.chapterData?.verses || []) {
+        const words = new Set(normalizeWords(verse.text));
+        const matched = terms.filter((term) => words.has(term));
+        if (matched.length === 0) continue;
+        ranked.push({
+          bookNumber: ctx.bookNumber,
+          bookName: getBookMeta(ctx.bookNumber).name,
+          chapter: ctx.chapter,
+          verse: verse.verse,
+          text: verse.text,
+          versionShortName: ctx.versionMeta.shortName,
+          score: matched.length * 3 + matched.length / terms.length + 2,
+        });
+      }
+    }
+
+    const unique: RankedVerseEvidence[] = [];
+    const seen = new Set<string>();
+    for (const hit of ranked.sort((a, b) => b.score - a.score || a.bookNumber - b.bookNumber || a.chapter - b.chapter || a.verse - b.verse)) {
+      const key = `${hit.versionShortName}:${hit.bookNumber}:${hit.chapter}:${hit.verse}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(hit);
+      if (unique.length >= limit) break;
+    }
+    return unique;
+  } catch {
+    return [];
+  }
+}
+
+const TOPIC_ALIASES: Record<string, string[]> = {
+  anxiety: ["anxious", "worry", "worried", "afraid", "fear", "stress", "overwhelmed", "panic"],
+  grief: ["sad", "grief", "loss", "hurt", "brokenhearted", "lonely", "cry", "mourn"],
+  wisdom: ["decision", "decide", "guidance", "direction", "confused", "choice", "discernment"],
+  forgiveness: ["forgive", "forgiveness", "guilt", "shame", "sin", "mercy", "grace", "repent"],
+  strength: ["tired", "weary", "exhausted", "burnout", "weak", "strength", "endurance", "rest"],
+  purpose: ["purpose", "identity", "calling", "meaning", "future", "gift"],
+  love: ["love", "loved", "loving", "relationship", "kindness", "charity"],
+  faith: ["faith", "believe", "belief", "trust", "doubt"],
+  hope: ["hope", "encouragement", "discouraged", "despair", "waiting"],
+  prayer: ["prayer", "pray", "praying", "talk to god"],
+  salvation: ["salvation", "saved", "redeemed", "grace", "eternal life"],
+  "holy-spirit": ["holy spirit", "spirit of god", "fruit of the spirit", "comforter"],
+  temptation: ["temptation", "tempted", "addiction", "resist", "self-control"],
+  anger: ["anger", "angry", "resentment", "reconcile", "conflict"],
+  family: ["family", "marriage", "husband", "wife", "parent", "child", "relationship"],
+  suffering: ["suffering", "pain", "tragedy", "why do bad things", "lament", "affliction"],
+};
+
+function findTopicalGuide(question: string) {
+  const normalized = ` ${question.toLocaleLowerCase().replace(/[^a-z0-9\s-]/g, " ").replace(/\s+/g, " ").trim()} `;
+  return TOPICAL_LIFE_GUIDES
+    .map((topic) => {
+      const aliases = [topic.id.replace(/-/g, " "), topic.label.toLocaleLowerCase(), ...(TOPIC_ALIASES[topic.id] || [])];
+      const score = aliases.reduce((total, alias) => total + (normalized.includes(` ${alias} `) ? 1 : 0), 0);
+      return { topic, score };
+    })
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)[0]?.topic;
 }
 
 function simplifyArchaicPhrasing(text: string): string {
@@ -251,42 +399,27 @@ export async function generateAiBibleResponse(
       : `${book.name} ${ctx.chapter}`;
 
   const effectivePrompt = ctx.userPrompt?.trim() || actionOrPrompt;
-  const reference = typeof actionOrPrompt === "string" ? extractScriptureReference(actionOrPrompt) : null;
+  const qLower = effectivePrompt.toLocaleLowerCase().trim();
+  const previousUserPrompt = [...(ctx.conversationHistory || [])]
+    .reverse()
+    .find((message) => message.role === "user")?.content || "";
+  const isFollowUp = /^(tell me more|go deeper|why\??|how so\??|explain that|what about that|and how|can you expand)/i.test(qLower);
+  const retrievalQuestion = isFollowUp && previousUserPrompt
+    ? `${previousUserPrompt} ${effectivePrompt}`
+    : effectivePrompt;
+  const reference = extractScriptureReference(effectivePrompt);
   const referencePassage = reference ? await loadReferenceText(reference, ctx) : null;
-
-  // The built-in Selah companion prefers the authenticated server model and falls back to local study tools.
-  if (actionOrPrompt !== "quiz") {
-    const result = await requestSecureBibleAnswer(effectivePrompt, ctx, referencePassage);
-    if (result.answer) {
-      const citations = (result.references || []).flatMap((reference): AiCitationLink[] => {
-        const parsed = parseScriptureReference(reference);
-        if (!parsed) return [];
-        return [{
-          label: reference,
-          bookNumber: parsed.bookNumber,
-          chapter: parsed.chapter,
-          ...(parsed.verse ? { verse: parsed.verse } : {}),
-        }];
-      });
-      return {
-        content: result.answer,
-        citations,
-        clarifyingQuestion: result.clarifyingQuestion || undefined,
-        suggestions: result.suggestions,
-        source: "online",
-      };
-    }
-    if (result.error && !/sign in/i.test(result.error)) {
-      return {
-        content: `### Online Selah AI is unavailable\n\n${result.error}\n\nThis turn was not answered by the online model. Please try again in a moment. You can still use the study tools while online AI reconnects.`,
-        source: "offline",
-      };
-    }
-    // Unauthenticated users can still use the built-in offline study tools.
-  }
+  const isWalkthrough = actionOrPrompt === "walkthrough" || /walk me through|chapter overview|chapter summary|what happens in this chapter/.test(qLower);
+  const isExplain = actionOrPrompt === "explain" || /\b(explain|in simple words|plain language|what does .* mean|meaning of)\b/.test(qLower);
+  const isContext = actionOrPrompt === "context" || /historical context|background of|who wrote|when was .* written/.test(qLower);
+  const asksLexiconQuestion = /meaning of|define|what is the word|what does .* mean/.test(qLower) && ORIGINAL_WORD_LEXICON.some((word) => qLower.includes(word.id) || word.englishTriggers.some((trigger) => qLower.includes(trigger)));
+  const isWordStudy = actionOrPrompt === "word_study" || /original language|greek|hebrew|word study|strong.?s number/.test(qLower) || asksLexiconQuestion;
+  const isCrossRefs = actionOrPrompt === "cross_refs" || /cross.?references|related passages|other verses about|connected passages/.test(qLower);
+  const isPrayer = actionOrPrompt === "prayer" || /\b(prayer|pray with me|help me pray)\b/.test(qLower);
+  const isQuiz = actionOrPrompt === "quiz" || /\b(quiz me|test me on|make .* quiz)\b/.test(qLower);
 
   // 1. WALKTHROUGH
-  if (actionOrPrompt === "walkthrough") {
+  if (isWalkthrough) {
     if (verses.length === 0) {
       return { content: `### ${book.name} ${ctx.chapter} is still loading\nI could not access the chapter text yet. Please try the walkthrough again in a moment, or ask a question about a topic or Bible reference.` };
     }
@@ -322,6 +455,11 @@ ${
 **Key Motifs in This Chapter:** ${keyThemes.length > 0 ? keyThemes.join(" • ") : book.theme}
 
 **How to read it well:** Read once slowly from start to finish to catch the flow, then tap any verse that arrests your attention to compare translations or journal a reflection.`,
+      suggestions: [
+        `Explain ${book.name} ${ctx.chapter} in simple words`,
+        `Show cross-references for ${book.name} ${ctx.chapter}`,
+        `What is the historical background of ${book.name}?`,
+      ],
       citations: [
         parseScriptureReference(book.keyVerseRef)
           ? {
@@ -336,30 +474,43 @@ ${
   }
 
   // 2. EXPLAIN SIMPLY
-  if (actionOrPrompt === "explain") {
-    const combinedText = focusVerses.map((v) => v.text).join(" ");
+  if (isExplain) {
+    const referenceBook = reference && parseScriptureReference(reference)
+      ? getBookMeta(parseScriptureReference(reference)!.bookNumber)
+      : book;
+    const explainLabel = referencePassage?.label || refLabel;
+    const referenceVerses = referencePassage?.text
+      .split("\\n")
+      .map((line) => line.replace(/^.+?—\\s*/, ""))
+      .join(" ");
+    const combinedText = referenceVerses || focusVerses.map((v) => v.text).join(" ");
     const plainReading = simplifyArchaicPhrasing(combinedText);
-    const firstVerseNum = focusVerses[0]?.verse || 1;
-    const prevVerse = verses.find((v) => v.verse === firstVerseNum - 1);
-    const nextVerse = verses.find(
-      (v) => v.verse === (focusVerses[focusVerses.length - 1]?.verse || 1) + 1
-    );
+    const referenceParsed = reference ? parseScriptureReference(reference) : null;
+    const referenceIsCurrentChapter = referenceParsed?.bookNumber === ctx.bookNumber && referenceParsed.chapter === ctx.chapter;
+    const firstVerseNum = referenceIsCurrentChapter && referenceParsed?.verse
+      ? referenceParsed.verse
+      : focusVerses[0]?.verse || 1;
+    const prevVerse = referenceIsCurrentChapter ? verses.find((v) => v.verse === firstVerseNum - 1) : undefined;
+    const lastFocusedVerse = referenceIsCurrentChapter && referenceParsed?.verseEnd
+      ? referenceParsed.verseEnd
+      : focusVerses[focusVerses.length - 1]?.verse || 1;
+    const nextVerse = referenceIsCurrentChapter ? verses.find((v) => v.verse === lastFocusedVerse + 1) : undefined;
 
     const matchedWords = ORIGINAL_WORD_LEXICON.filter((w) =>
       w.englishTriggers.some((tr) => combinedText.toLowerCase().includes(tr))
     ).slice(0, 2);
 
     return {
-      content: `### Plain-Language Reading of ${refLabel}
+      content: `### Plain-Language Reading of ${explainLabel}
 
 **In clear everyday phrasing:**
 > ${plainReading || "Select a verse in the reader to unpack its meaning."}
 
-**Immediate Flow in ${book.name} ${ctx.chapter}:**
+**Immediate Flow in ${referenceBook.name} ${referenceParsed?.chapter || ctx.chapter}:**
 ${prevVerse ? `- **Just before (v. ${prevVerse.verse}):** *“${prevVerse.text.slice(0, 110)}${prevVerse.text.length > 110 ? "…" : ""}”*` : "- Opens at the very beginning of this chapter."}
 ${nextVerse ? `- **Right after (v. ${nextVerse.verse}):** *“${nextVerse.text.slice(0, 110)}${nextVerse.text.length > 110 ? "…" : ""}”*` : "- Brings this chapter's thought to its closing cadence."}
 
-**Why this matters:** Within *${book.name}*'s overarching message (*${book.theme}*), ${refLabel} anchors our attention not merely on external information, but on trusting and responding to God's character.${
+**Why this matters:** Within *${referenceBook.name}*'s overarching message (*${referenceBook.theme}*), ${explainLabel} anchors our attention not merely on external information, but on trusting and responding to God's character.${
         matchedWords.length > 0
           ? `\n\n**Rich Theological Thread:** Notice **${matchedWords
               .map((m) => `${m.transliteration} (${m.literalGloss})`)
@@ -367,12 +518,20 @@ ${nextVerse ? `- **Right after (v. ${nextVerse.verse}):** *“${nextVerse.text.s
           : ""
       }
 
-**Practice Today:** Read ${refLabel} aloud once in your own voice, emphasizing a different word each time, and ask: *“What would change in my next two hours if I took this promise at face value?”*`,
+**Practice Today:** Read ${explainLabel} aloud once in your own voice, emphasizing a different word each time, and ask: *“What would change in my next two hours if I took this promise at face value?”*`,
+      citations: referenceParsed
+        ? [{ label: `Open ${explainLabel}`, bookNumber: referenceParsed.bookNumber, chapter: referenceParsed.chapter, verse: referenceParsed.verse }]
+        : undefined,
+      suggestions: [
+        `Show cross-references for ${explainLabel}`,
+        `What is the historical background of ${referenceBook.name}?`,
+        `Help me pray about ${referenceBook.theme}`,
+      ],
     };
   }
 
   // 3. HISTORICAL & LITERARY CONTEXT
-  if (actionOrPrompt === "context") {
+  if (isContext) {
     const keyParsed = parseScriptureReference(book.keyVerseRef);
     return {
       content: `### Historical & Literary Context: ${book.name}
@@ -408,20 +567,23 @@ ${
             },
           ]
         : undefined,
+      suggestions: [
+        `Walk me through ${book.name} ${ctx.chapter}`,
+        `Show cross-references for ${book.name} ${ctx.chapter}`,
+        `Explain ${book.name} ${ctx.chapter} in simple words`,
+      ],
     };
   }
 
   // 4. WORD STUDY & ORIGINAL HEBREW/GREEK
-  if (actionOrPrompt === "word_study") {
+  if (isWordStudy) {
     const combinedText = focusVerses.map((v) => v.text).join(" ");
     const matchedLexicon = ORIGINAL_WORD_LEXICON.filter((w) =>
-      w.englishTriggers.some((tr) => combinedText.toLowerCase().includes(tr))
+      w.englishTriggers.some((tr) => combinedText.toLowerCase().includes(tr)) ||
+      qLower.includes(w.id) ||
+      qLower.includes(w.transliteration.toLocaleLowerCase().split(" ")[0]) ||
+      w.englishTriggers.some((tr) => qLower.includes(tr))
     );
-
-    // Also pick a meaningful keyword to query live BDB/Thayer lexicon if online!
-    const topWords = extractKeyThemesFromVerses([combinedText]);
-    const liveQueryWord = topWords[0]?.toLowerCase() || (ctx.bookNumber <= 39 ? "peace" : "grace");
-    const liveDefs = await lookupOriginalLexiconOnline(liveQueryWord);
 
     const lexiconBlocks =
       matchedLexicon.length > 0
@@ -436,29 +598,21 @@ ${
             ctx.bookNumber <= 39 ? "Biblical Hebrew (with select Aramaic sections)" : "everyday Koine Greek"
           }, designed to be heard aloud in community.`;
 
-    const liveBlocks =
-      liveDefs.length > 0
-        ? `\n\n**BDB / Thayer Lexicon Lookup (*“${liveQueryWord}”*):**\n` +
-          liveDefs
-            .slice(0, 2)
-            .map(
-              (d) =>
-                `- **${d.lexeme || d.topic}** (*${d.transliteration || d.topic}*): ${d.short_definition}`
-            )
-            .join("\n")
-        : "";
-
     return {
       content: `### Original Language Word Study (${refLabel})
 
-${lexiconBlocks}${liveBlocks}
+${lexiconBlocks}
 
-**Tip:** Open **Compare Versions** on ${refLabel} to see how word-for-word translations (like KJV, NASB, ESV, YLT) and dynamic translations (like NLT, BSB, NIV) render these nuances!`,
+**About this local reference:** Selah shows curated Hebrew and Greek entries that match the selected passage; it does not claim to parse every original-language form. Compare installed translations of ${refLabel} for additional wording differences!`,
+      suggestions: [
+        `Show cross-references for ${refLabel}`,
+        `What does ${refLabel} say about ${matchedLexicon[0]?.englishTriggers[0] || "this word"}?`,
+      ],
     };
   }
 
   // 5. CROSS REFERENCES
-  if (actionOrPrompt === "cross_refs") {
+  if (isCrossRefs) {
     const curated = CURATED_CROSS_REFERENCES[`${ctx.bookNumber}:${ctx.chapter}`] || [];
     const citations: AiCitationLink[] = [];
     const lines: string[] = [];
@@ -513,11 +667,15 @@ ${
 
 Tap any reference pill below to jump straight to that passage:`,
       citations: citations.slice(0, 6),
+      suggestions: [
+        `Explain ${refLabel} in simple words`,
+        `What does the Bible say about ${keyTerms[0]?.toLocaleLowerCase() || book.theme}?`,
+      ],
     };
   }
 
   // 6. PRAYER & LECTIO DIVINA
-  if (actionOrPrompt === "prayer") {
+  if (isPrayer) {
     const anchorLine =
       focusVerses[0]?.text || `Your Word in ${book.name} ${ctx.chapter}`;
     return {
@@ -532,11 +690,15 @@ Tap any reference pill below to jump straight to that passage:`,
 *“Living God, thank You for speaking through ${refLabel}. Where my heart is distracted or self-reliant today, anchor me in the truth of these words. Shape my speech, my patience, and my decisions around Your faithfulness. Help me walk out this passage not just as words on a screen, but in love toward the people I meet today. Amen.”*
 
 **4. Carry One Question Today:** *Who in my life today needs to experience the grace or wisdom reflected in ${refLabel}?*`,
+      suggestions: [
+        `Show cross-references for ${refLabel}`,
+        `Explain ${refLabel} in simple words`,
+      ],
     };
   }
 
   // 7. INTERACTIVE CHAPTER QUIZ
-  if (actionOrPrompt === "quiz") {
+  if (isQuiz) {
     const quiz = buildQuizFromChapter(book.name, ctx.chapter, verses);
     return {
       content: `### Interactive Reading Check: ${book.name} ${ctx.chapter}
@@ -546,7 +708,6 @@ Test what stood out from your reading of **${book.name} ${ctx.chapter}** below:`
   }
 
   // 8. FREE-FORM USER QUESTION!
-  const qLower = actionOrPrompt.toLowerCase().trim();
 
   // Resolve explicit references to actual verse text when the selected version is installed.
   if (reference) {
@@ -592,109 +753,87 @@ Use the nearby verses to see how the thought develops before drawing a conclusio
     }
   }
 
-  // Check topical / emotional life questions!
-  const matchedTopic = TOPICAL_LIFE_GUIDES.find(
-    (t) =>
-      qLower.includes(t.id) ||
-      qLower.includes(t.label.toLowerCase()) ||
-      (t.id === "anxiety" && /anxious|worry|worried|afraid|fear|stress|overwhelm|panic/.test(qLower)) ||
-      (t.id === "grief" && /sad|grief|loss|hurt|broken|lonely|cry|mourn/.test(qLower)) ||
-      (t.id === "wisdom" && /decis|guide|direction|confused|choice|wisdom/.test(qLower)) ||
-      (t.id === "forgiveness" && /forgiv|guilt|shame|sin|mercy|grace/.test(qLower)) ||
-      (t.id === "strength" && /tired|weary|exhaust|burnout|weak|strength/.test(qLower)) ||
-      (t.id === "purpose" && /purpose|identity|calling|meaning|future/.test(qLower))
-  );
-
+  // Curated local guides cover common themes; every listed passage links into the reader.
+  const matchedTopic = findTopicalGuide(retrievalQuestion);
   if (matchedTopic) {
     const citations: AiCitationLink[] = [];
-    const bullets = matchedTopic.passages.map((p) => {
-      const parsed = parseScriptureReference(p.ref);
+    const passageLines = await Promise.all(matchedTopic.passages.slice(0, 5).map(async (passage) => {
+      const parsed = parseScriptureReference(passage.ref);
       if (parsed) {
         citations.push({
-          label: p.ref,
+          label: passage.ref,
           bookNumber: parsed.bookNumber,
           chapter: parsed.chapter,
           verse: parsed.verse,
         });
       }
-      return `- **${p.ref}** — ${p.note}`;
-    });
+      const localPassage = await loadReferenceText(passage.ref, ctx);
+      const verseText = localPassage?.text
+        ? `\n  ${localPassage.text.split("\n").map((line) => `> ${line}`).join("\n  ")}`
+        : "";
+      return `- **${passage.ref}** — ${passage.note}${verseText}`;
+    }));
 
     return {
-      content: `### ${matchedTopic.emoji} ${matchedTopic.label}
-${matchedTopic.summary}
-
-Here are key passages across Scripture to read and reflect on right now:
-${bullets.join("\n")}
-
-Tap any passage below to open it immediately in your reader:`,
+      content: `### ${matchedTopic.emoji} ${matchedTopic.label}\n\n${matchedTopic.summary}\n\n**Passages to explore in ${ctx.versionMeta.shortName}:**\n${passageLines.join("\n")}\n\nThese are curated reading paths, not a substitute for reading each passage in its chapter context. Tap a citation to open it.`,
       citations,
+      clarifyingQuestion: /\b(my|i am|i feel|i'm|me)\b/.test(qLower)
+        ? "Would you prefer a few passages to read, a short prayer, or practical reflection questions?"
+        : undefined,
+      suggestions: [
+        `Show cross-references for ${matchedTopic.label.toLocaleLowerCase()}`,
+        `Help me pray about ${matchedTopic.label.toLocaleLowerCase()}`,
+        `Walk me through ${book.name} ${ctx.chapter}`,
+      ],
+      source: "knowledge",
     };
   }
 
-  // Search the installed Bible for keywords in the user's question!
-  const searchWords = qLower
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter(
-      (w) =>
-        w.length >= 4 &&
-        !STOP_WORDS.has(w) &&
-        !["bible", "verse", "verses", "about", "mean", "means", "explain", "tell", "where", "does", "say", "says", "chapter", "help", "read"].includes(w)
-    );
-
-  if (searchWords.length > 0) {
-    try {
-      let searchRes = await searchInstalledBible(
-        ctx.versionMeta,
-        searchWords.slice(0, 2).join(" "),
-        { limit: 5 }
-      );
-      let searchedTerms = searchWords.slice(0, 2).join(" ");
-      if (searchRes.results.length === 0 && searchWords.length > 1) {
-        searchedTerms = searchWords[0];
-        searchRes = await searchInstalledBible(ctx.versionMeta, searchedTerms, { limit: 5 });
-      }
-      if (searchRes.results.length > 0) {
-        const citations: AiCitationLink[] = searchRes.results.map((r) => ({
-          label: `${r.bookName} ${r.chapter}:${r.verse}`,
-          bookNumber: r.bookNumber,
-          chapter: r.chapter,
-          verse: r.verse,
-        }));
-        const lines = searchRes.results
-          .map(
-            (r) =>
-              `- **${r.bookName} ${r.chapter}:${r.verse}** (${ctx.versionMeta.shortName}): *“${r.text}”*`
-          )
-          .join("\n");
-        return {
-          content: `### Scripture Passages Matching *“${searchedTerms}”*
-Found **${searchRes.totalMatches.toLocaleString()}** matching verse${searchRes.totalMatches === 1 ? "" : "s"} in **${ctx.versionMeta.name}**:
-
-${lines}
-
-Click any verse pill below to jump directly to its full chapter context:`,
-          citations,
-        };
-      }
-    } catch {
-      // Fall through to current chapter contextual answer
+  // Retrieve evidence from the currently selected full Bible edition, ranking verse matches locally.
+  const evidence = await rankLocalBibleEvidence(retrievalQuestion, ctx);
+  if (evidence.length > 0) {
+    const citationByReference = new Map<string, AiCitationLink>();
+    for (const hit of evidence) {
+      const key = `${hit.bookNumber}:${hit.chapter}:${hit.verse}`;
+      citationByReference.set(key, {
+        label: `${hit.bookName} ${hit.chapter}:${hit.verse}`,
+        bookNumber: hit.bookNumber,
+        chapter: hit.chapter,
+        verse: hit.verse,
+      });
     }
+    const citations = [...citationByReference.values()];
+    const evidenceLines = evidence
+      .map((hit) => `- **${hit.bookName} ${hit.chapter}:${hit.verse}** (${hit.versionShortName}): *“${hit.text}”*`)
+      .join("\n");
+    const lead = getBookMeta(evidence[0].bookNumber);
+    const followUpReference = `${evidence[0].bookName} ${evidence[0].chapter}:${evidence[0].verse}`;
+
+    return {
+      content: `### Bible Knowledge Search\n\nI searched Bible editions installed on this device, including **${ctx.versionMeta.name}**. These are the closest verse matches to the main words in your question: \n\n${evidenceLines}\n\n**Context note:** ${lead.name} is traditionally attributed to ${lead.author} and is centered on *${lead.theme}*. Search matches help locate relevant wording; read the surrounding chapter before treating a verse as a complete answer.`,
+      citations,
+      clarifyingQuestion: isFollowUp
+        ? undefined
+        : "Are you asking about the meaning of one of these verses, the history behind it, or how it connects to another passage?",
+      suggestions: [
+        `Explain ${followUpReference} in simple words`,
+        `Show cross-references for ${followUpReference}`,
+        `What is the historical background of ${lead.name}?`,
+      ],
+      source: "knowledge",
+    };
   }
 
-  // Contextual response anchored in current open chapter
+  // If the question is broad or not represented in the installed text, ask for a useful anchor.
   const sampleText = focusVerses.map((v) => `[v.${v.verse}] ${v.text}`).join(" ");
   return {
-    content: `### Reflecting on ${refLabel} (${ctx.versionMeta.shortName})
-
-You're currently in **${book.name} ${ctx.chapter}**, written by **${book.author}** (*${book.dateWritten}*), where the central thread is **${book.theme}**.
-
-> ${simplifyArchaicPhrasing(sampleText.slice(0, 320))}${sampleText.length > 320 ? "…" : ""}
-
-**Ways I can help you read deeper right now:**
-- Tap **Explain Simply** above to unpack selected verses in clear modern phrasing
-- Tap **Original Greek/Hebrew** to inspect root words & BDB/Thayer lexicon entries
-- Ask about any topic (e.g. *“verses about peace”*, *“forgiveness”*, *“hope”*) or any reference (e.g. *“Romans 8:28”*)!`,
+    content: `### Let’s find the right passage\n\nI couldn’t find a close match in the locally available **${ctx.versionMeta.name}** text for *“${effectivePrompt}”*. Selah’s built-in centre can search the full installed Bible, explain a cited passage, show curated topic guides, compare translations available in the reader, and offer selected Hebrew/Greek word notes.\n\nTry including a Bible reference (for example, **Romans 8:28**), one or two key words, or tell me what part of the answer you want to explore.\n\n**Current reading:** ${refLabel} — *“${simplifyArchaicPhrasing(sampleText.slice(0, 220))}${sampleText.length > 220 ? "…" : ""}”*`,
+    clarifyingQuestion: "Which Bible passage, person, or topic should I look up?",
+    suggestions: [
+      `Walk me through ${book.name} ${ctx.chapter}`,
+      `Show cross-references for ${refLabel}`,
+      "What does the Bible say about hope?",
+    ],
+    source: "knowledge",
   };
 }

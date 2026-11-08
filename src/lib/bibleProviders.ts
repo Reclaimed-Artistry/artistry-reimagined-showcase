@@ -1142,36 +1142,3 @@ export async function importCustomBibleJson(
     "Unrecognized JSON Bible schema. Supported formats: Selah export JSON, 66-book chapters array, or verse objects array."
   );
 }
-
-/**
- * Live Hebrew/Greek dictionary lookup via Bolls BDB/Thayer lexicon when online
- */
-export async function lookupOriginalLexiconOnline(query: string): Promise<
-  {
-    topic: string;
-    lexeme: string;
-    transliteration: string;
-    pronunciation: string;
-    short_definition: string;
-  }[]
-> {
-  try {
-    const res = await fetch(
-      `https://bolls.life/dictionary-definition/BDBT/${encodeURIComponent(query.trim())}/`
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    if (!Array.isArray(data)) return [];
-    return data.slice(0, 5).map((item: Record<string, unknown>) => ({
-      topic: String(item.topic || ""),
-      lexeme: String(item.lexeme || ""),
-      transliteration: String(item.transliteration || ""),
-      pronunciation: String(item.pronunciation || ""),
-      short_definition: cleanBollsHtml(
-        String(item.short_definition || item.definition || "")
-      ).slice(0, 360),
-    }));
-  } catch {
-    return [];
-  }
-}

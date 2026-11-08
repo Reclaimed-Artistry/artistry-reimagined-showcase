@@ -198,10 +198,6 @@ export type ReaderTheme = "parchment" | "sepia" | "night";
 export type ReaderFont = "scripture" | "display" | "sans" | "mono";
 export type ReaderLayoutMode = "verse" | "paragraph";
 
-export interface AiConnectionSettings {
-  mode: "hybrid";
-}
-
 export interface ReaderPreferences {
   theme: ReaderTheme;
   fontFamily: ReaderFont;
@@ -220,7 +216,6 @@ export interface ReaderPreferences {
   preferredVoiceURI: string;
   autoAdvanceChapter: boolean;
   ambientSound: boolean;
-  aiSettings: AiConnectionSettings;
 }
 
 export type AppSection =

@@ -1,4 +1,4 @@
-# Selah cloud sync, groups, and secure AI
+# Selah cloud sync, groups, and local Bible Knowledge Centre
 
 ## Cloud sync and reading groups
 
@@ -13,17 +13,13 @@ Public Vercel build variables:
 
 Never add a Supabase secret/service-role key to a `VITE_` variable or the client bundle.
 
-## Secure server-side AI
+## Local Bible Knowledge Centre
 
-`api/ai.ts` is a Vercel Node function. It requires a valid signed-in Supabase session, validates the bearer token against Supabase Auth, limits submitted context/history, and calls the configured OpenAI-compatible endpoint. The provider key is read only from server-side environment variables and is never sent to the client.
+Selah's AI Companion is a local, retrieval-based Bible study assistant. It does not call OpenAI or another hosted language model, has no provider API key, and does not require sign-in. Its evidence comes from complete Bible editions bundled with the app (KJV and BSB), any full translations the user has downloaded/imported on that device, the visible chapter, canonical book metadata, curated topical reading paths, cross-references, and selected Hebrew/Greek word-study notes. It links relevant references back to the reader and preserves recent conversation turns for follow-up searches.
 
-Configure these server variables in Vercel (Project → Settings → Environment Variables), then redeploy:
+The knowledge centre searches only translations available locally on that device; copyrighted editions are not redistributed by Selah and may remain publisher-hosted or require the user to obtain/download an authorized copy. Original-language material is a curated study aid, not a complete scholarly lexicon. Because this is a deterministic local study/search engine rather than a generative language model, open-ended answers are grounded in retrieved Bible text and study notes; when it cannot find a useful match it asks for a reference or clarifying detail instead of inventing an answer.
 
-- `OPENAI_API_KEY` — required secret; set as an encrypted/sensitive variable, never with a `VITE_` prefix.
-- `OPENAI_MODEL` — optional; defaults to `gpt-4o-mini`.
-- `OPENAI_BASE_URL` — optional; defaults to OpenAI's Chat Completions endpoint.
-
-The AI panel offers one built-in Selah companion: it attempts secure online answers for signed-in users and falls back to local study tools when offline or unauthenticated. Google sign-in is initiated from the AI panel. Enable Google under Supabase Auth → Sign In / Providers and supply a Google OAuth web client ID and secret; the authorized redirect URI in Google Cloud is `https://hvgmwiylmtdxiuqzcgxp.supabase.co/auth/v1/callback`. The project redirect allow-list already includes the production domain and Vercel deployment aliases. Google OAuth is currently disabled in this project's Auth configuration, so the UI will show a setup message until the provider is enabled. The API endpoint permits the production origin, local Vite origin, and the Vercel project's deployment aliases. If the Vercel account/team alias changes, update the origin matcher in `api/ai.ts`.
+Account sign-in remains available separately under **Study → Sync & Groups** for optional cloud backup and shared reading plans. It is not used by the local Bible Knowledge Centre. No OpenAI provider key is needed or stored in Vercel.
 
 ## Audio behavior
 
