@@ -12,6 +12,7 @@ import {
   HardDrive,
   Loader2,
   Search,
+  RefreshCw,
   Sparkles,
   Trash2,
   Wifi,
@@ -62,6 +63,8 @@ const PROVIDER_LABELS: Record<string, { label: string; style: string }> = {
 export const VersionVaultView: React.FC = () => {
   const {
     catalog,
+    catalogSyncStatus,
+    refreshCatalog,
     activeVersion,
     setActiveVersionId,
     setActiveSection,
@@ -168,13 +171,12 @@ export const VersionVaultView: React.FC = () => {
               Global Multi-Version Library &amp; Offline Vault
             </div>
             <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Every Translation. Ready Anytime, Anywhere.
+              Explore Bible translations. Read online or offline.
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Browse <strong>{catalog.length.toLocaleString()}+ Bible translations</strong> across{" "}
-              <strong>{distinctLanguages.length}+ languages</strong>. Stream any chapter instantly or
-              click <strong>Download Offline</strong> to store complete 66-book Bibles permanently in
-              your device&apos;s IndexedDB Vault for zero-internet reading and <code className="rounded bg-muted px-1 py-0.5 text-xs">&lt;35ms</code> full-Bible search.
+              Browse <strong>{catalog.length.toLocaleString()} Bible translations</strong> across{" "}
+              <strong>{distinctLanguages.length} languages</strong>. Stream chapters online or use{" "}
+              <strong>Download Offline</strong> to keep editions in this device&apos;s local vault.
             </p>
           </div>
 
@@ -187,7 +189,13 @@ export const VersionVaultView: React.FC = () => {
               }`}
             >
               {isOnline ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
-              {isOnline ? "Online • Live Catalog Synced" : "Offline Mode • Local Vault Active"}
+              {!isOnline
+                ? "Offline Mode • Local Vault Active"
+                : catalogSyncStatus === "ready"
+                  ? "Online • Catalog Synced"
+                  : catalogSyncStatus === "loading"
+                    ? "Online • Syncing Catalog"
+                    : "Online • Saved Catalog Available"}
             </span>
 
             <input
@@ -212,6 +220,35 @@ export const VersionVaultView: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {catalogSyncStatus !== "ready" && (
+          <div
+            role="status"
+            className={`mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm ${
+              catalogSyncStatus === "error"
+                ? "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200"
+                : "border-primary/20 bg-primary/5 text-foreground"
+            }`}
+          >
+            <p className="max-w-3xl">
+              {catalogSyncStatus === "loading"
+                ? "Checking the online translation catalog. Bundled and saved editions remain available during sync."
+                : isOnline
+                  ? "The online catalog could not be refreshed. This device is showing bundled and saved editions, which may be a partial list."
+                  : "This device is offline. The list contains bundled and saved editions and may be partial until an online sync succeeds."}
+            </p>
+            {catalogSyncStatus === "error" && isOnline && (
+              <button
+                type="button"
+                onClick={() => void refreshCatalog()}
+                className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-current/20 bg-background px-3 py-2 text-xs font-semibold hover:bg-accent"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Retry catalog sync
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Vault Stats Strip */}
         <div className="mt-6 grid grid-cols-2 gap-3 border-t border-border/70 pt-5 sm:grid-cols-4">

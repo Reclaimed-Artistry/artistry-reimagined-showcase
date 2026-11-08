@@ -18,6 +18,7 @@ import {
   importCustomBibleJson,
   loadUnifiedCatalog,
 } from "@/lib/bibleProviders";
+import type { CatalogSyncStatus } from "@/lib/bibleProviders";
 import {
   deleteOfflineBible,
   listOfflineBibleSummaries,
@@ -127,6 +128,8 @@ export interface BibleAppContextValue {
 
   // Versions & Offline Vault
   catalog: BibleVersionMeta[];
+  catalogSyncStatus: CatalogSyncStatus;
+  refreshCatalog: () => Promise<void>;
   activeVersionId: string;
   activeVersion: BibleVersionMeta;
   setActiveVersionId: (id: string) => void;
@@ -216,6 +219,16 @@ function getTodayIso(): string {
   return `${y}-${m}-${day}`;
 }
 
+function mergeCatalogVersions(
+  preferred: BibleVersionMeta[],
+  fallback: BibleVersionMeta[]
+): BibleVersionMeta[] {
+  const versions = new Map<string, BibleVersionMeta>();
+  for (const version of fallback) versions.set(version.id, version);
+  for (const version of preferred) versions.set(version.id, version);
+  return Array.from(versions.values());
+}
+
 export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeSection, setActiveSection] = useState<AppSection>("home");
 
@@ -240,6 +253,7 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     readLocal<BibleVersionMeta[]>(STORAGE_KEYS.CUSTOM_VERSIONS, [])
   );
   const [baseCatalog, setBaseCatalog] = useState<BibleVersionMeta[]>(BUNDLED_VERSIONS);
+  const [catalogSyncStatus, setCatalogSyncStatus] = useState<CatalogSyncStatus>("loading");
 
   const catalog = useMemo(() => {
     const map = new Map<string, BibleVersionMeta>();
@@ -383,12 +397,19 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setOfflineSummaries(dbList);
   }, []);
 
+  const refreshCatalog = useCallback(async () => {
+    const initial = await loadUnifiedCatalog(
+      (remoteUpdated) => {
+        setBaseCatalog((current) => mergeCatalogVersions(remoteUpdated, current));
+      },
+      setCatalogSyncStatus
+    );
+    // Keep any remote update that may have completed before the local promise.
+    setBaseCatalog((current) => mergeCatalogVersions(current, initial));
+  }, []);
+
   useEffect(() => {
-    loadUnifiedCatalog((remoteUpdated) => {
-      setBaseCatalog(remoteUpdated);
-    }).then((initial) => {
-      setBaseCatalog(initial);
-    });
+    void refreshCatalog();
     refreshOfflineList();
 
     // Record today's visit in reading streak
@@ -399,7 +420,7 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       writeLocal(STORAGE_KEYS.STREAK_DATES, next);
       return next;
     });
-  }, [refreshOfflineList]);
+  }, [refreshCatalog, refreshOfflineList]);
 
   // Persist location
   useEffect(() => {
@@ -1054,6 +1075,8 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     nextChapter,
     prevChapter,
     catalog,
+    catalogSyncStatus,
+    refreshCatalog,
     activeVersionId,
     activeVersion,
     setActiveVersionId,
