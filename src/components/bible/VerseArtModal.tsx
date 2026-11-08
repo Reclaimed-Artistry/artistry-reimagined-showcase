@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Copy, Download, Image as ImageIcon, Share2 } from "lucide-react";
+import { Copy, Download, Image as ImageIcon, Share2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatReference } from "@/data/canonicalBooks";
 import { useBibleApp } from "@/context/BibleAppContext";
@@ -104,7 +104,10 @@ export const VerseArtModal: React.FC = () => {
 
   const [themeId, setThemeId] = useState<string>("obsidian");
   const [aspect, setAspect] = useState<"square" | "story">("square");
+  const [uploadedImage, setUploadedImage] = useState<HTMLImageElement | null>(null);
+  const [uploadedImageName, setUploadedImageName] = useState("");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const sortedVerses = useMemo(
     () => (selectedVerses.length > 0 ? [...selectedVerses].sort((a, b) => a - b) : [1]),
@@ -128,6 +131,34 @@ export const VerseArtModal: React.FC = () => {
 
   const activeTheme = CARD_THEMES.find((t) => t.id === themeId) || CARD_THEMES[0];
 
+  const handleBackgroundImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Choose a PNG, JPEG, or WebP image.");
+      return;
+    }
+    if (file.size > 12 * 1024 * 1024) {
+      toast.error("Please choose an image smaller than 12 MB.");
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      setUploadedImage(image);
+      setUploadedImageName(file.name);
+      toast.success("Picture added as the Verse Art background.");
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      toast.error("That image could not be opened.");
+    };
+    image.src = objectUrl;
+  };
+
   useEffect(() => {
     if (!verseArtModalOpen) return;
     const canvas = canvasRef.current;
@@ -140,12 +171,21 @@ export const VerseArtModal: React.FC = () => {
     canvas.width = width;
     canvas.height = height;
 
-    // Background gradient
-    const grad = ctx.createLinearGradient(0, 0, width, height);
-    grad.addColorStop(0, activeTheme.bgStart);
-    grad.addColorStop(1, activeTheme.bgEnd);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, width, height);
+    // Use an uploaded picture as a cover background, or fall back to the selected color theme.
+    if (uploadedImage?.naturalWidth && uploadedImage.naturalHeight) {
+      const scale = Math.max(width / uploadedImage.naturalWidth, height / uploadedImage.naturalHeight);
+      const drawWidth = uploadedImage.naturalWidth * scale;
+      const drawHeight = uploadedImage.naturalHeight * scale;
+      ctx.drawImage(uploadedImage, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
+      ctx.fillStyle = themeId === "parchment" ? "rgba(255, 250, 240, 0.48)" : "rgba(8, 12, 18, 0.42)";
+      ctx.fillRect(0, 0, width, height);
+    } else {
+      const grad = ctx.createLinearGradient(0, 0, width, height);
+      grad.addColorStop(0, activeTheme.bgStart);
+      grad.addColorStop(1, activeTheme.bgEnd);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+    }
 
     // Subtle inset frame
     ctx.strokeStyle = activeTheme.borderColor;
@@ -178,7 +218,7 @@ export const VerseArtModal: React.FC = () => {
     ctx.fillStyle = activeTheme.accentColor;
     ctx.font = `700 30px system-ui, -apple-system, sans-serif`;
     ctx.fillText(`${refLabel.toUpperCase()}  •  ${activeVersion.shortName}`, width / 2, y + 48);
-  }, [verseArtModalOpen, activeTheme, aspect, verseText, refLabel, activeVersion.shortName]);
+  }, [verseArtModalOpen, activeTheme, themeId, aspect, verseText, refLabel, activeVersion.shortName, uploadedImage]);
 
   const handleDownloadPng = () => {
     const canvas = canvasRef.current;
@@ -223,6 +263,45 @@ export const VerseArtModal: React.FC = () => {
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="sr-only"
+              onChange={handleBackgroundImage}
+              aria-label="Upload a background picture"
+            />
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/15"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              Upload picture
+            </button>
+            {uploadedImageName ? (
+              <>
+                <span className="max-w-[180px] truncate text-xs text-muted-foreground" title={uploadedImageName}>
+                  {uploadedImageName}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadedImage(null);
+                    setUploadedImageName("");
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
+                  aria-label="Remove uploaded background picture"
+                >
+                  <X className="h-3 w-3" />Remove
+                </button>
+              </>
+            ) : (
+              <span className="text-[11px] text-muted-foreground">PNG, JPEG, or WebP • up to 12 MB</span>
+            )}
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap gap-1.5">
               {CARD_THEMES.map((t) => (

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import {
   ArrowUpRight,
   BookOpen,
@@ -8,15 +9,15 @@ import {
   Languages,
   Link2,
   Loader2,
+  LogOut,
   Send,
-  Settings2,
-  ShieldCheck,
   Sparkles,
   Volume2,
   X,
 } from "lucide-react";
 import { formatReference, getBookMeta } from "@/data/canonicalBooks";
 import { useBibleApp } from "@/context/BibleAppContext";
+import { supabase } from "@/lib/cloudWorkspace";
 import {
   AiCompanionMessage,
   AiQuickAction,
@@ -157,16 +158,66 @@ export const AiCompanionPanel: React.FC = () => {
     navigateTo,
     startAudioFromVerse,
     prefs,
-    updatePrefs,
   } = useBibleApp();
 
   const [messages, setMessages] = useState<AiCompanionMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const scrollEndRef = useRef<HTMLDivElement | null>(null);
   const bookMeta = getBookMeta(bookNumber);
+
+  useEffect(() => {
+    if (!supabase) return;
+    let mounted = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (mounted) setSession(data.session);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+    });
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const signInWithGoogle = async () => {
+    if (!supabase) {
+      setAuthError("Online AI sign-in is not configured in this app.");
+      return;
+    }
+    setAuthBusy(true);
+    setAuthError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.href },
+      });
+      if (error) {
+        const providerDisabled = /provider.*(not enabled|unsupported)|not enabled.*provider/i.test(error.message);
+        setAuthError(providerDisabled
+          ? "Google sign-in is not enabled yet. The Selah administrator must configure Google OAuth in Supabase Auth."
+          : error.message);
+      }
+    } catch {
+      setAuthError("Could not start Google sign-in. Please check your connection and try again.");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const signOut = async () => {
+    if (!supabase) return;
+    setAuthBusy(true);
+    setAuthError(null);
+    const { error } = await supabase.auth.signOut();
+    if (error) setAuthError(error.message);
+    setAuthBusy(false);
+  };
 
   const activeRefLabel =
     selectedVerses.length > 0
@@ -315,18 +366,6 @@ export const AiCompanionPanel: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => setShowSettings((s) => !s)}
-            className={`rounded-lg p-1.5 transition ${
-              showSettings
-                ? "bg-primary/15 text-primary"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground"
-            }`}
-            title="AI Engine Settings (Built-in Offline + Custom API Key)"
-          >
-            <Settings2 className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
             onClick={() => setAiPanelOpen(false)}
             className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
             title="Close AI Panel"
@@ -336,97 +375,49 @@ export const AiCompanionPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Optional Custom LLM Settings Drawer */}
-      {showSettings && (
-        <div className="space-y-2.5 border-b border-border bg-secondary/40 p-4 text-xs">
-          <div className="font-semibold text-foreground">AI Reading Engine Mode</div>
-          <p className="text-[11px] text-muted-foreground">
-            Built-in study stays available offline and also tries secure server AI after you sign in; it falls back to offline study if the service is not configured. The provider key stays on the server and must be added by an administrator.
-          </p>
-          <div className="grid grid-cols-3 gap-1.5">
-            <button
-              type="button"
-              onClick={() =>
-                updatePrefs({ aiSettings: { ...prefs.aiSettings, mode: "hybrid" } })
-              }
-              className={`rounded-lg border py-1.5 font-semibold ${
-                prefs.aiSettings.mode === "hybrid"
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card"
-              }`}
-            >
-              Built-in + Online
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                updatePrefs({ aiSettings: { ...prefs.aiSettings, mode: "custom_llm" } })
-              }
-              className={`rounded-lg border py-1.5 font-semibold ${
-                prefs.aiSettings.mode === "custom_llm"
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card"
-              }`}
-            >
-              Direct Model API
-            </button>
-            <button
-              type="button"
-              onClick={() => updatePrefs({ aiSettings: { ...prefs.aiSettings, mode: "server_llm" } })}
-              className={`inline-flex items-center justify-center gap-1 rounded-lg border px-1 py-1.5 font-semibold ${
-                prefs.aiSettings.mode === "server_llm"
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card"
-              }`}
-            >
-              <ShieldCheck className="h-3 w-3" />Secure server
-            </button>
-          </div>
-          {prefs.aiSettings.mode === "server_llm" && (
-            <p className="rounded-lg border border-primary/20 bg-primary/5 p-2 text-[11px] text-muted-foreground">
-              Your question and relevant passage are sent to Selah’s server after sign-in. Provider credentials are not stored on this device.
-            </p>
-          )}
-
-          {prefs.aiSettings.mode === "custom_llm" && (
-            <div className="space-y-2 pt-1">
-              <input
-                type="text"
-                value={prefs.aiSettings.endpointUrl}
-                onChange={(e) =>
-                  updatePrefs({
-                    aiSettings: { ...prefs.aiSettings, endpointUrl: e.target.value },
-                  })
-                }
-                placeholder="https://api.openai.com/v1/chat/completions"
-                className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs"
-              />
-              <input
-                type="password"
-                value={prefs.aiSettings.apiKey}
-                onChange={(e) =>
-                  updatePrefs({
-                    aiSettings: { ...prefs.aiSettings, apiKey: e.target.value },
-                  })
-                }
-                placeholder="API Key (stored locally on your device)"
-                className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs"
-              />
-              <input
-                type="text"
-                value={prefs.aiSettings.model}
-                onChange={(e) =>
-                  updatePrefs({
-                    aiSettings: { ...prefs.aiSettings, model: e.target.value },
-                  })
-                }
-                placeholder="Model (e.g. gpt-4o-mini)"
-                className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs"
-              />
+      <div className="border-b border-border bg-secondary/40 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-2.5">
+            {session ? (
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            ) : (
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            )}
+            <div>
+              <p className="text-xs font-semibold text-foreground">
+                {session ? "Online Selah AI is ready" : "Sign in to use online Selah AI"}
+              </p>
+              <p className="mt-0.5 max-w-xl text-[11px] leading-4 text-muted-foreground">
+                {session
+                  ? `Signed in as ${session.user.email || "your account"}. Your question and passage are sent securely to Selah’s AI service.`
+                  : "Sign in with Google for online answers. Offline study stays available; Google sign-in must be enabled in Selah’s authentication settings."}
+              </p>
             </div>
+          </div>
+          {session ? (
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              disabled={authBusy}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold hover:bg-accent disabled:opacity-50"
+            >
+              {authBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
+              Sign out
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void signInWithGoogle()}
+              disabled={authBusy || !supabase}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            >
+              {authBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span aria-hidden="true" className="grid h-4 w-4 place-items-center rounded-full bg-white text-[11px] font-bold text-[#4285F4]">G</span>}
+              Continue with Google
+            </button>
           )}
         </div>
-      )}
+        {authError && <p role="alert" className="mt-2 text-xs text-destructive">{authError}</p>}
+      </div>
 
       {/* Quick Study Chips */}
       <div className="flex flex-wrap gap-1.5 border-b border-border/60 bg-background/60 p-3">

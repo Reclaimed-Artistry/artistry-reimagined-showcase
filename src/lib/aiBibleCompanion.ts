@@ -225,71 +225,6 @@ async function loadReferenceText(
   }
 }
 
-async function callCustomLlmIfConfigured(
-  prompt: string,
-  ctx: AiContextPayload,
-  referencePassage?: { label: string; text: string; contextText?: string } | null
-): Promise<string | null> {
-  const { aiSettings, chapterData, bookNumber, chapter, selectedVerses, versionMeta } = ctx;
-  if (aiSettings.mode !== "custom_llm" || !aiSettings.apiKey.trim()) {
-    return null;
-  }
-
-  const book = getBookMeta(bookNumber);
-  const targetVerses =
-    selectedVerses.length > 0
-      ? chapterData?.verses.filter((v) => selectedVerses.includes(v.verse)) || []
-      : chapterData?.verses.slice(0, 20) || [];
-  const passageSnippet = targetVerses
-    .map((v) => `[${v.verse}] ${v.text}`)
-    .join("\n");
-  const referencedText = referencePassage
-    ? `\n\nQuestion's referenced passage (${referencePassage.label}, ${versionMeta.shortName}):\n${referencePassage.text}${referencePassage.contextText ? `\nNearby verses:\n${referencePassage.contextText}` : ""}`
-    : "";
-  const systemPrompt = `You are Selah AI, a warm, scholarly, faithful, and clear Bible reading companion embedded inside Selah Multi-Version Bible.
-Current open passage: ${book.name} ${chapter} (${versionMeta.shortName} — ${versionMeta.name}).
-Selected verses: ${selectedVerses.length > 0 ? selectedVerses.join(", ") : "Whole chapter"}.
-Current passage text:\n${passageSnippet || "The current chapter text is still loading."}${referencedText}
-
-Answer the reader's actual question directly, in clear language. Ground claims in the supplied Scripture, identify verse references, distinguish the text from interpretive views, and say when the provided context is insufficient. Keep responses focused and use brief headings or bullets only when useful.`;
-
-  const controller = new AbortController();
-  const timeoutId = globalThis.setTimeout(() => controller.abort(), 12_000);
-  try {
-    const endpoint =
-      aiSettings.endpointUrl.trim() || "https://api.openai.com/v1/chat/completions";
-    const history = (ctx.conversationHistory || []).slice(-6).map((message) => ({
-      role: message.role,
-      content: message.content.slice(0, 1_200),
-    }));
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${aiSettings.apiKey.trim()}`,
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: aiSettings.model.trim() || "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...history,
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.35,
-      }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const answer = data?.choices?.[0]?.message?.content;
-    return typeof answer === "string" && answer.trim() ? answer.trim() : null;
-  } catch {
-    return null;
-  } finally {
-    globalThis.clearTimeout(timeoutId);
-  }
-}
-
 export async function generateAiBibleResponse(
   actionOrPrompt: AiQuickAction | string,
   ctx: AiContextPayload
@@ -316,8 +251,8 @@ export async function generateAiBibleResponse(
   const reference = typeof actionOrPrompt === "string" ? extractScriptureReference(actionOrPrompt) : null;
   const referencePassage = reference ? await loadReferenceText(reference, ctx) : null;
 
-  // Use the authenticated server proxy when selected; provider credentials never enter the browser.
-  if (actionOrPrompt !== "quiz" && (ctx.aiSettings.mode === "server_llm" || ctx.aiSettings.mode === "hybrid")) {
+  // The built-in Selah companion prefers the authenticated server model and falls back to local study tools.
+  if (actionOrPrompt !== "quiz") {
     const result = await requestSecureBibleAnswer(effectivePrompt, ctx, referencePassage);
     if (result.answer) {
       return {
@@ -330,19 +265,7 @@ export async function generateAiBibleResponse(
         }],
       };
     }
-    if (ctx.aiSettings.mode === "server_llm") {
-      return { content: `### Secure AI unavailable\n${result.error || "Try again shortly, or use built-in study tools."}` };
-    }
-    // Hybrid mode quietly falls back to the local study engine when online AI isn't configured.
-  }
-
-  // Try the optional user-configured LLM only when explicitly selected.
-  // A bounded request time keeps a slow provider from making the panel feel stuck.
-  if (actionOrPrompt !== "quiz" && ctx.aiSettings.mode === "custom_llm" && ctx.aiSettings.apiKey) {
-    const llmReply = await callCustomLlmIfConfigured(effectivePrompt, ctx, referencePassage);
-    if (llmReply) {
-      return { content: llmReply };
-    }
+    // Unauthenticated or unavailable online AI falls back to built-in offline study.
   }
 
   // 1. WALKTHROUGH

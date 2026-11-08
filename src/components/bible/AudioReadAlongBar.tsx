@@ -536,14 +536,22 @@ export const AudioReadAlongBar: React.FC = () => {
             {sleepMinutes ? `${sleepMinutes}m` : "Sleep"}
           </button>
 
-          <button
-            type="button"
-            onClick={() => setAudioBarOpen(false)}
-            className="rounded-xl p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-            title="Close Audio Bar"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          {!isPlaying && (
+            <button
+              type="button"
+              onClick={() => {
+                stopAllPlayback();
+                setActiveAudioVerse(null);
+                setAudioBarOpen(false);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
+              title="Close the paused audio player"
+              aria-label="Close paused audio player"
+            >
+              <X className="h-4 w-4" />
+              Close
+            </button>
+          )}
         </div>
       </div>
     </div>

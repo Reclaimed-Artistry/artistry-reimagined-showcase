@@ -23,7 +23,7 @@ Configure these server variables in Vercel (Project → Settings → Environment
 - `OPENAI_MODEL` — optional; defaults to `gpt-4o-mini`.
 - `OPENAI_BASE_URL` — optional; defaults to OpenAI's Chat Completions endpoint.
 
-Until `OPENAI_API_KEY` is configured, the secure AI mode reports that it is unavailable; built-in offline study tools continue to work. The API endpoint permits the production origin, local Vite origin, and the Vercel project's deployment aliases. If the Vercel account/team alias changes, update the origin matcher in `api/ai.ts`.
+The AI panel offers one built-in Selah companion: it attempts secure online answers for signed-in users and falls back to local study tools when offline or unauthenticated. Google sign-in is initiated from the AI panel. Enable Google under Supabase Auth → Sign In / Providers and supply a Google OAuth web client ID and secret; the authorized redirect URI in Google Cloud is `https://hvgmwiylmtdxiuqzcgxp.supabase.co/auth/v1/callback`. The project redirect allow-list already includes the production domain and Vercel deployment aliases. Google OAuth is currently disabled in this project's Auth configuration, so the UI will show a setup message until the provider is enabled. The API endpoint permits the production origin, local Vite origin, and the Vercel project's deployment aliases. If the Vercel account/team alias changes, update the origin matcher in `api/ai.ts`.
 
 ## Audio behavior
 
