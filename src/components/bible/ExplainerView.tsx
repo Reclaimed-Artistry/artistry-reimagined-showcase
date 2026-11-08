@@ -94,6 +94,31 @@ export const ExplainerView: React.FC = () => {
         <div><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-primary"><Lightbulb className="h-4 w-4" /> A gentle reminder</div><p className="mt-3 max-w-3xl font-scripture text-lg leading-8 text-foreground/90">Selah means to pause and reflect. Use the app in a way that helps you listen, learn, and love your neighbor. No streak or feature matters more than that.</p></div>
         <button type="button" onClick={() => setActiveSection("reflection")} className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/20 bg-card px-5 py-3 text-sm font-semibold shadow-sm transition hover:border-primary/40 hover:bg-accent"><Check className="h-4 w-4 text-primary" /> Take a quiet moment</button>
       </section>
+
+      <section aria-labelledby="developer-heading" className="overflow-hidden rounded-[2rem] border border-border/80 bg-card p-5 shadow-sm sm:p-8">
+        <div className="mb-6">
+          <p className="text-[10px] font-bold uppercase tracking-[.2em] text-primary">The heart behind Selah</p>
+          <h2 id="developer-heading" className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">About the Developer</h2>
+        </div>
+        <div className="grid items-start gap-7 md:grid-cols-[minmax(0,.78fr)_minmax(0,1.22fr)] md:gap-10">
+          <img
+            src="/images/victor-inyang.jpg"
+            alt="Victor Inyang, developer of Selah Multi Versions Bible"
+            className="mx-auto aspect-[4/5] w-full max-w-sm rounded-[1.5rem] object-cover object-center shadow-md md:mx-0"
+            loading="lazy"
+          />
+          <div className="space-y-4 text-sm leading-7 text-muted-foreground">
+            <p>My name is Victor Inyang, and I am a lover of God&apos;s Word with a deep passion for making the Scriptures more accessible, understandable, and meaningful to everyone who desires to grow in their knowledge of God.</p>
+            <p>My love for the Word of God goes beyond simply reading the Scriptures; I have a genuine desire to see people understand, internalise, and live by the truths contained in them. I believe that studying the Bible should not only be an exercise in reading words but an opportunity to encounter truth, gain understanding, develop spiritual maturity, and experience transformation.</p>
+            <p>This conviction inspired the creation of Selah Multi Versions Bible.</p>
+            <p>I believe that one of the greatest gifts anyone can have is the ability to understand God&apos;s Word with clarity. Different Bible translations offer different perspectives on the same divine truth, and having access to multiple versions can make studying, comparing, interpreting, and assimilating Scripture much easier.</p>
+            <p>My vision is to make Bible study a more enriching and rewarding experience, helping readers move beyond familiarity with Scripture into deeper understanding and practical application.</p>
+            <p>Selah represents a moment to pause, reflect, and consider. It is a reminder that God&apos;s Word deserves more than a hurried reading; it deserves thoughtful meditation, understanding, and application.</p>
+            <p>My prayer is that this platform will inspire a deeper hunger for God&apos;s Word, encourage consistent Bible study, and help everyone who uses it grow in wisdom, faith, and intimacy with God.</p>
+            <p>The goal is simple: not just to help people read the Word, but to make it easier for them to understand, assimilate, and live it.</p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

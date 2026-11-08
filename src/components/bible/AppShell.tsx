@@ -174,14 +174,6 @@ export const AppShell: React.FC = () => {
       shortLabel: "Read",
       icon: <BookOpen className="h-4 w-4" />,
     },
-    ...(prefs.showBibleCompanion
-      ? [{
-          id: "companion" as const,
-          label: "Selah Bible Companion",
-          shortLabel: "Selah",
-          icon: <Sparkles className="h-4 w-4" />,
-        }]
-      : []),
     {
       id: "versions",
       label: "Vault",
