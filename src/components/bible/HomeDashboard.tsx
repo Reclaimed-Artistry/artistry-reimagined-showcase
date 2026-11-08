@@ -1,16 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  ArrowRight,
-  BookHeart,
-  BookOpen,
-  CalendarDays,
-  CircleHelp,
-  Database,
-  Feather,
-  BellRing,
-  Search,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, BellRing } from "lucide-react";
 import { toast } from "sonner";
 import { formatReference, getBookMeta } from "@/data/canonicalBooks";
 import { getDevotionalForDate } from "@/data/dailyReflections";
@@ -18,6 +7,7 @@ import { getChapterContent } from "@/lib/bibleProviders";
 import { useBibleApp } from "@/context/useBibleApp";
 import type { AppSection } from "@/types/bible";
 import { Switch } from "@/components/ui/switch";
+import { SelahIcon, type SelahIconName } from "./SelahIcon";
 import { disableRemotePushReminder, enableRemotePushReminder, REMOTE_PUSH_ACTIVE_KEY, updateRemotePushReminder } from "@/lib/webPushReminders";
 
 type HomeDashboardProps = {
@@ -34,17 +24,16 @@ const HOME_LINKS: {
   section: AppSection | "companion";
   title: string;
   description: string;
-  icon: React.ReactNode;
-  color: string;
+  icon: SelahIconName;
 }[] = [
-  { section: "reader", title: "Read", description: "Open the Bible and continue your reading.", icon: <BookOpen className="h-5 w-5" />, color: "text-blue-600 bg-blue-500/10" },
-  { section: "versions", title: "Vault", description: "Browse, compare, and manage Bible editions.", icon: <Database className="h-5 w-5" />, color: "text-violet-600 bg-violet-500/10" },
-  { section: "study", title: "Study", description: "Search Scripture, notes, memory, and progress.", icon: <Search className="h-5 w-5" />, color: "text-emerald-600 bg-emerald-500/10" },
-  { section: "companion", title: "Selah Bible Companion", description: "Explore Scripture with local study tools.", icon: <Sparkles className="h-5 w-5" />, color: "text-amber-600 bg-amber-500/10" },
-  { section: "kids", title: "Kids’ Stories", description: "Read Bible stories together, from all 66 books.", icon: <BookHeart className="h-5 w-5" />, color: "text-rose-600 bg-rose-500/10" },
-  { section: "plans", title: "Reading Plans", description: "Choose a plan and build a steady rhythm.", icon: <CalendarDays className="h-5 w-5" />, color: "text-cyan-600 bg-cyan-500/10" },
-  { section: "reflection", title: "Reflect", description: "Make space for prayer and daily reflection.", icon: <Feather className="h-5 w-5" />, color: "text-fuchsia-600 bg-fuchsia-500/10" },
-  { section: "about", title: "About Selah", description: "Learn how the Bible app works.", icon: <CircleHelp className="h-5 w-5" />, color: "text-slate-600 bg-slate-500/10" },
+  { section: "reader", title: "Read", description: "Open a passage or pick up where you stopped.", icon: "read" },
+  { section: "versions", title: "Bible versions", description: "Find, compare, and manage editions.", icon: "vault" },
+  { section: "study", title: "Study", description: "Search Scripture and revisit your notes.", icon: "study" },
+  { section: "companion", title: "Bible Companion", description: "Explore a passage with guided study tools.", icon: "companion" },
+  { section: "kids", title: "Stories for families", description: "Read a Bible story and talk about it together.", icon: "kids" },
+  { section: "plans", title: "Reading plans", description: "Follow a plan or shape one of your own.", icon: "plans" },
+  { section: "reflection", title: "Daily reflection", description: "Make a little room for prayer and reflection.", icon: "reflect" },
+  { section: "about", title: "About Selah", description: "Learn how Selah works and who made it.", icon: "about" },
 ];
 
 export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, onOpenCompanion }) => {
@@ -57,6 +46,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
     updatePrefs,
   } = useBibleApp();
   const dateKey = todayKey();
+  const displayDate = useMemo(() => new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date()), []);
   const devotional = useMemo(() => getDevotionalForDate(dateKey), [dateKey]);
   const devotionalReference = formatReference(
     devotional.bookNumber,
@@ -167,42 +157,41 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-7 px-4 pb-32 pt-7 sm:px-8 sm:pt-10">
-      <section className="grid gap-4 lg:grid-cols-[1.45fr_.8fr]">
-        <article className="relative overflow-hidden rounded-[2rem] border border-primary/15 bg-gradient-to-br from-primary/10 via-card to-card p-6 shadow-sm sm:p-9">
-          <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
-          <div className="relative">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-background/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.18em] text-primary">
-              <Sparkles className="h-3.5 w-3.5" /> Verse of the day
-            </div>
-            <blockquote className="mt-5 max-w-3xl font-scripture text-sm leading-6 text-foreground">
-              “{verseText}”
-            </blockquote>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <span className="font-mono text-sm font-bold text-primary">{devotionalReference}</span>
-              <button
-                type="button"
-                onClick={handleReadVerse}
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
-              >
-                Read this passage <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
+    <div className="mx-auto max-w-5xl space-y-9 px-4 pb-32 pt-7 sm:px-8 sm:pt-9">
+      <header className="border-b border-border/80 pb-5">
+        <p className="text-xs font-medium text-muted-foreground">{displayDate}</p>
+        <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight sm:text-4xl">A moment to pause.</h1>
+      </header>
+
+      <section className="grid gap-6 lg:grid-cols-[1.45fr_.85fr]">
+        <article className="rounded-2xl border border-border bg-card px-6 py-7 sm:px-8 sm:py-9">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-muted-foreground">
+            <span className="uppercase tracking-[.13em]">Today’s passage</span>
+            <span aria-hidden="true" className="text-border">/</span>
+            <span className="font-mono text-[11px] text-primary">{devotionalReference}</span>
           </div>
+          <blockquote className="mt-6 max-w-3xl font-scripture text-2xl leading-relaxed text-foreground sm:text-3xl">
+            “{verseText}”
+          </blockquote>
+          <button
+            type="button"
+            onClick={handleReadVerse}
+            className="mt-6 inline-flex items-center gap-2 border-b border-primary/40 pb-1 text-sm font-semibold text-primary transition hover:border-primary"
+          >
+            Read the full passage <ArrowRight className="h-4 w-4" />
+          </button>
         </article>
 
-        <article className="flex flex-col justify-between rounded-[2rem] border border-border bg-card p-6 shadow-sm sm:p-7">
+        <article className="flex flex-col justify-between rounded-2xl border border-border bg-secondary/55 p-6 sm:p-7">
           <div>
-            <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.18em] text-muted-foreground">
-              <BookOpen className="h-3.5 w-3.5 text-primary" /> Pick up where you left off
-            </div>
-            <h2 className="mt-4 font-display text-2xl font-bold">{lastBook.name} {chapter}</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">Your reading place is saved on this device, ready whenever you return.</p>
+            <p className="text-xs font-medium text-muted-foreground">Continue where you left off</p>
+            <h2 className="mt-3 font-display text-2xl font-semibold">{lastBook.name} {chapter}</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">Your place is saved on this device.</p>
           </div>
           <button
             type="button"
             onClick={() => onSelectSection("reader")}
-            className="mt-6 inline-flex w-fit items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-2.5 text-xs font-semibold text-primary transition hover:bg-primary/15"
+            className="mt-6 inline-flex w-fit items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-110"
           >
             Continue reading <ArrowRight className="h-4 w-4" />
           </button>
@@ -210,23 +199,27 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
       </section>
 
       <section aria-labelledby="home-menu-heading">
-        <div className="mb-4">
-          <p className="text-[10px] font-bold uppercase tracking-[.18em] text-primary">Your Selah space</p>
-          <h2 id="home-menu-heading" className="mt-1 font-display text-2xl font-bold">Where would you like to go?</h2>
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2 border-b border-border/80 pb-3">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Choose a practice</p>
+            <h2 id="home-menu-heading" className="mt-1 font-display text-2xl font-semibold">Explore Selah</h2>
+          </div>
+          <span className="text-xs text-muted-foreground">Read at your own pace</span>
         </div>
-        <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid gap-x-8 md:grid-cols-2">
           {HOME_LINKS.filter((link) => link.section !== "companion" || prefs.showBibleCompanion).map((link) => (
             <button
               key={link.section}
               type="button"
               onClick={() => link.section === "companion" ? onOpenCompanion() : onSelectSection(link.section)}
-              className="flex h-full min-h-36 flex-col items-start gap-2.5 rounded-2xl border border-border/80 bg-card p-3.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md sm:p-4"
+              className="group flex min-w-0 items-center gap-3 border-b border-border/70 py-4 text-left transition-colors hover:bg-primary/[.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${link.color}`}>{link.icon}</span>
-              <span className="min-w-0">
-                <span className="block min-h-10 line-clamp-2 text-sm font-semibold leading-5">{link.title}</span>
-                <span className="mt-1 block line-clamp-2 text-xs leading-5 text-muted-foreground">{link.description}</span>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/15"><SelahIcon name={link.icon} className="h-7 w-7" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-foreground">{link.title}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{link.description}</span>
               </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
             </button>
           ))}
         </div>

@@ -3,48 +3,49 @@
 @tailwind utilities;
 
 @layer base {
-  /* Navy & white light theme */
+  /* Warm paper and evergreen ink: the quiet default reading palette */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --background: 40 27% 96%;
+    --foreground: 151 16% 14%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card: 42 31% 99%;
+    --card-foreground: 151 16% 14%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 42 31% 99%;
+    --popover-foreground: 151 16% 14%;
 
-    --primary: 220 67% 28%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 151 27% 29%;
+    --primary-foreground: 42 35% 97%;
 
-    --secondary: 214 32% 95%;
-    --secondary-foreground: 222 47% 14%;
+    --secondary: 39 22% 91%;
+    --secondary-foreground: 151 17% 18%;
 
-    --muted: 214 28% 95%;
-    --muted-foreground: 215 16% 43%;
+    --muted: 39 18% 92%;
+    --muted-foreground: 151 8% 41%;
 
-    --accent: 214 38% 92%;
-    --accent-foreground: 222 47% 14%;
+    --accent: 39 25% 89%;
+    --accent-foreground: 151 17% 18%;
 
-    --destructive: 0 72% 45%;
+    --destructive: 0 64% 45%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 214 24% 86%;
-    --input: 214 24% 86%;
-    --ring: 220 67% 35%;
+    --border: 37 16% 84%;
+    --input: 37 16% 84%;
+    --ring: 151 27% 29%;
 
-    --radius: 0.75rem;
+    --radius: 0.65rem;
 
-    --sidebar-background: 216 36% 97%;
-    --sidebar-foreground: 222 38% 17%;
-    --sidebar-primary: 220 67% 28%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 214 38% 92%;
-    --sidebar-accent-foreground: 222 47% 14%;
-    --sidebar-border: 214 24% 87%;
-    --sidebar-ring: 220 67% 35%;
+    --sidebar-background: 40 25% 97%;
+    --sidebar-foreground: 151 16% 14%;
+    --sidebar-primary: 151 27% 29%;
+    --sidebar-primary-foreground: 42 35% 97%;
+    --sidebar-accent: 39 25% 89%;
+    --sidebar-accent-foreground: 151 17% 18%;
+    --sidebar-border: 37 16% 84%;
+    --sidebar-ring: 151 27% 29%;
 
     --red-letter: #991B1B;
+    --selah-icon-accent: #A16E3E;
   }
 
   /* Monastic Sepia Theme */
@@ -87,48 +88,50 @@
     --sidebar-ring: 25 72% 33%;
 
     --red-letter: #8F1919;
+    --selah-icon-accent: #8A562B;
   }
 
-  /* Rich blue on near-black dark theme */
+  /* Deep forest night mode, softened for long reading sessions */
   html.dark {
-    --background: 222 36% 5%;
-    --foreground: 214 32% 92%;
+    --background: 155 14% 7%;
+    --foreground: 42 22% 91%;
 
-    --card: 222 31% 8%;
-    --card-foreground: 214 32% 92%;
+    --card: 154 13% 10%;
+    --card-foreground: 42 22% 91%;
 
-    --popover: 222 31% 9%;
-    --popover-foreground: 214 32% 92%;
+    --popover: 154 13% 11%;
+    --popover-foreground: 42 22% 91%;
 
-    --primary: 217 91% 62%;
-    --primary-foreground: 222 47% 8%;
+    --primary: 145 34% 61%;
+    --primary-foreground: 155 17% 10%;
 
-    --secondary: 221 30% 13%;
-    --secondary-foreground: 214 32% 91%;
+    --secondary: 154 13% 15%;
+    --secondary-foreground: 42 22% 89%;
 
-    --muted: 221 28% 12%;
-    --muted-foreground: 215 18% 66%;
+    --muted: 154 12% 14%;
+    --muted-foreground: 145 8% 66%;
 
-    --accent: 220 31% 17%;
-    --accent-foreground: 214 32% 94%;
+    --accent: 151 15% 19%;
+    --accent-foreground: 42 22% 92%;
 
-    --destructive: 0 65% 52%;
+    --destructive: 0 61% 54%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 24% 19%;
-    --input: 220 24% 19%;
-    --ring: 217 91% 62%;
+    --border: 151 12% 22%;
+    --input: 151 12% 22%;
+    --ring: 145 34% 61%;
 
-    --sidebar-background: 222 38% 4%;
-    --sidebar-foreground: 214 32% 90%;
-    --sidebar-primary: 217 91% 62%;
-    --sidebar-primary-foreground: 222 47% 8%;
-    --sidebar-accent: 220 31% 14%;
-    --sidebar-accent-foreground: 214 32% 94%;
-    --sidebar-border: 220 24% 16%;
-    --sidebar-ring: 217 91% 62%;
+    --sidebar-background: 155 15% 6%;
+    --sidebar-foreground: 42 22% 89%;
+    --sidebar-primary: 145 34% 61%;
+    --sidebar-primary-foreground: 155 17% 10%;
+    --sidebar-accent: 151 15% 16%;
+    --sidebar-accent-foreground: 42 22% 92%;
+    --sidebar-border: 151 12% 17%;
+    --sidebar-ring: 145 34% 61%;
 
     --red-letter: #FFA3A3;
+    --selah-icon-accent: #D5AD77;
   }
 
   * {
@@ -136,8 +139,9 @@
   }
 
   body {
-    @apply bg-background text-foreground font-mono antialiased selection:bg-primary/20 selection:text-foreground;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    @apply bg-background text-foreground font-sans antialiased selection:bg-primary/15 selection:text-foreground;
+    font-feature-settings: "kern", "liga", "calt";
+    line-height: 1.5;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior-y: none;
   }

@@ -1,28 +1,28 @@
-# Selah Multi Versions Bible (Selah MVB) — Multi-Version Offline Scripture, Reading Plans, Daily Reflection & AI Companion
+# Selah Bible — Reading, Study, Reflection, and Offline Scripture
 
 **Selah Multi Versions Bible (Selah MVB)** is a local-first, offline-capable multi-version Bible web application designed around editorial clarity, deep study, and daily spiritual rhythm.
 
 ## Key Capabilities
 
 - **Personal Home & Reading Reminders**: A daily verse from the selected local Bible edition, one-tap resume to the last saved chapter, shortcuts to the main app sections, and optional device-local daily reminders with browser notifications or in-app fallback.
-- **1,300+ Online & Downloadable Bible Versions Across 700+ Languages**:
-  - **2 Complete 66-Book Starter Bibles Pre-Installed Offline**: **Berean Standard Bible (BSB)** and **King James Version (KJV)** work 100% offline immediately out of the box.
-  - **Global Multi-Source Catalog**: Aggregates **Open Scripture Global CDN** (141 full Bibles including NIV, NKJV, ESV, NLT, NASB, AMP, CSB, WEB, Yoruba `OYCB`, Igbo `BIUO`, Hausa `BSRK`, Swahili `SUV`, Reina-Valera, Hebrew `WLC`, Greek `TR`/`LXX`, Latin Vulgate), **Bolls Open Bible Archive** (146 translations including MSG, NET, RSV, LSB, CJB, YLT), and **HelloAO Free Use Bible API** (1,256+ translations across 700+ languages).
-  - **One-Click Full Offline Vault (`IndexedDB`)**: Download any translation once with live byte-level progress to read, compare, and search anytime without internet—plus portable `.json` export and custom `.json` Bible import.
+- **Bible Versions and Offline Reading**:
+  - The **Berean Standard Bible (BSB)** and **King James Version (KJV)** are bundled for offline reading.
+  - A multi-source catalog lets readers browse versions by name, abbreviation, or language. Availability and licensing vary by provider and translation.
+  - The **Offline Vault (`IndexedDB`)** can download supported editions for offline use, show download progress, and import or export portable `.json` Bible files.
 - **Synchronized Parallel Multi-Version Reader**:
   - Read 1, 2, or 3 Bible versions side-by-side in synchronized columns, or compare any selected verse across all installed & featured translations in the **Multi-Version Parallel Drawer**.
   - Navy-and-white light and rich-blue-on-black dark themes, optional sepia, custom background colors or personal images with an adjustable dim overlay, 4 font styles, adjustable text size, Verse-by-Verse or Flowing Prose modes, Red-Letter Words of Jesus, and translator footnotes.
 - **Selah Bible Companion & Audio Read-Along**:
-  - **Selah Bible Companion**: Local, sign-in-free study assistant that searches installed Bible editions, links answers to passages, and offers chapter walkthroughs, plain-language readings, book background, curated topical guides, selected Hebrew/Greek word notes, cross-references, guided prayers, quizzes, clarifying questions, and follow-up prompts. It can also prepare a topic-based sermon draft with a big idea, purpose, three-point outline, exposition, practical applications, Bible excerpts, and clickable references. It requires no hosted AI model or API key. Responses are grounded in available local texts and curated notes rather than generative-model output; more translations can be downloaded subject to their licenses.
-  - **AI Voice & Studio Audio Read-Along**: Synchronized verse-by-verse read-aloud highlighting using neural/browser speech synthesis (works offline on every version) plus studio human audio MP3s where available, playback speed control, sleep timer, and a WebAudio contemplative ambient pad.
+  - **Selah Bible Companion**: A local study helper that searches available Bible texts and curated notes, links responses to passages, and offers chapter guides, topical prompts, word notes, cross-references, quizzes, and sermon-outline support. It does not require a hosted AI service or API key; its explanations are study aids, not a substitute for Scripture or trusted pastoral guidance.
+  - **Audio Read-Along**: Device speech synthesis with verse-following highlights, plus studio narration where available. Playback includes voice and speed controls, a sleep timer, and an optional ambient sound.
 - **Structured Reading Plans & Custom Plan Builder**:
   - Includes 7 complete reading plans (*Whole Bible in 365 Days*, *New Testament in 90 Days*, *Walk With Jesus: Four Gospels in 30 Days*, *31 Days of Psalms & Proverbs*, *14-Day Story of Scripture*, *7-Day Peace for an Anxious Heart*, and *21-Day Paul's Letters*) plus a **Custom Reading Plan Generator** for any combination of books and days.
 - **Kids Bible Story Trail**:
-  - Child-friendly journeys through all **66 books**, plus **68 Bible-story retellings** with references, conversation prompts, simple activities, and prayers.
+  - Child-friendly Bible-book journeys and story retellings with references, conversation prompts, simple activities, and prayers.
 - **Daily Bible Reflection & Prayer Sanctuary**:
   - Daily devotional meditations rendered dynamically in your chosen Bible version, a **Heart Mood Compass**, guided 4-step *Lectio Divina* journaling, and a personal Prayer Sanctuary with answered-prayer tracking.
-- **Full-Bible Instant Offline Search, Study Notebook, Verse Art & Memory Deck**:
-  - `<35ms` full-Bible concordance search across all 31,102 verses with book distribution breakdown, 6-color verse highlighting, bookmarks, margin study notes, a **Progressive Cloze Memorization Trainer**, a **66-Book Completion Mosaic**, and a **Canvas Shareable Verse Art Card Studio**.
+- **Bible Search, Study Notebook, Verse Art & Memory Deck**:
+  - Search available Bible text, save highlights, bookmarks, and study notes, practice verse recall, track reading progress, and create shareable verse-art cards.
 
 ## Running Locally
 

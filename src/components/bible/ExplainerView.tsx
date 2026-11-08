@@ -1,32 +1,25 @@
 import React from "react";
 import {
   ArrowRight,
-  AudioLines,
-  BookOpen,
   Check,
-  CloudDownload,
-  Compass,
-  Feather,
   Heart,
   HeartHandshake,
-  Layers3,
   LoaderCircle,
   Lightbulb,
-  MessageCircleHeart,
   MoonStar,
   ShieldCheck,
-  Sparkles,
   Sun,
 } from "lucide-react";
+import { SelahIcon, type SelahIconName } from "./SelahIcon";
 import { useBibleApp } from "@/context/useBibleApp";
 
-const FEATURES = [
-  { icon: BookOpen, title: "Read at your pace", body: "Open a passage, choose a translation, and make the page comfortable with adjustable type and reading layouts." },
-  { icon: Layers3, title: "Compare translations", body: "Place trusted Bible versions side by side and notice how each translation expresses the passage." },
-  { icon: CloudDownload, title: "Take Scripture offline", body: "Keep selected Bible translations on your device so your reading can continue without a connection." },
-  { icon: Feather, title: "Build a quiet rhythm", body: "Use reflections, reading plans, prayer notes, and saved verses to create a practice that fits real life." },
-  { icon: AudioLines, title: "Listen as you read", body: "Use read-along audio and speech tools when listening works better than looking at a screen." },
-  { icon: MessageCircleHeart, title: "Explore with care", body: "The optional Selah Bible Companion can help explain context and prompt reflection using local Bible texts and curated notes. It is a study aid, not a substitute for Scripture or trusted pastoral guidance." },
+const FEATURES: { icon: SelahIconName; title: string; body: string }[] = [
+  { icon: "read", title: "Read at your pace", body: "Open a passage, choose a translation, and make the page comfortable with adjustable type and reading layouts." },
+  { icon: "compare", title: "Compare translations", body: "Place trusted Bible versions side by side and notice how each translation expresses the passage." },
+  { icon: "offline", title: "Take Scripture offline", body: "Keep selected Bible translations on your device so your reading can continue without a connection." },
+  { icon: "rhythm", title: "Build a quiet rhythm", body: "Use reflections, reading plans, prayer notes, and saved verses to create a practice that fits real life." },
+  { icon: "audio", title: "Listen as you read", body: "Use read-along audio and speech tools when listening works better than looking at a screen." },
+  { icon: "companion", title: "Explore with care", body: "The optional Selah Bible Companion can help explain context and prompt reflection using local Bible texts and curated notes. It is a study aid, not a substitute for Scripture or trusted pastoral guidance." },
 ];
 
 const STEPS = [
@@ -119,21 +112,18 @@ export const ExplainerView: React.FC = () => {
 
   return (
     <div className="explainer-page mx-auto max-w-6xl space-y-9 px-4 pb-32 pt-7 sm:px-8 sm:pt-10">
-      <section className="relative isolate overflow-hidden rounded-[2rem] bg-[#17251f] px-6 py-9 text-white shadow-[0_30px_90px_-44px_rgba(19,31,25,.7)] sm:px-10 sm:py-14 lg:px-14">
-        <div className="absolute -right-14 -top-24 -z-10 h-80 w-80 rounded-full bg-emerald-300/20 blur-3xl" />
-        <div className="absolute -bottom-32 left-1/3 -z-10 h-72 w-72 rounded-full bg-amber-300/15 blur-3xl" />
-        <div className="grid items-end gap-10 lg:grid-cols-[1.25fr_.75fr]">
+      <section className="rounded-2xl border border-border bg-card p-6 sm:p-9 lg:p-11">
+        <div className="grid items-center gap-8 lg:grid-cols-[1.2fr_.8fr]">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.18em] text-emerald-100"><Sparkles className="h-3.5 w-3.5" /> A calmer way to spend time in the Word</div>
-            <h1 className="mt-6 max-w-3xl font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">Make room for <span className="text-amber-200">what matters.</span></h1>
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-white/70 sm:text-base">Selah is a thoughtful Bible reading companion: a quiet place to read, listen, learn, and reflect—on your own or with the people you love.</p>
-            <button type="button" onClick={() => setActiveSection("reader")} className="mt-7 inline-flex items-center gap-2 rounded-full bg-amber-200 px-5 py-3 text-sm font-semibold text-stone-950 shadow-lg transition hover:-translate-y-0.5 hover:bg-amber-100">Open today’s reading <ArrowRight className="h-4 w-4" /></button>
+            <p className="text-xs font-semibold uppercase tracking-[.14em] text-primary">About Selah</p>
+            <h1 className="mt-4 max-w-2xl font-display text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">Read Scripture at your own pace.</h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">Selah brings Bible reading, study tools, and quiet daily practices together. Use what helps; leave the rest for another day.</p>
+            <button type="button" onClick={() => setActiveSection("reader")} className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-110">Open the Bible <ArrowRight className="h-4 w-4" /></button>
           </div>
-          <div className="rounded-3xl border border-white/15 bg-white/[.07] p-5 backdrop-blur-sm sm:p-6">
-            <div className="flex items-center gap-2 text-xs font-semibold text-white/75"><Compass className="h-4 w-4 text-amber-200" /> A simple starting point</div>
-            <p className="mt-4 font-scripture text-2xl leading-relaxed sm:text-3xl">“Be still, and know that I am God.”</p>
-            <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4 text-xs text-white/55"><span>Psalm 46:10</span><span>Take a breath · Begin</span></div>
-          </div>
+          <blockquote className="border-l-2 border-primary/35 pl-5 sm:pl-7">
+            <p className="font-scripture text-2xl leading-relaxed text-foreground sm:text-3xl">“Be still, and know that I am God.”</p>
+            <footer className="mt-4 text-xs font-medium text-muted-foreground">Psalm 46:10</footer>
+          </blockquote>
         </div>
       </section>
 
@@ -152,7 +142,7 @@ export const ExplainerView: React.FC = () => {
           </div>
         </div>
         <div className="grid auto-rows-fr gap-3 sm:grid-cols-2">
-          {FEATURES.map(({ icon: Icon, title, body }, index) => <article key={title} className="group h-full rounded-3xl border border-border/80 bg-card p-5 transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 sm:p-6"><span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${index % 2 ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-primary/10 text-primary"}`}><Icon className="h-5 w-5" /></span><h3 className="mt-4 text-sm font-semibold">{title}</h3><p className="mt-2 text-xs leading-6 text-muted-foreground">{body}</p></article>)}
+          {FEATURES.map(({ icon, title, body }) => <article key={title} className="flex items-start gap-3 border-b border-border/75 py-4 sm:gap-4"><span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center text-primary"><SelahIcon name={icon} className="h-7 w-7" /></span><div><h3 className="text-sm font-semibold">{title}</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">{body}</p></div></article>)}
         </div>
       </section>
 

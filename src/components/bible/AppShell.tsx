@@ -1,18 +1,5 @@
 import React, { lazy, Suspense, useEffect, useState } from "react";
-import {
-  BookHeart,
-  BookOpen,
-  Calendar,
-  CircleHelp,
-  Command,
-  Database,
-  Feather,
-  Flame,
-  House,
-  Search,
-  Smartphone,
-  Sparkles,
-} from "lucide-react";
+import { Command, Flame, Search, Smartphone } from "lucide-react";
 import { useBibleApp } from "@/context/useBibleApp";
 import {
   type BeforeInstallPromptEvent,
@@ -22,6 +9,7 @@ import {
   syncStatusBarWithTheme,
   triggerHaptic,
 } from "@/lib/nativeMobile";
+import { SelahIcon } from "./SelahIcon";
 import { TypographyPopover } from "./TypographyPopover";
 import { HomeDashboard } from "./HomeDashboard";
 import { ReadingReminderScheduler } from "./ReadingReminderScheduler";
@@ -166,50 +154,50 @@ export const AppShell: React.FC = () => {
       id: "home",
       label: "Home",
       shortLabel: "Home",
-      icon: <House className="h-4 w-4" />,
+      icon: <SelahIcon name="home" className="h-4 w-4" />,
     },
     {
       id: "reader",
       label: "Read",
       shortLabel: "Read",
-      icon: <BookOpen className="h-4 w-4" />,
+      icon: <SelahIcon name="read" className="h-4 w-4" />,
     },
     {
       id: "versions",
       label: "Vault",
       shortLabel: "Vault",
-      icon: <Database className="h-4 w-4" />,
+      icon: <SelahIcon name="vault" className="h-4 w-4" />,
       badge: `${catalog.length.toLocaleString()}+`,
     },
     {
       id: "plans",
       label: "Reading Plans",
       shortLabel: "Plans",
-      icon: <Calendar className="h-4 w-4" />,
+      icon: <SelahIcon name="plans" className="h-4 w-4" />,
     },
     {
       id: "reflection",
       label: "Reflect",
       shortLabel: "Reflect",
-      icon: <Feather className="h-4 w-4" />,
+      icon: <SelahIcon name="reflect" className="h-4 w-4" />,
     },
     {
       id: "study",
       label: "Study",
       shortLabel: "Study",
-      icon: <Search className="h-4 w-4" />,
+      icon: <SelahIcon name="study" className="h-4 w-4" />,
     },
     {
       id: "kids",
       label: "Kids’ Storybook",
       shortLabel: "Kids",
-      icon: <BookHeart className="h-4 w-4" />,
+      icon: <SelahIcon name="kids" className="h-4 w-4" />,
     },
     {
       id: "about",
       label: "How Selah Works",
       shortLabel: "About",
-      icon: <CircleHelp className="h-4 w-4" />,
+      icon: <SelahIcon name="about" className="h-4 w-4" />,
     },
   ];
 
@@ -226,7 +214,7 @@ export const AppShell: React.FC = () => {
   };
 
   const appShellStyle = {
-    "--app-wallpaper-color": prefs.appearanceBackgroundColor || (prefs.theme === "night" ? "#050914" : prefs.theme === "sepia" ? "#EDE6D5" : "#FFFFFF"),
+    "--app-wallpaper-color": prefs.appearanceBackgroundColor || (prefs.theme === "night" ? "#101813" : prefs.theme === "sepia" ? "#EDE6D5" : "#F6F4EF"),
     "--app-wallpaper-image": prefs.appearanceBackgroundImage
       ? `url("${prefs.appearanceBackgroundImage}")`
       : "none",
@@ -240,7 +228,7 @@ export const AppShell: React.FC = () => {
     <div className="app-shell flex min-h-screen w-full min-w-0 flex-col text-foreground" style={appShellStyle}>
       <ReadingReminderScheduler />
       {/* Top Global Sanctuary Bar (with iPhone Notch / Dynamic Island safe-top padding) */}
-      <header className="safe-top sticky top-0 z-30 w-full border-b border-border/80 bg-sidebar/95 backdrop-blur-md">
+      <header className="safe-top sticky top-0 z-30 w-full border-b border-border bg-sidebar">
         <div className="mx-auto flex h-16 w-full max-w-7xl min-w-0 items-center justify-between gap-2.5 px-3 sm:px-6">
           {/* Brand Identity */}
           <button
@@ -271,11 +259,11 @@ export const AppShell: React.FC = () => {
               </svg>
             </div>
             <div className="min-w-0">
-              <div className="truncate whitespace-nowrap font-display text-sm font-bold leading-tight tracking-tight text-foreground sm:text-lg xl:text-xl">
-                Selah Multi version Bible
+              <div className="truncate whitespace-nowrap font-display text-lg font-semibold leading-tight tracking-tight text-foreground sm:text-xl">
+                Selah
               </div>
-              <div className="hidden text-[10px] font-medium tracking-wider uppercase text-muted-foreground sm:block">
-                Read • Reflect • Rest
+              <div className="hidden text-[10px] font-medium tracking-[.12em] uppercase text-muted-foreground sm:block">
+                Read · Reflect · Rest
               </div>
             </div>
           </button>
@@ -364,7 +352,7 @@ export const AppShell: React.FC = () => {
                 aria-label="Toggle Selah Bible Companion"
                 aria-expanded={aiPanelOpen}
               >
-                <Sparkles className="h-3.5 w-3.5" />
+                <SelahIcon name="companion" className="h-4 w-4" />
                 <span className="hidden sm:inline">Bible Companion</span>
               </button>
             )}
@@ -401,7 +389,7 @@ export const AppShell: React.FC = () => {
       {/* Persistent bottom navigation (with iPhone Home Indicator safe-bottom padding) */}
       <nav
         aria-label="Main navigation"
-        className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 pt-1.5 backdrop-blur-md"
+        className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card pt-1.5 shadow-[0_-8px_24px_rgba(18,34,25,.045)]"
       >
         <div className="mx-auto grid w-full max-w-2xl grid-cols-8 items-center gap-0 px-1 sm:gap-1 sm:px-3 lg:gap-2">
           {navItems.map((item) => {
