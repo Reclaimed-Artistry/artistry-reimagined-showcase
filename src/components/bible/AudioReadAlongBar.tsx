@@ -349,6 +349,11 @@ export const AudioReadAlongBar: React.FC = () => {
   useEffect(() => {
     if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
     const mediaSession = navigator.mediaSession;
+    if (!audioBarOpen) {
+      mediaSession.metadata = null;
+      mediaSession.playbackState = "none";
+      return;
+    }
     if (typeof MediaMetadata !== "undefined") {
       mediaSession.metadata = new MediaMetadata({
         title: `${bookMeta.name} ${chapter}`,
@@ -372,7 +377,7 @@ export const AudioReadAlongBar: React.FC = () => {
         try { mediaSession.setActionHandler(action, null); } catch { /* unsupported action */ }
       }
     };
-    }, [isPlaying, engineMode, bookMeta.name, chapter, activeVersion.shortName, stopAllPlayback, handleTogglePlay, handlePrevVerse, handleNextVerse]);
+    }, [audioBarOpen, isPlaying, engineMode, bookMeta.name, chapter, activeVersion.shortName, stopAllPlayback, handleTogglePlay, handlePrevVerse, handleNextVerse]);
 
   if (!audioBarOpen) return null;
 
