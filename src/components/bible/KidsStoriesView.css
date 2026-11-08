@@ -1,6 +1,8 @@
-.kids-page,
-.kids-page * {
-  font-size: 14px !important;
+/* Keep the requested 14px reading size scoped to story and intro copy only;
+   headings and small labels retain their own responsive type scale. */
+.kids-page .kids-intro p,
+.kids-page #selected-story .font-scripture {
+  font-size: 14px;
 }
 
 .kids-prompt-card {

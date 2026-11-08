@@ -237,16 +237,16 @@ export const AppShell: React.FC = () => {
   const isStandaloneApp = isStandaloneInstalled();
 
   return (
-    <div className="app-shell flex min-h-screen flex-col text-foreground" style={appShellStyle}>
+    <div className="app-shell flex min-h-screen w-full min-w-0 flex-col text-foreground" style={appShellStyle}>
       <ReadingReminderScheduler />
       {/* Top Global Sanctuary Bar (with iPhone Notch / Dynamic Island safe-top padding) */}
-      <header className="safe-top sticky top-0 z-30 border-b border-border/80 bg-sidebar/95 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2.5 px-4 sm:px-6">
+      <header className="safe-top sticky top-0 z-30 w-full border-b border-border/80 bg-sidebar/95 backdrop-blur-md">
+        <div className="mx-auto flex h-16 w-full max-w-7xl min-w-0 items-center justify-between gap-2.5 px-3 sm:px-6">
           {/* Brand Identity */}
           <button
             type="button"
             onClick={() => handleSelectSection("home")}
-            className="flex items-center gap-2.5 text-left"
+            className="flex min-w-0 items-center gap-2.5 text-left"
             title="Selah Multi version Bible"
           >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-foreground text-background shadow-sm">
@@ -270,11 +270,11 @@ export const AppShell: React.FC = () => {
                 />
               </svg>
             </div>
-            <div>
-              <div className="font-display text-base font-bold leading-none tracking-tight text-foreground sm:text-lg xl:text-xl">
+            <div className="min-w-0">
+              <div className="truncate whitespace-nowrap font-display text-sm font-bold leading-tight tracking-tight text-foreground sm:text-lg xl:text-xl">
                 Selah Multi version Bible
               </div>
-              <div className="text-[10px] font-medium tracking-wider uppercase text-muted-foreground">
+              <div className="hidden text-[10px] font-medium tracking-wider uppercase text-muted-foreground sm:block">
                 Read • Reflect • Rest
               </div>
             </div>
@@ -373,8 +373,8 @@ export const AppShell: React.FC = () => {
       </header>
 
       {/* Main Workspace + Selah Bible Companion Sidebar */}
-      <div className="flex flex-1">
-        <main className="pb-mobile-safe min-w-0 flex-1">
+      <div className="flex w-full min-w-0 flex-1">
+        <main className="pb-mobile-safe w-full min-w-0 flex-1">
           <Suspense fallback={<div role="status" className="mx-auto max-w-6xl px-6 py-12 text-sm text-muted-foreground">Opening your Selah space…</div>}>
             {activeSection === "home" && (
               <HomeDashboard
