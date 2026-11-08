@@ -199,7 +199,7 @@ export type ReaderFont = "scripture" | "display" | "sans" | "mono";
 export type ReaderLayoutMode = "verse" | "paragraph";
 
 export interface AiConnectionSettings {
-  mode: "hybrid" | "custom_llm";
+  mode: "hybrid" | "custom_llm" | "server_llm";
   endpointUrl: string;
   apiKey: string;
   model: string;

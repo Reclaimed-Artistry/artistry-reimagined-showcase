@@ -14,6 +14,7 @@ import {
   lookupOriginalLexiconOnline,
   searchInstalledBible,
 } from "./bibleProviders";
+import { requestSecureBibleAnswer } from "@/lib/secureBibleAi";
 import type {
   AiConnectionSettings,
   BibleVersionMeta,
@@ -315,7 +316,24 @@ export async function generateAiBibleResponse(
   const reference = typeof actionOrPrompt === "string" ? extractScriptureReference(actionOrPrompt) : null;
   const referencePassage = reference ? await loadReferenceText(reference, ctx) : null;
 
-  // Try the optional user-configured LLM first (except for interactive quizzes).
+  // Use the authenticated server proxy when selected; provider credentials never enter the browser.
+  if (actionOrPrompt !== "quiz" && ctx.aiSettings.mode === "server_llm") {
+    const result = await requestSecureBibleAnswer(effectivePrompt, ctx, referencePassage);
+    if (result.answer) {
+      return {
+        content: result.answer,
+        citations: [{
+          label: refLabel,
+          bookNumber: ctx.bookNumber,
+          chapter: ctx.chapter,
+          ...(selectedSorted.length > 0 ? { verse: selectedSorted[0] } : {}),
+        }],
+      };
+    }
+    return { content: `### Secure AI unavailable\n${result.error || "Try again shortly, or use built-in study tools."}` };
+  }
+
+  // Try the optional user-configured LLM only when explicitly selected.
   // A bounded request time keeps a slow provider from making the panel feel stuck.
   if (actionOrPrompt !== "quiz" && ctx.aiSettings.mode === "custom_llm" && ctx.aiSettings.apiKey) {
     const llmReply = await callCustomLlmIfConfigured(effectivePrompt, ctx, referencePassage);

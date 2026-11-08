@@ -10,6 +10,7 @@ import {
   Loader2,
   Send,
   Settings2,
+  ShieldCheck,
   Sparkles,
   Volume2,
   X,
@@ -340,11 +341,10 @@ export const AiCompanionPanel: React.FC = () => {
         <div className="space-y-2.5 border-b border-border bg-secondary/40 p-4 text-xs">
           <div className="font-semibold text-foreground">AI Reading Engine Mode</div>
           <p className="text-[11px] text-muted-foreground">
-            Built-in study tools work offline with curated themes, study guides, and searches of
-            Bible text installed on your device. For open-ended generated answers, connect an
-            OpenAI-compatible model; your provider may require its own API key:
+            Built-in tools work offline. Secure server AI keeps the provider key on the server and
+            requires a Selah account; an administrator must configure the provider in deployment settings.
           </p>
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-3 gap-1.5">
             <button
               type="button"
               onClick={() =>
@@ -369,9 +369,25 @@ export const AiCompanionPanel: React.FC = () => {
                   : "border-border bg-card"
               }`}
             >
-              Generative Model API
+              Direct Model API
+            </button>
+            <button
+              type="button"
+              onClick={() => updatePrefs({ aiSettings: { ...prefs.aiSettings, mode: "server_llm" } })}
+              className={`inline-flex items-center justify-center gap-1 rounded-lg border px-1 py-1.5 font-semibold ${
+                prefs.aiSettings.mode === "server_llm"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card"
+              }`}
+            >
+              <ShieldCheck className="h-3 w-3" />Secure server
             </button>
           </div>
+          {prefs.aiSettings.mode === "server_llm" && (
+            <p className="rounded-lg border border-primary/20 bg-primary/5 p-2 text-[11px] text-muted-foreground">
+              Your question and relevant passage are sent to Selah’s server after sign-in. Provider credentials are not stored on this device.
+            </p>
+          )}
 
           {prefs.aiSettings.mode === "custom_llm" && (
             <div className="space-y-2 pt-1">

@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { toast } from "sonner";
 import { getBookMeta } from "@/data/canonicalBooks";
+import type { StudySnapshot } from "@/lib/cloudWorkspace";
 import { BUILTIN_READING_PLANS } from "@/data/readingPlans";
 import {
   BUNDLED_VERSIONS,
@@ -55,6 +56,7 @@ const STORAGE_KEYS = {
   MEMORY_CARDS: "selah_memory_cards_v1",
   READ_CHAPTERS: "selah_read_chapters_v1",
   STREAK_DATES: "selah_streak_dates_v1",
+  DELETED_ITEMS: "selah_study_deletions_v1",
 };
 
 const DEFAULT_PREFS: ReaderPreferences = {
@@ -162,9 +164,12 @@ interface BibleAppContextValue {
   notes: VerseNote[];
   saveNote: (note: Omit<VerseNote, "id" | "createdAt" | "updatedAt"> & { id?: string }) => void;
   deleteNote: (id: string) => void;
+  studyDeletionMarkers: Record<string, number>;
+  applyStudySnapshot: (snapshot: StudySnapshot) => void;
 
   // Progress & Streaks
   readChapters: string[];
+  streakDates: string[];
   markChapterRead: (bookNumber?: number, chapter?: number) => void;
   streakCount: number;
 
@@ -270,6 +275,9 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // User study items
   const [highlights, setHighlights] = useState<Record<string, VerseHighlight>>(() =>
     readLocal<Record<string, VerseHighlight>>(STORAGE_KEYS.HIGHLIGHTS, {})
+  );
+  const [studyDeletionMarkers, setStudyDeletionMarkers] = useState<Record<string, number>>(() =>
+    readLocal<Record<string, number>>(STORAGE_KEYS.DELETED_ITEMS, {})
   );
   const [bookmarks, setBookmarks] = useState<VerseBookmark[]>(() =>
     readLocal<VerseBookmark[]>(STORAGE_KEYS.BOOKMARKS, [])
@@ -645,8 +653,19 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [refreshOfflineList, setActiveVersionId]
   );
 
+  const markStudyItemDeleted = useCallback((kind: string, id: string) => {
+    setStudyDeletionMarkers((prev) => {
+      const next = { ...prev, [`${kind}:${id}`]: Date.now() };
+      writeLocal(STORAGE_KEYS.DELETED_ITEMS, next);
+      return next;
+    });
+  }, []);
+
   const setVerseHighlight = useCallback(
     (verses: number[], color: HighlightColor | null) => {
+      if (!color) {
+        verses.forEach((verse) => markStudyItemDeleted("highlight", `${bookNumber}:${chapter}:${verse}`));
+      }
       setHighlights((prev) => {
         const next = { ...prev };
         for (const v of verses) {
@@ -668,49 +687,52 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return next;
       });
     },
-    [bookNumber, chapter]
+    [bookNumber, chapter, markStudyItemDeleted]
   );
 
   const toggleBookmark = useCallback(
     (verse: number, textSnippet: string) => {
+      const existing = bookmarks.find(
+        (bookmark) => bookmark.bookNumber === bookNumber && bookmark.chapter === chapter && bookmark.verse === verse
+      );
+      if (existing) {
+        markStudyItemDeleted("bookmark", existing.id);
+        setBookmarks((prev) => {
+          const next = prev.filter((bookmark) => bookmark.id !== existing.id);
+          writeLocal(STORAGE_KEYS.BOOKMARKS, next);
+          return next;
+        });
+        toast.info("Bookmark removed");
+        return;
+      }
+      const bookmark: VerseBookmark = {
+        id: `bm-${Date.now()}-${verse}`,
+        bookNumber,
+        chapter,
+        verse,
+        versionId: activeVersion.id,
+        versionShortName: activeVersion.shortName,
+        textSnippet,
+        createdAt: Date.now(),
+      };
       setBookmarks((prev) => {
-        const existing = prev.find(
-          (b) => b.bookNumber === bookNumber && b.chapter === chapter && b.verse === verse
-        );
-        let next: VerseBookmark[];
-        if (existing) {
-          next = prev.filter((b) => b.id !== existing.id);
-          toast.info("Bookmark removed");
-        } else {
-          next = [
-            {
-              id: `bm-${Date.now()}-${verse}`,
-              bookNumber,
-              chapter,
-              verse,
-              versionId: activeVersion.id,
-              versionShortName: activeVersion.shortName,
-              textSnippet,
-              createdAt: Date.now(),
-            },
-            ...prev,
-          ];
-          toast.success(`Bookmarked ${getBookMeta(bookNumber).name} ${chapter}:${verse}`);
-        }
+        const next = [bookmark, ...prev];
         writeLocal(STORAGE_KEYS.BOOKMARKS, next);
         return next;
       });
+      toast.success(`Bookmarked ${getBookMeta(bookNumber).name} ${chapter}:${verse}`);
     },
-    [bookNumber, chapter, activeVersion]
+    [bookNumber, chapter, activeVersion, bookmarks, markStudyItemDeleted]
   );
 
   const removeBookmark = useCallback((id: string) => {
+    markStudyItemDeleted("bookmark", id);
     setBookmarks((prev) => {
-      const next = prev.filter((b) => b.id !== id);
+      const next = prev.filter((bookmark) => bookmark.id !== id);
       writeLocal(STORAGE_KEYS.BOOKMARKS, next);
       return next;
     });
-  }, []);
+  }, [markStudyItemDeleted]);
 
   const saveNote = useCallback(
     (noteInput: Omit<VerseNote, "id" | "createdAt" | "updatedAt"> & { id?: string }) => {
@@ -742,12 +764,13 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 
   const deleteNote = useCallback((id: string) => {
+    markStudyItemDeleted("note", id);
     setNotes((prev) => {
       const next = prev.filter((n) => n.id !== id);
       writeLocal(STORAGE_KEYS.NOTES, next);
       return next;
     });
-  }, []);
+  }, [markStudyItemDeleted]);
 
   const markChapterRead = useCallback(
     (bNum = bookNumber, chNum = chapter) => {
@@ -915,12 +938,13 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const deletePrayer = useCallback((id: string) => {
+    markStudyItemDeleted("prayer", id);
     setPrayers((prev) => {
       const next = prev.filter((p) => p.id !== id);
       writeLocal(STORAGE_KEYS.PRAYERS, next);
       return next;
     });
-  }, []);
+  }, [markStudyItemDeleted]);
 
   const addMemoryCard = useCallback(
     (verses: number[], text: string) => {
@@ -980,11 +1004,37 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const deleteMemoryCard = useCallback((id: string) => {
+    markStudyItemDeleted("memory", id);
     setMemoryCards((prev) => {
       const next = prev.filter((c) => c.id !== id);
       writeLocal(STORAGE_KEYS.MEMORY_CARDS, next);
       return next;
     });
+  }, [markStudyItemDeleted]);
+
+  const applyStudySnapshot = useCallback((snapshot: StudySnapshot) => {
+    setBookmarks(snapshot.bookmarks);
+    setHighlights(snapshot.highlights);
+    setNotes(snapshot.notes);
+    setReadChapters(snapshot.readChapters);
+    setStreakDates(snapshot.streakDates || []);
+    setEnrollments(snapshot.enrollments);
+    setCustomPlans(snapshot.customPlans);
+    setReflections(snapshot.reflections);
+    setPrayers(snapshot.prayers);
+    setMemoryCards(snapshot.memoryCards);
+    setStudyDeletionMarkers(snapshot.deletedItems || {});
+    writeLocal(STORAGE_KEYS.DELETED_ITEMS, snapshot.deletedItems || {});
+    writeLocal(STORAGE_KEYS.BOOKMARKS, snapshot.bookmarks);
+    writeLocal(STORAGE_KEYS.HIGHLIGHTS, snapshot.highlights);
+    writeLocal(STORAGE_KEYS.NOTES, snapshot.notes);
+    writeLocal(STORAGE_KEYS.READ_CHAPTERS, snapshot.readChapters);
+    writeLocal(STORAGE_KEYS.STREAK_DATES, snapshot.streakDates || []);
+    writeLocal(STORAGE_KEYS.ENROLLMENTS, snapshot.enrollments);
+    writeLocal(STORAGE_KEYS.CUSTOM_PLANS, snapshot.customPlans);
+    writeLocal(STORAGE_KEYS.REFLECTIONS, snapshot.reflections);
+    writeLocal(STORAGE_KEYS.PRAYERS, snapshot.prayers);
+    writeLocal(STORAGE_KEYS.MEMORY_CARDS, snapshot.memoryCards);
   }, []);
 
   const startAudioFromVerse = useCallback((verse = 1) => {
@@ -1034,7 +1084,10 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     notes,
     saveNote,
     deleteNote,
+    studyDeletionMarkers,
+    applyStudySnapshot,
     readChapters,
+    streakDates,
     markChapterRead,
     streakCount,
     allPlans,

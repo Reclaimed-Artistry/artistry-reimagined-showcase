@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   Bookmark,
   Brain,
+  Cloud,
   CheckCircle2,
   Eye,
   FileText,
@@ -19,6 +20,7 @@ import {
 } from "@/lib/bibleProviders";
 import { useBibleApp } from "@/context/BibleAppContext";
 import type { MemoryVerseCard } from "@/types/bible";
+import { CloudWorkspacePanel } from "./CloudWorkspacePanel";
 
 function buildClozeText(text: string, level: 0 | 1 | 2 | 3): string {
   if (level === 0) return text;
@@ -201,9 +203,10 @@ export const SearchAndStudyView: React.FC = () => {
     readChapters,
   } = useBibleApp();
 
-  const [subTab, setSubTab] = useState<"search" | "notebook" | "memory" | "progress">(
-    "search"
+  const [subTab, setSubTab] = useState<"search" | "notebook" | "memory" | "progress" | "cloud">(
+    new URLSearchParams(window.location.search).get("group") ? "cloud" : "search"
   );
+  const [notebookQuery, setNotebookQuery] = useState("");
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<"all" | "OT" | "NT">("all");
   const [bookFilter, setBookFilter] = useState<number | null>(null);
@@ -236,6 +239,16 @@ export const SearchAndStudyView: React.FC = () => {
     () => Object.values(highlights).sort((a, b) => b.updatedAt - a.updatedAt),
     [highlights]
   );
+  const notebookNeedle = notebookQuery.trim().toLowerCase();
+  const filteredNotes = useMemo(() => notes.filter((note) =>
+    !notebookNeedle || `${formatReference(note.bookNumber, note.chapter, note.verse, note.verseEnd)} ${note.title} ${note.content} ${note.tags.join(" ")}`.toLowerCase().includes(notebookNeedle)
+  ), [notes, notebookNeedle]);
+  const filteredBookmarks = useMemo(() => bookmarks.filter((bookmark) =>
+    !notebookNeedle || `${formatReference(bookmark.bookNumber, bookmark.chapter, bookmark.verse)} ${bookmark.textSnippet} ${bookmark.label || ""}`.toLowerCase().includes(notebookNeedle)
+  ), [bookmarks, notebookNeedle]);
+  const filteredHighlights = useMemo(() => highlightEntries.filter((highlight) =>
+    !notebookNeedle || formatReference(highlight.bookNumber, highlight.chapter, highlight.verse).toLowerCase().includes(notebookNeedle)
+  ), [highlightEntries, notebookNeedle]);
 
   const readSet = useMemo(() => new Set(readChapters), [readChapters]);
   const totalBibleChapters = 1189;
@@ -271,6 +284,11 @@ export const SearchAndStudyView: React.FC = () => {
                 id: "progress",
                 label: `66-Book Progress (${overallPct}%)`,
                 icon: <Sparkles className="h-3.5 w-3.5" />,
+              },
+              {
+                id: "cloud",
+                label: "Sync & Groups",
+                icon: <Cloud className="h-3.5 w-3.5" />,
               },
             ] as const
           ).map((t) => (
@@ -512,19 +530,31 @@ export const SearchAndStudyView: React.FC = () => {
       {/* TAB 2: STUDY NOTEBOOK (NOTES, BOOKMARKS, HIGHLIGHTS) */}
       {subTab === "notebook" && (
         <div className="grid gap-6 lg:grid-cols-3">
+          <div className="relative lg:col-span-3">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              value={notebookQuery}
+              onChange={(event) => setNotebookQuery(event.target.value)}
+              placeholder="Search notes, tags, bookmarks, highlights, or references..."
+              className="w-full rounded-2xl border border-border bg-card py-3 pl-10 pr-4 text-sm outline-none focus:border-primary"
+              aria-label="Search your study journal"
+            />
+          </div>
           {/* Study Notes */}
           <div className="space-y-3 rounded-3xl border border-border/80 bg-card p-5">
             <h3 className="flex items-center gap-2 font-display text-xl font-bold">
               <FileText className="h-4 w-4 text-primary" />
-              Study Notes ({notes.length})
+              Study Notes ({filteredNotes.length})
             </h3>
-            {notes.length === 0 ? (
+            {filteredNotes.length === 0 ? (
               <p className="py-6 text-xs text-muted-foreground">
-                Tap any verse in the Reader and click <strong>Note</strong> to add personal
-                commentary.
+                {notes.length === 0
+                  ? <>Tap any verse in the Reader and click <strong>Note</strong> to add personal commentary.</>
+                  : "No study notes match this search."}
               </p>
             ) : (
-              notes.map((n) => (
+              filteredNotes.map((n) => (
                 <div
                   key={n.id}
                   className="rounded-2xl border border-border/70 bg-background/70 p-3.5 text-xs"
@@ -556,14 +586,14 @@ export const SearchAndStudyView: React.FC = () => {
           <div className="space-y-3 rounded-3xl border border-border/80 bg-card p-5">
             <h3 className="flex items-center gap-2 font-display text-xl font-bold">
               <Bookmark className="h-4 w-4 text-primary" />
-              Bookmarks ({bookmarks.length})
+              Bookmarks ({filteredBookmarks.length})
             </h3>
-            {bookmarks.length === 0 ? (
+            {filteredBookmarks.length === 0 ? (
               <p className="py-6 text-xs text-muted-foreground">
-                Your bookmarked verses will appear here for instant recall.
+                {bookmarks.length === 0 ? "Your bookmarked verses will appear here for instant recall." : "No bookmarks match this search."}
               </p>
             ) : (
-              bookmarks.map((bm) => (
+              filteredBookmarks.map((bm) => (
                 <div
                   key={bm.id}
                   className="rounded-2xl border border-border/70 bg-background/70 p-3.5 text-xs"
@@ -597,15 +627,15 @@ export const SearchAndStudyView: React.FC = () => {
           <div className="space-y-3 rounded-3xl border border-border/80 bg-card p-5">
             <h3 className="flex items-center gap-2 font-display text-xl font-bold">
               <Highlighter className="h-4 w-4 text-primary" />
-              Highlights ({highlightEntries.length})
+              Highlights ({filteredHighlights.length})
             </h3>
-            {highlightEntries.length === 0 ? (
+            {filteredHighlights.length === 0 ? (
               <p className="py-6 text-xs text-muted-foreground">
-                Tap any verse and choose from 6 watercolor highlight tones.
+                {highlightEntries.length === 0 ? "Tap any verse and choose from 6 watercolor highlight tones." : "No highlights match this search."}
               </p>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {highlightEntries.map((hl) => (
+                {filteredHighlights.map((hl) => (
                   <button
                     key={hl.key}
                     type="button"
@@ -670,6 +700,9 @@ export const SearchAndStudyView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* TAB 5: CLOUD BACKUP AND SHARED READING GROUPS */}
+      {subTab === "cloud" && <CloudWorkspacePanel />}
     </div>
   );
 };

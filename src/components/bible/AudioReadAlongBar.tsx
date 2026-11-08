@@ -234,6 +234,8 @@ export const AudioReadAlongBar: React.FC = () => {
     let audio = htmlAudioRef.current;
     if (!audio) {
       audio = new Audio();
+      // Stream-only: third-party narration licenses are not verified for offline redistribution.
+      audio.preload = "none";
       htmlAudioRef.current = audio;
     }
 
@@ -315,14 +317,12 @@ export const AudioReadAlongBar: React.FC = () => {
     }
   }, [audioBarOpen, stopAllPlayback, setActiveAudioVerse]);
 
-  if (!audioBarOpen) return null;
-
   const currentIdx = Math.max(
     0,
     verses.findIndex((v) => v.verse === (activeAudioVerse || 1))
   );
 
-  const handleTogglePlay = () => {
+  const handleTogglePlay = useCallback(() => {
     if (isPlaying) {
       stopAllPlayback();
     } else if (engineMode === "studio" && studioKeys.length > 0) {
@@ -330,19 +330,51 @@ export const AudioReadAlongBar: React.FC = () => {
     } else {
       speakFromIndex(currentIdx);
     }
-  };
+  }, [isPlaying, engineMode, studioKeys.length, stopAllPlayback, playStudioAudio, speakFromIndex, currentIdx]);
 
-  const handlePrevVerse = () => {
+  const handlePrevVerse = useCallback(() => {
     const prevIdx = Math.max(0, currentIdx - 1);
     setEngineMode("speech");
     speakFromIndex(prevIdx);
-  };
+  }, [currentIdx, speakFromIndex]);
 
-  const handleNextVerse = () => {
+  const handleNextVerse = useCallback(() => {
     const nextIdx = Math.min(verses.length - 1, currentIdx + 1);
     setEngineMode("speech");
     speakFromIndex(nextIdx);
-  };
+  }, [verses.length, currentIdx, speakFromIndex]);
+
+  // Media Session controls keep supported studio narration controllable from the lock screen
+  // and operating-system media controls. Web Speech playback remains browser-dependent.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    const mediaSession = navigator.mediaSession;
+    if (typeof MediaMetadata !== "undefined") {
+      mediaSession.metadata = new MediaMetadata({
+        title: `${bookMeta.name} ${chapter}`,
+        artist: `Selah Multi version Bible • ${activeVersion.shortName}`,
+        album: engineMode === "studio" ? "Bible narration" : "Scripture read-along",
+      });
+    }
+    mediaSession.playbackState = isPlaying ? "playing" : "paused";
+    const actions: [MediaSessionAction, MediaSessionActionHandler][] = [
+      ["play", () => handleTogglePlay()],
+      ["pause", () => stopAllPlayback()],
+      ["stop", () => stopAllPlayback()],
+      ["previoustrack", () => handlePrevVerse()],
+      ["nexttrack", () => handleNextVerse()],
+    ];
+    for (const [action, handler] of actions) {
+      try { mediaSession.setActionHandler(action, handler); } catch { /* unsupported action */ }
+    }
+    return () => {
+      for (const [action] of actions) {
+        try { mediaSession.setActionHandler(action, null); } catch { /* unsupported action */ }
+      }
+    };
+    }, [isPlaying, engineMode, bookMeta.name, chapter, activeVersion.shortName, stopAllPlayback, handleTogglePlay, handlePrevVerse, handleNextVerse]);
+
+  if (!audioBarOpen) return null;
 
   const speeds = [0.85, 1.0, 1.15, 1.3, 1.5];
 
@@ -427,6 +459,7 @@ export const AudioReadAlongBar: React.FC = () => {
                   stopAllPlayback();
                   setEngineMode("studio");
                 }}
+                title="Streams third-party narration. Offline downloads are disabled unless the audio license permits redistribution."
                 className={`rounded-lg px-2 py-1 text-[11px] font-semibold ${
                   engineMode === "studio"
                     ? "bg-primary text-primary-foreground"
@@ -485,7 +518,7 @@ export const AudioReadAlongBar: React.FC = () => {
           <button
             type="button"
             onClick={() =>
-              setSleepMinutes((prev) => (prev === null ? 15 : prev === 15 ? 30 : null))
+              setSleepMinutes((prev) => prev === null ? 15 : prev === 15 ? 30 : prev === 30 ? 45 : prev === 45 ? 60 : null)
             }
             className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-[11px] font-semibold ${
               sleepMinutes
