@@ -60,7 +60,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_PREFS: ReaderPreferences = {
   theme: "parchment",
-  fontFamily: "scripture",
+  fontFamily: "mono",
   appearanceBackgroundColor: null,
   appearanceBackgroundImage: "",
   appearanceImageDarken: 28,
@@ -231,6 +231,8 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [prefs, setPrefs] = useState<ReaderPreferences>(() => {
     const storedPrefs = readLocal<Partial<ReaderPreferences> & { aiSettings?: unknown }>(STORAGE_KEYS.PREFS, {});
     delete storedPrefs.aiSettings; // Ignore legacy provider settings from earlier app builds.
+    // Migrate the previous built-in reading-font default to Study Mono.
+    if (storedPrefs.fontFamily === "scripture") storedPrefs.fontFamily = "mono";
     return { ...DEFAULT_PREFS, ...storedPrefs };
   });
 
