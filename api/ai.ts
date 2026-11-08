@@ -103,7 +103,21 @@ ${context || "No passage text was supplied."}`;
       }),
     });
     if (!upstream.ok) {
-      return res.status(502).json({ error: "Selah AI could not complete that response. Please try again shortly." });
+      // Keep provider details (including any request metadata) out of the client response,
+      // but explain the common configuration failures so the owner can fix them without guessing.
+      const providerError = upstream.status === 401
+        ? "The AI provider rejected the server-side API key. Update OPENAI_API_KEY in Vercel, then redeploy."
+        : upstream.status === 403
+          ? "The AI provider denied access. Check that the server-side key has permission to use the configured model."
+          : upstream.status === 404
+            ? "The configured AI model was not found. Check OPENAI_MODEL in Vercel (or remove it to use the default model), then redeploy."
+            : upstream.status === 429
+              ? "The AI provider is rate-limiting requests or the account has no available quota. Check provider usage and billing."
+              : upstream.status >= 500
+                ? "The AI provider is temporarily unavailable. Please try again shortly."
+                : `The AI provider rejected the request (HTTP ${upstream.status}). Check the configured model and provider settings.`;
+      console.error("Selah AI provider request failed", { status: upstream.status });
+      return res.status(502).json({ error: providerError });
     }
 
     const payload = await upstream.json() as { choices?: { message?: { content?: unknown } }[] };
