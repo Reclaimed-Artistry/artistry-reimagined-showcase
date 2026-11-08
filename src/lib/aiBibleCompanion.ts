@@ -480,8 +480,8 @@ ${
       : book;
     const explainLabel = referencePassage?.label || refLabel;
     const referenceVerses = referencePassage?.text
-      .split("\\n")
-      .map((line) => line.replace(/^.+?—\\s*/, ""))
+      .split("\n")
+      .map((line) => line.replace(/^\[\d+\]\s*/, ""))
       .join(" ");
     const combinedText = referenceVerses || focusVerses.map((v) => v.text).join(" ");
     const plainReading = simplifyArchaicPhrasing(combinedText);
