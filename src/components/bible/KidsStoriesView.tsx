@@ -198,9 +198,9 @@ export const KidsStoriesView: React.FC = () => {
   };
 
   return (
-    <div className="kids-page mx-auto max-w-6xl space-y-8 px-4 pb-32 pt-7 sm:px-8 sm:pt-10">
-      <section className="kids-intro kids-width-box overflow-hidden rounded-[2rem] border border-amber-200/60 bg-[#fffaf1] shadow-[0_24px_70px_-36px_rgba(77,45,12,.35)] dark:border-white/10 dark:bg-[#191b24]">
-        <div className="grid lg:grid-cols-[1.02fr_.98fr]">
+    <div className="kids-page box-border mx-auto w-full min-w-0 max-w-6xl space-y-8 overflow-x-clip px-4 pb-32 pt-7 sm:px-8 sm:pt-10">
+      <section className="kids-intro kids-width-box min-w-0 overflow-hidden rounded-[2rem] border border-amber-200/60 bg-[#fffaf1] shadow-[0_24px_70px_-36px_rgba(77,45,12,.35)] dark:border-white/10 dark:bg-[#191b24]">
+        <div className="grid min-w-0 lg:grid-cols-[minmax(0,1.02fr)_minmax(0,.98fr)]">
           <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-12">
             <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-amber-300/70 bg-amber-100/80 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[.16em] text-amber-900 dark:border-amber-200/20 dark:bg-amber-200/10 dark:text-amber-200">
               <Sparkles className="h-3.5 w-3.5" /> A little light for little hearts
@@ -230,8 +230,8 @@ export const KidsStoriesView: React.FC = () => {
         </div>
       </section>
 
-      <section id="story-time" className="grid gap-7 lg:grid-cols-[.85fr_1.15fr]">
-        <aside className="space-y-4">
+      <section id="story-time" className="grid min-w-0 gap-7 lg:grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)]">
+        <aside className="min-w-0 space-y-4">
           <div className="flex flex-col items-start gap-2">
             <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-primary">Explore the Bible</p><h2 className="mt-1 font-display text-2xl font-semibold">Story shelf</h2></div>
             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{completedStoryCount}/{STORIES.length} read</span>
@@ -280,7 +280,7 @@ export const KidsStoriesView: React.FC = () => {
           ref={storyDetailRef}
           tabIndex={-1}
           aria-label={`Full story: ${selectedStory.title}`}
-          className="kids-width-box scroll-mt-24 overflow-hidden rounded-[2rem] border border-border bg-card shadow-[0_24px_70px_-48px_rgba(15,23,42,.4)] focus:outline-none"
+          className="kids-width-box min-w-0 scroll-mt-24 overflow-hidden rounded-[2rem] border border-border bg-card shadow-[0_24px_70px_-48px_rgba(15,23,42,.4)] focus:outline-none"
         >
           <div className={`relative overflow-hidden bg-gradient-to-br ${selectedStory.colors} px-6 py-7 text-white sm:px-9 sm:py-9`}>
             {selectedStory.illustrated && <img src="/kids-story-hero.webp" alt="A calm lake and boat from the story" className="absolute inset-0 h-full w-full object-cover opacity-45 mix-blend-screen" />}
