@@ -207,7 +207,7 @@ export const KidsStoriesView: React.FC = () => {
             <h1 className="max-w-xl font-display text-4xl font-semibold leading-[1.06] tracking-tight text-stone-900 dark:text-stone-50 sm:text-5xl">
               Big stories. <span className="text-amber-700 dark:text-amber-300">Gentle beginnings.</span>
             </h1>
-            <p className="mt-5 max-w-lg text-sm leading-7 text-stone-600 dark:text-stone-300 sm:text-base">
+            <p className="mt-5 max-w-lg text-sm leading-7 text-stone-600 dark:text-stone-300 sm:text-sm">
               Explore major Bible stories from across the Old and New Testaments, plus a child-friendly journey through every one of the 66 books. Each guide includes a big idea, a question to share, and a simple activity.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -294,7 +294,7 @@ export const KidsStoriesView: React.FC = () => {
           <div className="space-y-7 p-6 sm:p-9">
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-primary"><BookHeart className="h-4 w-4" /> {selectedStory.journey ? "The book at a glance" : "The story"}</div>
-              <div className="space-y-4 font-scripture text-[17px] leading-8 text-foreground/90 sm:text-lg sm:leading-9">{selectedStory.story.map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
+              <div className="space-y-4 font-scripture text-sm leading-6 text-foreground/90 sm:text-sm sm:leading-7">{selectedStory.story.map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div ref={(element) => { promptCardsRef.current[0] = element; }} className="flex h-full min-w-0 flex-col rounded-2xl border border-amber-200/70 bg-amber-50/80 p-4 dark:border-amber-100/10 dark:bg-amber-200/5"><div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200"><Lightbulb className="h-4 w-4" /> The big idea</div><p className="mt-2 flex-1 text-sm leading-6 text-amber-950/80 dark:text-amber-100/80">{selectedStory.lesson}</p></div>
