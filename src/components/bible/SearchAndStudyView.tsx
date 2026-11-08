@@ -257,7 +257,7 @@ export const SearchAndStudyView: React.FC = () => {
   return (
     <div className="mx-auto max-w-6xl px-4 pb-28 pt-8 sm:px-8">
       {/* Header & Sub-Navigation */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-6 space-y-4">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground sm:text-4xl">
             Concordance, Notebook &amp; Memory
@@ -268,42 +268,41 @@ export const SearchAndStudyView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-1.5 rounded-2xl border border-border bg-card p-1.5">
+        <div className="grid auto-rows-fr grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
           {(
             [
-              { id: "search", label: "Full-Bible Search", icon: <Search className="h-3.5 w-3.5" /> },
+              { id: "search", label: "Full-Bible Search", icon: <Search className="h-4 w-4" /> },
               {
                 id: "notebook",
-                label: `Study Notebook (${
-                  highlightEntries.length + bookmarks.length + notes.length
-                })`,
-                icon: <Highlighter className="h-3.5 w-3.5" />,
+                label: `Study Notebook (${highlightEntries.length + bookmarks.length + notes.length})`,
+                icon: <Highlighter className="h-4 w-4" />,
               },
-              { id: "memory", label: "Memory Deck", icon: <Brain className="h-3.5 w-3.5" /> },
+              { id: "memory", label: "Memory Deck", icon: <Brain className="h-4 w-4" /> },
               {
                 id: "progress",
                 label: `66-Book Progress (${overallPct}%)`,
-                icon: <Sparkles className="h-3.5 w-3.5" />,
+                icon: <Sparkles className="h-4 w-4" />,
               },
               {
                 id: "cloud",
                 label: "Sync & Groups",
-                icon: <Cloud className="h-3.5 w-3.5" />,
+                icon: <Cloud className="h-4 w-4" />,
               },
             ] as const
           ).map((t) => (
             <button
               key={t.id}
               type="button"
+              aria-pressed={subTab === t.id}
               onClick={() => setSubTab(t.id)}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition ${
+              className={`flex h-20 min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl border px-2 py-2 text-center text-xs font-semibold transition ${
                 subTab === t.id
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "border-primary/40 bg-primary text-primary-foreground shadow-sm"
+                  : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
               }`}
             >
               {t.icon}
-              {t.label}
+              <span className="line-clamp-2 leading-4">{t.label}</span>
             </button>
           ))}
         </div>
@@ -480,18 +479,18 @@ export const SearchAndStudyView: React.FC = () => {
             </div>
           ) : (
             /* Curated Life Topics Explorer when search is idle */
-            <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {TOPICAL_LIFE_GUIDES.map((topic) => (
                 <div
                   key={topic.id}
-                  className="flex h-[21rem] flex-col rounded-2xl border border-border/80 bg-card p-5 shadow-sm"
+                  className="flex h-[21rem] min-w-0 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card p-5 shadow-sm"
                 >
-                  <div className="h-8 text-2xl">{topic.emoji}</div>
-                  <h3 className="mt-2 line-clamp-2 min-h-14 font-display text-xl font-bold text-foreground">
+                  <div className="h-8 shrink-0 text-2xl">{topic.emoji}</div>
+                  <h3 className="mt-2 h-14 shrink-0 line-clamp-2 font-display text-xl font-bold text-foreground">
                     {topic.label}
                   </h3>
-                  <p className="mt-1 line-clamp-3 min-h-[3.75rem] text-xs text-muted-foreground">{topic.summary}</p>
-                  <div className="mt-auto space-y-1.5 pt-3">
+                  <p className="mt-1 h-[3.75rem] shrink-0 line-clamp-3 text-xs text-muted-foreground">{topic.summary}</p>
+                  <div className="mt-auto grid min-h-0 grid-rows-3 gap-1.5 pt-3">
                     {topic.passages.slice(0, 3).map((p, idx) => (
                       <button
                         key={idx}
@@ -511,10 +510,10 @@ export const SearchAndStudyView: React.FC = () => {
                             );
                           }
                         }}
-                        className="flex w-full items-center justify-between rounded-lg border border-border/60 bg-background/70 px-2.5 py-1.5 text-left text-xs hover:border-primary/40"
+                        className="flex h-8 min-w-0 w-full items-center gap-2 overflow-hidden rounded-lg border border-border/60 bg-background/70 px-2.5 text-left text-xs hover:border-primary/40"
                       >
-                        <span className="font-semibold text-primary">{p.ref}</span>
-                        <span className="truncate pl-2 text-[11px] text-muted-foreground">
+                        <span className="max-w-[48%] shrink-0 truncate font-semibold text-primary">{p.ref}</span>
+                        <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
                           {p.note}
                         </span>
                       </button>

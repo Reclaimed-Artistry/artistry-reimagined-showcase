@@ -130,7 +130,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-background/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.18em] text-primary">
               <Sparkles className="h-3.5 w-3.5" /> Verse of the day
             </div>
-            <blockquote className="mt-5 max-w-3xl font-scripture text-2xl leading-relaxed text-foreground sm:text-3xl sm:leading-relaxed">
+            <blockquote className="mt-5 max-w-3xl font-scripture text-sm leading-6 text-foreground">
               “{verseText}”
             </blockquote>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -169,18 +169,18 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
           <p className="text-[10px] font-bold uppercase tracking-[.18em] text-primary">Your Selah space</p>
           <h2 id="home-menu-heading" className="mt-1 font-display text-2xl font-bold">Where would you like to go?</h2>
         </div>
-        <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-4">
           {HOME_LINKS.filter((link) => link.section !== "companion" || prefs.showBibleCompanion).map((link) => (
             <button
               key={link.section}
               type="button"
               onClick={() => link.section === "companion" ? onOpenCompanion() : onSelectSection(link.section)}
-              className="flex h-full min-h-32 items-start gap-3 rounded-2xl border border-border/80 bg-card p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md"
+              className="flex h-full min-h-36 flex-col items-start gap-2.5 rounded-2xl border border-border/80 bg-card p-3.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md sm:p-4"
             >
-              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${link.color}`}>{link.icon}</span>
+              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${link.color}`}>{link.icon}</span>
               <span className="min-w-0">
-                <span className="block font-semibold leading-5">{link.title}</span>
-                <span className="mt-1.5 block text-xs leading-5 text-muted-foreground">{link.description}</span>
+                <span className="block min-h-10 line-clamp-2 text-sm font-semibold leading-5">{link.title}</span>
+                <span className="mt-1 block line-clamp-2 text-xs leading-5 text-muted-foreground">{link.description}</span>
               </span>
             </button>
           ))}
