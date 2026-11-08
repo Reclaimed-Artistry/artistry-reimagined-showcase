@@ -164,6 +164,7 @@ export const AiCompanionPanel: React.FC = () => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -171,13 +172,21 @@ export const AiCompanionPanel: React.FC = () => {
   const bookMeta = getBookMeta(bookNumber);
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase) {
+      setSessionReady(true);
+      return;
+    }
     let mounted = true;
     void supabase.auth.getSession().then(({ data }) => {
-      if (mounted) setSession(data.session);
+      if (!mounted) return;
+      setSession(data.session);
+      setSessionReady(true);
+    }).catch(() => {
+      if (mounted) setSessionReady(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
+      setSessionReady(true);
     });
     return () => {
       mounted = false;
@@ -231,12 +240,12 @@ export const AiCompanionPanel: React.FC = () => {
 
   // Seed initial welcome walkthrough on first open
   useEffect(() => {
-    if (aiPanelOpen && messages.length === 0 && primaryChapterData) {
+    if (aiPanelOpen && sessionReady && messages.length === 0 && primaryChapterData) {
       handleTriggerAction("walkthrough", "Walk me through this chapter");
     }
     // Wait for the chapter data too, in case the panel opens before the reader finishes loading.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aiPanelOpen, primaryChapterData, messages.length]);
+  }, [aiPanelOpen, primaryChapterData, messages.length, sessionReady]);
 
   useEffect(() => {
     scrollEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -390,7 +399,7 @@ export const AiCompanionPanel: React.FC = () => {
               <p className="mt-0.5 max-w-xl text-[11px] leading-4 text-muted-foreground">
                 {session
                   ? `Signed in as ${session.user.email || "your account"}. Your question and passage are sent securely to Selah’s AI service.`
-                  : "Sign in with Google for online answers. Offline study stays available; Google sign-in must be enabled in Selah’s authentication settings."}
+                  : "Sign in with Google for conversational online answers. Offline study remains available without signing in."}
               </p>
             </div>
           </div>
@@ -450,7 +459,40 @@ export const AiCompanionPanel: React.FC = () => {
               <p>{m.content}</p>
             ) : (
               <>
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {m.source === "online" ? "Online Selah AI" : m.quiz ? "Interactive Bible quiz" : session ? "Offline fallback" : "Offline study"}
+                </div>
+                {session && !m.source && !m.quiz && (
+                  <p className="mb-2 text-[11px] text-muted-foreground">
+                    The online model was unavailable for this turn, so this response uses Selah’s offline study tools. You can retry your question.
+                  </p>
+                )}
                 {renderFormattedMarkdownText(m.content)}
+
+                {m.clarifyingQuestion && (
+                  <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-xs text-foreground">
+                    <strong>To tailor this:</strong> {m.clarifyingQuestion}
+                  </p>
+                )}
+
+                {m.suggestions && m.suggestions.length > 0 && (
+                  <div className="mt-3 border-t border-border/60 pt-2.5">
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">You could ask</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {m.suggestions.map((suggestion, idx) => (
+                        <button
+                          key={`${m.id}-suggestion-${idx}`}
+                          type="button"
+                          disabled={loading}
+                          onClick={() => handleTriggerAction(suggestion)}
+                          className="rounded-full border border-primary/25 bg-primary/5 px-2.5 py-1 text-left text-[11px] text-primary transition hover:bg-primary/10 disabled:opacity-50"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {m.quiz && m.quiz.length > 0 && <QuizInteractiveWidget quiz={m.quiz} />}
 
@@ -494,7 +536,7 @@ export const AiCompanionPanel: React.FC = () => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about this passage, a topic, or verse..."
+            placeholder="Ask Selah anything or explore Scripture..."
             className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
           />
           <button

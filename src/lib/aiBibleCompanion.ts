@@ -50,6 +50,9 @@ export interface AiCompanionMessage {
   content: string;
   citations?: AiCitationLink[];
   quiz?: AiQuizQuestion[];
+  clarifyingQuestion?: string | null;
+  suggestions?: string[];
+  source?: "online" | "offline";
   timestamp: number;
 }
 
@@ -255,14 +258,22 @@ export async function generateAiBibleResponse(
   if (actionOrPrompt !== "quiz") {
     const result = await requestSecureBibleAnswer(effectivePrompt, ctx, referencePassage);
     if (result.answer) {
+      const citations = (result.references || []).flatMap((reference): AiCitationLink[] => {
+        const parsed = parseScriptureReference(reference);
+        if (!parsed) return [];
+        return [{
+          label: reference,
+          bookNumber: parsed.bookNumber,
+          chapter: parsed.chapter,
+          ...(parsed.verse ? { verse: parsed.verse } : {}),
+        }];
+      });
       return {
         content: result.answer,
-        citations: [{
-          label: refLabel,
-          bookNumber: ctx.bookNumber,
-          chapter: ctx.chapter,
-          ...(selectedSorted.length > 0 ? { verse: selectedSorted[0] } : {}),
-        }],
+        citations,
+        clarifyingQuestion: result.clarifyingQuestion || undefined,
+        suggestions: result.suggestions,
+        source: "online",
       };
     }
     // Unauthenticated or unavailable online AI falls back to built-in offline study.
