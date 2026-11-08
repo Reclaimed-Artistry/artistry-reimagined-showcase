@@ -399,26 +399,30 @@ export const AppShell: React.FC = () => {
       <Suspense fallback={null}><AudioReadAlongBar /></Suspense>
 
       {/* Persistent bottom navigation (with iPhone Home Indicator safe-bottom padding) */}
-      <nav aria-label="Main navigation" className="safe-bottom hide-scrollbar fixed inset-x-0 bottom-0 z-40 flex items-center justify-start gap-0.5 overflow-x-auto border-t border-border bg-card/95 px-1 pt-1.5 backdrop-blur-md lg:justify-center lg:gap-2 lg:px-4">
-        {navItems.map((item) => {
-          const active = activeSection === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              title={item.label}
-              aria-current={active ? "page" : undefined}
-              onClick={() => handleSelectSection(item.id)}
-              className={`flex min-h-11 min-w-[40px] shrink-0 flex-col items-center gap-0.5 rounded-xl px-1 py-1 text-[9px] font-semibold transition lg:min-w-0 lg:flex-row lg:gap-2 lg:rounded-lg lg:px-3 lg:py-2 lg:text-xs ${
-                active ? "text-primary" : "text-muted-foreground"
-              }`}
-            >
-              {item.icon}
-              <span className="lg:hidden">{item.shortLabel}</span>
-              <span className="hidden lg:inline">{item.label}</span>
-            </button>
-          );
-        })}
+      <nav
+        aria-label="Main navigation"
+        className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 pt-1.5 backdrop-blur-md"
+      >
+        <div className="mx-auto grid w-full max-w-2xl grid-cols-8 items-center gap-0 px-1 sm:gap-1 sm:px-3 lg:gap-2">
+          {navItems.map((item) => {
+            const active = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                title={item.label}
+                aria-current={active ? "page" : undefined}
+                onClick={() => handleSelectSection(item.id)}
+                className={`flex min-h-11 w-full min-w-0 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1 text-[9px] font-semibold transition lg:flex-row lg:gap-2 lg:rounded-lg lg:px-2 lg:py-2 lg:text-xs ${
+                  active ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                {item.icon}
+                <span className="max-w-full truncate whitespace-nowrap">{item.shortLabel}</span>
+              </button>
+            );
+          })}
+        </div>
       </nav>
 
       {/* Drawers & Modals */}
