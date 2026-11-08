@@ -305,6 +305,18 @@ export const TOPICAL_LIFE_GUIDES: TopicalGuideTopic[] = [
     ],
   },
   {
+    id: "grace",
+    label: "Grace & New Life",
+    emoji: "🎁",
+    summary: "Grace is God's gift and welcome, not a reward earned by performance; in Scripture it creates a life of gratitude and good works.",
+    passages: [
+      { ref: "Ephesians 2:1-10", note: "Grace saves as a gift and forms a people for good works" },
+      { ref: "Romans 5:1-11", note: "Peace with God and love while people are still weak" },
+      { ref: "Titus 3:3-8", note: "Mercy and renewal lead to a life devoted to good works" },
+      { ref: "John 1:14-18", note: "Grace and truth are revealed through Jesus Christ" },
+    ],
+  },
+  {
     id: "forgiveness",
     label: "Grace & Forgiveness",
     emoji: "🕊️",
@@ -693,6 +705,15 @@ export const SERMON_FRAMEWORKS: Record<string, SermonFramework> = {
       { title: "Tell the truth about sorrow", exposition: "The Psalms and Lamentations give faithful language to pain and unanswered questions.", application: "Make room for silence, tears, and honest questions in the congregation." },
       { title: "Notice God beside the brokenhearted", exposition: "Psalm 34:18 speaks of God's nearness; John 11 shows Jesus weeping with mourners.", application: "Be present before offering explanations; ask what practical care is needed." },
       { title: "Hold hope without rushing grief", exposition: "Christian hope looks toward God's promised restoration while taking present suffering seriously.", application: "Offer one concrete act of support and let lament and hope coexist." },
+    ],
+  },
+  grace: {
+    bigIdea: "God's grace is a gift that welcomes and renews people, then forms them for a life of love and good works.",
+    purpose: "Show grace as both God's unearned welcome and the power for a changed life, not permission to harm or a reward for performance.",
+    points: [
+      { title: "Receive grace as God's gift", exposition: "Ephesians 2:8-10 places salvation in God's grace and faith, not human boasting.", application: "Release both self-congratulation and despair; worth is not earned by performance." },
+      { title: "See grace meet us in weakness", exposition: "Romans 5 describes God's love reaching people while they are still weak and estranged.", application: "Let grace make a community humble, welcoming, and honest about need." },
+      { title: "Let grace bear fruit", exposition: "Titus 3 connects God's mercy and renewal with devotion to good works.", application: "Choose one act of service as gratitude, never as payment for God's welcome." },
     ],
   },
   forgiveness: {

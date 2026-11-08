@@ -251,8 +251,10 @@ function findTopicalGuide(question: string) {
   const normalized = ` ${question.toLocaleLowerCase().replace(/[^a-z0-9\s-]/g, " ").replace(/\s+/g, " ").trim()} `;
   return TOPICAL_LIFE_GUIDES
     .map((topic) => {
-      const aliases = [topic.id.replace(/-/g, " "), topic.label.toLocaleLowerCase(), ...(TOPIC_ALIASES[topic.id] || [])];
-      const score = aliases.reduce((total, alias) => total + (normalized.includes(` ${alias} `) ? 1 : 0), 0);
+      const directMatches = [topic.id.replace(/-/g, " "), topic.label.toLocaleLowerCase()];
+      const synonyms = TOPIC_ALIASES[topic.id] || [];
+      const score = directMatches.reduce((total, alias) => total + (normalized.includes(` ${alias} `) ? 3 : 0), 0) +
+        synonyms.reduce((total, alias) => total + (normalized.includes(` ${alias} `) ? 1 : 0), 0);
       return { topic, score };
     })
     .filter((item) => item.score > 0)
