@@ -1,4 +1,5 @@
 import {
+  CANONICAL_BOOKS,
   formatReference,
   getBookMeta,
   parseScriptureReference,
@@ -9,6 +10,7 @@ import {
   TOPICAL_LIFE_GUIDES,
 } from "@/data/scholarlyKnowledge";
 import {
+  getInstalledFullBible,
   lookupOriginalLexiconOnline,
   searchInstalledBible,
 } from "./bibleProviders";
@@ -57,6 +59,8 @@ export interface AiContextPayload {
   chapterData: NormalizedChapter | null;
   versionMeta: BibleVersionMeta;
   aiSettings: AiConnectionSettings;
+  userPrompt?: string;
+  conversationHistory?: { role: "user" | "assistant"; content: string }[];
 }
 
 const STOP_WORDS = new Set([
@@ -156,9 +160,74 @@ function buildQuizFromChapter(
   return quiz.slice(0, 3);
 }
 
+function extractScriptureReference(text: string): string | null {
+  const bookNames = CANONICAL_BOOKS.flatMap((book) =>
+    Array.from(new Set([book.name, book.shortName, book.usfm, ...book.aliases]))
+      // Very short abbreviations are ambiguous in ordinary questions ("is 2..." -> Isaiah 2).
+      .filter((name) => name.length >= 3 || name.toLowerCase() === "ps")
+      .map((name) => ({ name, bookNumber: book.bookNumber }))
+  ).sort((a, b) => b.name.length - a.name.length);
+
+  for (const { name, bookNumber } of bookNames) {
+    // Canonical book names contain no regex metacharacters; make multi-word names flexible.
+    const escapedName = name.replace(/\s+/g, "\\s+");
+    const match = text.match(
+      new RegExp(String.raw`\b${escapedName}\.?\s+\d+(?::\d+(?:\s*[-–]\s*\d+)?)?\b`, "i")
+    );
+    if (match && parseScriptureReference(match[0])?.bookNumber === bookNumber) {
+      return match[0].replace(/\s*[-–]\s*/g, "-");
+    }
+  }
+  return null;
+}
+
+async function loadReferenceText(
+  reference: string,
+  ctx: AiContextPayload
+): Promise<{ label: string; text: string; contextText?: string } | null> {
+  const parsed = parseScriptureReference(reference);
+  if (!parsed) return null;
+
+  try {
+    const bible = await getInstalledFullBible(ctx.versionMeta);
+    const targetBook = bible?.books.find((item) => item.bookNumber === parsed.bookNumber);
+    const targetChapter = targetBook?.chapters.find((item) => item.chapter === parsed.chapter);
+    if (!targetChapter) return null;
+
+    const startVerse = parsed.verse ?? 1;
+    const endVerse = parsed.verseEnd ?? (parsed.verse ? startVerse : Number.MAX_SAFE_INTEGER);
+    const selected = targetChapter.verses.filter(
+      (verse) => verse.verse >= startVerse && verse.verse <= endVerse
+    ).slice(0, parsed.verse ? undefined : 24);
+    if (!selected.length) return null;
+
+    const selectedNumbers = new Set(selected.map((verse) => verse.verse));
+    const neighboringVerses = targetChapter.verses.filter(
+      (verse) =>
+        !selectedNumbers.has(verse.verse) &&
+        (verse.verse === selected[0].verse - 1 || verse.verse === selected[selected.length - 1].verse + 1)
+    );
+    const contextText = neighboringVerses
+      .map((verse) => `[${verse.verse}] ${verse.text}`)
+      .join("\n");
+
+    return {
+      label: parsed.verse
+        ? formatReference(parsed.bookNumber, parsed.chapter, selected[0].verse, selected[selected.length - 1].verse)
+        : formatReference(parsed.bookNumber, parsed.chapter),
+      text: selected.map((verse) => `[${verse.verse}] ${verse.text}`).join("\n"),
+      contextText: contextText || undefined,
+    };
+  } catch {
+    // A verse may not be available in a streaming-only version; keep the answer path usable.
+    return null;
+  }
+}
+
 async function callCustomLlmIfConfigured(
   prompt: string,
-  ctx: AiContextPayload
+  ctx: AiContextPayload,
+  referencePassage?: { label: string; text: string; contextText?: string } | null
 ): Promise<string | null> {
   const { aiSettings, chapterData, bookNumber, chapter, selectedVerses, versionMeta } = ctx;
   if (aiSettings.mode !== "custom_llm" || !aiSettings.apiKey.trim()) {
@@ -173,38 +242,50 @@ async function callCustomLlmIfConfigured(
   const passageSnippet = targetVerses
     .map((v) => `[${v.verse}] ${v.text}`)
     .join("\n");
-
+  const referencedText = referencePassage
+    ? `\n\nQuestion's referenced passage (${referencePassage.label}, ${versionMeta.shortName}):\n${referencePassage.text}${referencePassage.contextText ? `\nNearby verses:\n${referencePassage.contextText}` : ""}`
+    : "";
   const systemPrompt = `You are Selah AI, a warm, scholarly, faithful, and clear Bible reading companion embedded inside Selah Multi-Version Bible.
 Current open passage: ${book.name} ${chapter} (${versionMeta.shortName} — ${versionMeta.name}).
 Selected verses: ${selectedVerses.length > 0 ? selectedVerses.join(", ") : "Whole chapter"}.
-Passage text:
-${passageSnippet}
+Current passage text:\n${passageSnippet || "The current chapter text is still loading."}${referencedText}
 
-Help the reader understand the text plainly, historically, and devotionally. Reference specific verse numbers clearly.`;
+Answer the reader's actual question directly, in clear language. Ground claims in the supplied Scripture, identify verse references, distinguish the text from interpretive views, and say when the provided context is insufficient. Keep responses focused and use brief headings or bullets only when useful.`;
 
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), 12_000);
   try {
     const endpoint =
       aiSettings.endpointUrl.trim() || "https://api.openai.com/v1/chat/completions";
+    const history = (ctx.conversationHistory || []).slice(-6).map((message) => ({
+      role: message.role,
+      content: message.content.slice(0, 1_200),
+    }));
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${aiSettings.apiKey.trim()}`,
       },
+      signal: controller.signal,
       body: JSON.stringify({
         model: aiSettings.model.trim() || "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
+          ...history,
           { role: "user", content: prompt },
         ],
-        temperature: 0.45,
+        temperature: 0.35,
       }),
     });
     if (!res.ok) return null;
     const data = await res.json();
-    return data?.choices?.[0]?.message?.content || null;
+    const answer = data?.choices?.[0]?.message?.content;
+    return typeof answer === "string" && answer.trim() ? answer.trim() : null;
   } catch {
     return null;
+  } finally {
+    globalThis.clearTimeout(timeoutId);
   }
 }
 
@@ -230,9 +311,14 @@ export async function generateAiBibleResponse(
         )
       : `${book.name} ${ctx.chapter}`;
 
-  // Try optional user-configured cloud/local LLM first if enabled (except for interactive quiz!)
+  const effectivePrompt = ctx.userPrompt?.trim() || actionOrPrompt;
+  const reference = typeof actionOrPrompt === "string" ? extractScriptureReference(actionOrPrompt) : null;
+  const referencePassage = reference ? await loadReferenceText(reference, ctx) : null;
+
+  // Try the optional user-configured LLM first (except for interactive quizzes).
+  // A bounded request time keeps a slow provider from making the panel feel stuck.
   if (actionOrPrompt !== "quiz" && ctx.aiSettings.mode === "custom_llm" && ctx.aiSettings.apiKey) {
-    const llmReply = await callCustomLlmIfConfigured(actionOrPrompt, ctx);
+    const llmReply = await callCustomLlmIfConfigured(effectivePrompt, ctx, referencePassage);
     if (llmReply) {
       return { content: llmReply };
     }
@@ -240,6 +326,9 @@ export async function generateAiBibleResponse(
 
   // 1. WALKTHROUGH
   if (actionOrPrompt === "walkthrough") {
+    if (verses.length === 0) {
+      return { content: `### ${book.name} ${ctx.chapter} is still loading\nI could not access the chapter text yet. Please try the walkthrough again in a moment, or ask a question about a topic or Bible reference.` };
+    }
     const total = verses.length;
     const third = Math.max(1, Math.ceil(total / 3));
     const opening = verses.slice(0, third);
@@ -498,33 +587,41 @@ Test what stood out from your reading of **${book.name} ${ctx.chapter}** below:`
   // 8. FREE-FORM USER QUESTION!
   const qLower = actionOrPrompt.toLowerCase().trim();
 
-  // Check if the user typed or mentioned a specific Bible reference (e.g. "What does John 3:16 mean?" or "Psalm 23")
-  const refExtractMatch = actionOrPrompt.match(
-    /\b([1-3]?\s*[A-Za-z]+\s+\d+(?::\d+(?:-\d+)?)?)\b/
-  );
-  if (refExtractMatch) {
-    const parsedRef = parseScriptureReference(refExtractMatch[1]);
+  // Resolve explicit references to actual verse text when the selected version is installed.
+  if (reference) {
+    const parsedRef = parseScriptureReference(reference);
     if (parsedRef) {
       const targetBook = getBookMeta(parsedRef.bookNumber);
+      const label = referencePassage?.label || formatReference(
+        parsedRef.bookNumber,
+        parsedRef.chapter,
+        parsedRef.verse,
+        parsedRef.verseEnd
+      );
+      const quotedPassage = referencePassage?.text
+        .split("\n")
+        .map((line) => `> ${line}`)
+        .join("\n");
+      const passageBlock = referencePassage
+        ? `\n\n**Passage text (${ctx.versionMeta.shortName}):**\n${quotedPassage}`
+        : "\n\nI could not load that verse from the selected translation. If it is not installed, switch to a bundled or downloaded version and try again.";
+      const contextBlock = referencePassage?.contextText
+        ? `\n\n**Nearby context (${ctx.versionMeta.shortName}):**\n${referencePassage.contextText
+            .split("\n")
+            .map((line) => `> ${line}`)
+            .join("\n")}`
+        : "";
       return {
-        content: `### Exploring ${formatReference(
-          parsedRef.bookNumber,
-          parsedRef.chapter,
-          parsedRef.verse,
-          parsedRef.verseEnd
-        )}
+        content: `### Exploring ${label}
 
-**Book Context:** *${targetBook.name}* (${targetBook.author}, ${targetBook.dateWritten}) explores **${targetBook.theme}**.
-${targetBook.overview}
+${passageBlock}${contextBlock}
 
-Click the citation button below to jump directly to **${formatReference(
-          parsedRef.bookNumber,
-          parsedRef.chapter,
-          parsedRef.verse
-        )}** in **${ctx.versionMeta.shortName}**, where we can compare translations side-by-side and examine every verse in detail!`,
+**Book context:** *${targetBook.name}* (${targetBook.author}, ${targetBook.dateWritten}) centers on **${targetBook.theme}**. ${targetBook.overview}
+
+Use the nearby verses to see how the thought develops before drawing a conclusion. Ask a follow-up about a phrase or interpretation, or tap the citation to open it in the reader.`,
         citations: [
           {
-            label: `Open ${formatReference(parsedRef.bookNumber, parsedRef.chapter, parsedRef.verse)}`,
+            label: `Open ${label}`,
             bookNumber: parsedRef.bookNumber,
             chapter: parsedRef.chapter,
             verse: parsedRef.verse,
@@ -587,11 +684,16 @@ Tap any passage below to open it immediately in your reader:`,
 
   if (searchWords.length > 0) {
     try {
-      const searchRes = await searchInstalledBible(
+      let searchRes = await searchInstalledBible(
         ctx.versionMeta,
         searchWords.slice(0, 2).join(" "),
         { limit: 5 }
       );
+      let searchedTerms = searchWords.slice(0, 2).join(" ");
+      if (searchRes.results.length === 0 && searchWords.length > 1) {
+        searchedTerms = searchWords[0];
+        searchRes = await searchInstalledBible(ctx.versionMeta, searchedTerms, { limit: 5 });
+      }
       if (searchRes.results.length > 0) {
         const citations: AiCitationLink[] = searchRes.results.map((r) => ({
           label: `${r.bookName} ${r.chapter}:${r.verse}`,
@@ -606,7 +708,7 @@ Tap any passage below to open it immediately in your reader:`,
           )
           .join("\n");
         return {
-          content: `### Scripture Passages Matching *“${searchWords.slice(0, 2).join(" ")}”*
+          content: `### Scripture Passages Matching *“${searchedTerms}”*
 Found **${searchRes.totalMatches.toLocaleString()}** matching verse${searchRes.totalMatches === 1 ? "" : "s"} in **${ctx.versionMeta.name}**:
 
 ${lines}

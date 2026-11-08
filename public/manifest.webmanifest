@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Selah Multi Versions Bible",
-  "short_name": "Selah MVB",
+  "name": "Selah Multi version Bible",
+  "short_name": "Selah Multi version Bible",
   "description": "Multi-version offline-first Bible for iPhone, Android, and Web with 1,300+ downloadable translations, reading plans, daily reflections, audio read-along, and embedded AI Scripture companion.",
   "start_url": "/",
   "scope": "/",

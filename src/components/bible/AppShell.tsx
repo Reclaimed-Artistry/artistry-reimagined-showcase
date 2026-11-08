@@ -16,6 +16,7 @@ import { useBibleApp } from "@/context/BibleAppContext";
 import {
   type BeforeInstallPromptEvent,
   initMobileRuntime,
+  isStandaloneInstalled,
   subscribeAndroidBackButton,
   syncStatusBarWithTheme,
   triggerHaptic,
@@ -194,6 +195,7 @@ export const AppShell: React.FC = () => {
       ? String(Math.max(0, Math.min(80, prefs.appearanceImageDarken)) / 100)
       : "0",
   } as React.CSSProperties;
+  const isStandaloneApp = isStandaloneInstalled();
 
   return (
     <div className="app-shell flex min-h-screen flex-col text-foreground" style={appShellStyle}>
@@ -205,7 +207,7 @@ export const AppShell: React.FC = () => {
             type="button"
             onClick={() => handleSelectSection("reader")}
             className="flex items-center gap-2.5 text-left"
-            title="Selah Multi Versions Bible (Selah MVB)"
+            title="Selah Multi version Bible"
           >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-foreground text-background shadow-sm">
               <svg
@@ -229,8 +231,8 @@ export const AppShell: React.FC = () => {
               </svg>
             </div>
             <div>
-              <div className="font-display text-xl font-bold leading-none tracking-tight text-foreground">
-                Selah MVB
+              <div className="font-display text-base font-bold leading-none tracking-tight text-foreground sm:text-lg xl:text-xl">
+                Selah Multi version Bible
               </div>
               <div className="text-[10px] font-medium tracking-wider uppercase text-muted-foreground">
                 Read • Reflect • Rest
@@ -289,15 +291,17 @@ export const AppShell: React.FC = () => {
 
             <TypographyPopover />
 
-            <button
-              type="button"
-              onClick={() => setMobileModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground shadow-sm transition hover:border-primary/40 hover:bg-accent"
-              title="Install on iPhone or Android / App Store & Play Store"
-            >
-              <Smartphone className="h-3.5 w-3.5 text-primary" />
-              <span className="hidden md:inline">iOS &amp; Android</span>
-            </button>
+            {!isStandaloneApp && (
+              <button
+                type="button"
+                onClick={() => setMobileModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground shadow-sm transition hover:border-primary/40 hover:bg-accent"
+                title="Install on iPhone or Android / App Store & Play Store"
+              >
+                <Smartphone className="h-3.5 w-3.5 text-primary" />
+                <span className="hidden md:inline">iOS &amp; Android</span>
+              </button>
+            )}
 
             <div
               className="hidden items-center gap-1 rounded-xl border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs font-bold text-amber-800 dark:text-amber-300 sm:inline-flex"
@@ -367,12 +371,14 @@ export const AppShell: React.FC = () => {
       <VerseCompareDrawer />
       <VerseArtModal />
       <CommandPaletteModal />
-      <MobileAppModal
-        open={mobileModalOpen}
-        onOpenChange={setMobileModalOpen}
-        deferredPrompt={deferredInstallPrompt}
-        onInstalled={() => setDeferredInstallPrompt(null)}
-      />
+      {!isStandaloneApp && (
+        <MobileAppModal
+          open={mobileModalOpen}
+          onOpenChange={setMobileModalOpen}
+          deferredPrompt={deferredInstallPrompt}
+          onInstalled={() => setDeferredInstallPrompt(null)}
+        />
+      )}
     </div>
   );
 };

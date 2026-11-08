@@ -55,7 +55,7 @@ export const MobileAppModal: React.FC<MobileAppModalProps> = ({
     await deferredPrompt.prompt();
     const choice = await deferredPrompt.userChoice;
     if (choice.outcome === "accepted") {
-      toast.success("Selah MVB installed on your home screen!");
+      toast.success("Selah Multi version Bible installed on your home screen!");
       onInstalled();
       onOpenChange(false);
     }
@@ -66,13 +66,15 @@ export const MobileAppModal: React.FC<MobileAppModalProps> = ({
     toast.success("Copied build command!");
   };
 
+  if (standalone) return null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[88vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2.5 font-display text-2xl font-bold">
             <Smartphone className="h-5 w-5 text-primary" />
-            Selah MVB for iPhone &amp; Android
+            Selah Multi version Bible for iPhone &amp; Android
           </DialogTitle>
         </DialogHeader>
 
@@ -152,7 +154,7 @@ export const MobileAppModal: React.FC<MobileAppModalProps> = ({
                 Install Instantly on iPhone or iPad
               </div>
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Install Selah MVB directly onto your iPhone Home Screen for full-screen Dynamic Island layout, instant launch, and offline Scripture access anywhere:
+                Install Selah Multi version Bible directly onto your iPhone Home Screen for full-screen Dynamic Island layout, instant launch, and offline Scripture access anywhere:
               </p>
               <ol className="space-y-2.5 text-xs">
                 <li className="flex items-start gap-2.5 rounded-xl bg-muted/50 p-2.5">
@@ -190,7 +192,7 @@ export const MobileAppModal: React.FC<MobileAppModalProps> = ({
                 Install on Android Phone or Tablet
               </div>
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Install Selah MVB as an Android app with native app-drawer icon, offline Bible storage, and full-screen reading:
+                Install Selah Multi version Bible as an Android app with native app-drawer icon, offline Bible storage, and full-screen reading:
               </p>
 
               {deferredPrompt ? (
@@ -200,7 +202,7 @@ export const MobileAppModal: React.FC<MobileAppModalProps> = ({
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-sm transition hover:opacity-95"
                 >
                   <Download className="h-4 w-4" />
-                  Install Selah MVB App Now
+                  Install Selah Multi version Bible App Now
                 </button>
               ) : (
                 <ol className="space-y-2 text-xs">
@@ -217,7 +219,7 @@ export const MobileAppModal: React.FC<MobileAppModalProps> = ({
                       2
                     </span>
                     <div>
-                      Tap <strong>Install app</strong> (or <strong>Add to Home screen</strong>) to add Selah MVB to your Android app drawer.
+                      Tap <strong>Install app</strong> (or <strong>Add to Home screen</strong>) to add Selah Multi version Bible to your Android app drawer.
                     </div>
                   </li>
                 </ol>

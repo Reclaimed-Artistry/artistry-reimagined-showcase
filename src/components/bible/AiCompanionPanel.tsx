@@ -182,8 +182,9 @@ export const AiCompanionPanel: React.FC = () => {
     if (aiPanelOpen && messages.length === 0 && primaryChapterData) {
       handleTriggerAction("walkthrough", "Walk me through this chapter");
     }
+    // Wait for the chapter data too, in case the panel opens before the reader finishes loading.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aiPanelOpen]);
+  }, [aiPanelOpen, primaryChapterData, messages.length]);
 
   useEffect(() => {
     scrollEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -207,6 +208,8 @@ export const AiCompanionPanel: React.FC = () => {
         chapterData: primaryChapterData,
         versionMeta: activeVersion,
         aiSettings: prefs.aiSettings,
+        userPrompt: userLabel || actionOrText,
+        conversationHistory: messages.slice(-6).map(({ role, content }) => ({ role, content })),
       });
 
       setMessages((prev) => [
@@ -215,6 +218,16 @@ export const AiCompanionPanel: React.FC = () => {
           id: `a-${Date.now()}`,
           role: "assistant",
           ...reply,
+          timestamp: Date.now(),
+        },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          content: "I couldn’t complete that study just now. Please try again; your question is still here, and your reading progress is unchanged.",
           timestamp: Date.now(),
         },
       ]);
@@ -327,9 +340,9 @@ export const AiCompanionPanel: React.FC = () => {
         <div className="space-y-2.5 border-b border-border bg-secondary/40 p-4 text-xs">
           <div className="font-semibold text-foreground">AI Reading Engine Mode</div>
           <p className="text-[11px] text-muted-foreground">
-            Selah AI works <strong>100% instantly &amp; offline</strong> out of the box using its
-            built-in Scripture Intelligence &amp; Lexicon engine. Optionally connect an
-            OpenAI-compatible endpoint for open-ended generative study:
+            Built-in study tools work offline with curated themes, study guides, and searches of
+            Bible text installed on your device. For open-ended generated answers, connect an
+            OpenAI-compatible model; your provider may require its own API key:
           </p>
           <div className="grid grid-cols-2 gap-1.5">
             <button
@@ -343,7 +356,7 @@ export const AiCompanionPanel: React.FC = () => {
                   : "border-border bg-card"
               }`}
             >
-              Built-in Instant AI
+              Built-in Offline Study
             </button>
             <button
               type="button"
@@ -356,7 +369,7 @@ export const AiCompanionPanel: React.FC = () => {
                   : "border-border bg-card"
               }`}
             >
-              Custom LLM API
+              Generative Model API
             </button>
           </div>
 
@@ -458,7 +471,7 @@ export const AiCompanionPanel: React.FC = () => {
         {loading && (
           <div className="flex items-center gap-2 rounded-2xl border border-border bg-background/80 p-3.5 text-xs text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            Studying {activeRefLabel}...
+            Searching Scripture and preparing a response...
           </div>
         )}
 
