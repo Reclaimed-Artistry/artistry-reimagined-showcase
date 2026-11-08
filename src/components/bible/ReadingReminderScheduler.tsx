@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import { getBookMeta } from "@/data/canonicalBooks";
 import { useBibleApp } from "@/context/useBibleApp";
+import { REMOTE_PUSH_ACTIVE_KEY } from "@/lib/webPushReminders";
 
 const dateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -28,7 +29,13 @@ export const ReadingReminderScheduler: React.FC = () => {
       } catch {
         // Keep an in-memory guard for private browsing modes that block local storage.
       }
-      if (currentMinutes < targetMinutes || lastSent === today || notifiedDate === today) return;
+      let remotePushActive = false;
+      try {
+        remotePushActive = localStorage.getItem(REMOTE_PUSH_ACTIVE_KEY) === "true";
+      } catch {
+        // Continue with the in-session reminder if browser storage is unavailable.
+      }
+      if (currentMinutes < targetMinutes || lastSent === today || notifiedDate === today || remotePushActive) return;
 
       // Write the daily marker before displaying so multiple checks/tabs don't repeat the reminder.
       notifiedDate = today;

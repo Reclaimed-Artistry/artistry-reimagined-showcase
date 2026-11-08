@@ -18,6 +18,7 @@ import { getChapterContent } from "@/lib/bibleProviders";
 import { useBibleApp } from "@/context/useBibleApp";
 import type { AppSection } from "@/types/bible";
 import { Switch } from "@/components/ui/switch";
+import { disableRemotePushReminder, enableRemotePushReminder, REMOTE_PUSH_ACTIVE_KEY, updateRemotePushReminder } from "@/lib/webPushReminders";
 
 type HomeDashboardProps = {
   onSelectSection: (section: AppSection) => void;
@@ -69,6 +70,9 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
       ? Notification.permission
       : "unsupported",
   );
+  const [remotePushActive, setRemotePushActive] = useState(() =>
+    typeof window !== "undefined" && localStorage.getItem(REMOTE_PUSH_ACTIVE_KEY) === "true",
+  );
   const lastBook = getBookMeta(bookNumber);
 
   useEffect(() => {
@@ -93,7 +97,21 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
   }, [activeVersion, devotional]);
 
   const setReminderEnabled = async (enabled: boolean) => {
-    if (enabled && typeof window !== "undefined" && "Notification" in window) {
+    if (!enabled) {
+      try {
+        await disableRemotePushReminder();
+      } catch {
+        toast.info("Reminder turned off on this device", {
+          description: "If this device is offline, its saved push subscription will expire automatically when the service next contacts it.",
+        });
+      } finally {
+        setRemotePushActive(false);
+        updatePrefs({ dailyStudyReminderEnabled: false });
+      }
+      return;
+    }
+
+    if (typeof window !== "undefined" && "Notification" in window) {
       let permission = Notification.permission;
       if (permission === "default") {
         try {
@@ -103,18 +121,45 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
         }
       }
       setNotificationPermission(permission);
-      if (permission === "denied") {
+      if (permission === "granted") {
+        try {
+          await enableRemotePushReminder(prefs.dailyStudyReminderTime);
+          setRemotePushActive(true);
+          toast.success("Device push reminders enabled", {
+            description: "Selah can now send your daily reminder to this device, even when the app is closed.",
+          });
+        } catch (error) {
+          setRemotePushActive(false);
+          toast.info("Local reminder saved", {
+            description: error instanceof Error
+              ? `${error.message} The reminder will still appear while Selah is open.`
+              : "Remote push could not be configured. The reminder will still appear while Selah is open.",
+          });
+        }
+      } else {
         toast.info("In-app reminder saved", {
-          description: "Browser notifications are blocked. Selah can still remind you while it is open.",
+          description: "Notifications are blocked in device settings. Selah can still remind you while it is open.",
         });
       }
-    } else if (enabled) {
+    } else {
       setNotificationPermission("unsupported");
+      setRemotePushActive(false);
       toast.info("In-app reminder saved", {
-        description: "This browser does not support notifications. Selah can still remind you while it is open.",
+        description: "This device does not support push notifications. Selah can still remind you while it is open.",
       });
     }
-    updatePrefs({ dailyStudyReminderEnabled: enabled });
+    updatePrefs({ dailyStudyReminderEnabled: true });
+  };
+
+  const handleReminderTimeChange = (reminderTime: string) => {
+    updatePrefs({ dailyStudyReminderTime: reminderTime });
+    if (remotePushActive) {
+      void updateRemotePushReminder(reminderTime).catch((error: unknown) => {
+        localStorage.removeItem(REMOTE_PUSH_ACTIVE_KEY);
+        setRemotePushActive(false);
+        toast.error(error instanceof Error ? error.message : "Could not update your push reminder time.");
+      });
+    }
   };
 
   const handleReadVerse = () => {
@@ -194,8 +239,10 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
             <h2 id="reading-reminder-heading" className="font-semibold">A gentle daily reading reminder</h2>
             <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
               {prefs.dailyStudyReminderEnabled
-                ? "Your local reminder is on. It can notify you while Selah is open or running in the background; browsers cannot schedule it after the app is fully closed."
-                : "Choose a time for a quiet nudge to read a portion of Scripture or continue where you left off."}
+                ? remotePushActive
+                  ? "Device push is on. Selah will send this reminder to your notification panel at the chosen time, even when the app is closed, as long as this device is online and notifications remain allowed."
+                  : "Your local reminder is on. It can notify you while Selah is open or running in the background; turn on device notifications below to receive reminders while it is closed."
+                : "Choose a time for a quiet nudge to read Scripture. Enable device notifications to receive the reminder even while Selah is closed."}
             </p>
             <label className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground">
               Reminder time
@@ -203,18 +250,20 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
                 type="time"
                 aria-label="Daily reading reminder time"
                 value={prefs.dailyStudyReminderTime}
-                onChange={(event) => updatePrefs({ dailyStudyReminderTime: event.target.value })}
+                onChange={(event) => handleReminderTimeChange(event.target.value)}
                 className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground"
               />
             </label>
             <p className="mt-2 text-[10px] text-muted-foreground">
-              {notificationPermission === "granted"
-                ? "Browser notifications are allowed on this device."
+              {remotePushActive
+                ? "Device notification permission is granted and the daily push subscription is active."
+                : notificationPermission === "granted"
+                ? "Device notifications are allowed. Turn this reminder on to register daily push delivery."
                 : notificationPermission === "denied"
-                ? "Notifications are blocked in browser settings; an in-app reminder will still appear while Selah is open."
+                ? "Notifications are blocked in device settings; an in-app reminder will still appear while Selah is open."
                 : notificationPermission === "unsupported"
-                ? "This browser does not support notifications; an in-app reminder will still appear while Selah is open."
-                : "Turning on the reminder will ask whether Selah may send browser notifications."}
+                ? "This device does not support web push; an in-app reminder will still appear while Selah is open."
+                : "Turning on the reminder will ask whether Selah may send device notifications."}
             </p>
           </div>
         </div>

@@ -35,6 +35,24 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { body: event.data?.text() || "Your daily Scripture reminder is ready." };
+  }
+  const title = payload.title || "A quiet moment with Scripture";
+  const options = {
+    body: payload.body || "Open Selah to continue your reading.",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    tag: payload.tag || "selah-daily-reading-reminder",
+    data: { url: payload.url || "/?section=reader" },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const targetUrl = new URL(event.notification.data?.url || "/?section=reader", self.location.origin).href;
