@@ -341,8 +341,7 @@ export const AiCompanionPanel: React.FC = () => {
         <div className="space-y-2.5 border-b border-border bg-secondary/40 p-4 text-xs">
           <div className="font-semibold text-foreground">AI Reading Engine Mode</div>
           <p className="text-[11px] text-muted-foreground">
-            Built-in tools work offline. Secure server AI keeps the provider key on the server and
-            requires a Selah account; an administrator must configure the provider in deployment settings.
+            Built-in study stays available offline and also tries secure server AI after you sign in; it falls back to offline study if the service is not configured. The provider key stays on the server and must be added by an administrator.
           </p>
           <div className="grid grid-cols-3 gap-1.5">
             <button
@@ -356,7 +355,7 @@ export const AiCompanionPanel: React.FC = () => {
                   : "border-border bg-card"
               }`}
             >
-              Built-in Offline Study
+              Built-in + Online
             </button>
             <button
               type="button"

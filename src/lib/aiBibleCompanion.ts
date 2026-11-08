@@ -317,7 +317,7 @@ export async function generateAiBibleResponse(
   const referencePassage = reference ? await loadReferenceText(reference, ctx) : null;
 
   // Use the authenticated server proxy when selected; provider credentials never enter the browser.
-  if (actionOrPrompt !== "quiz" && ctx.aiSettings.mode === "server_llm") {
+  if (actionOrPrompt !== "quiz" && (ctx.aiSettings.mode === "server_llm" || ctx.aiSettings.mode === "hybrid")) {
     const result = await requestSecureBibleAnswer(effectivePrompt, ctx, referencePassage);
     if (result.answer) {
       return {
@@ -330,7 +330,10 @@ export async function generateAiBibleResponse(
         }],
       };
     }
-    return { content: `### Secure AI unavailable\n${result.error || "Try again shortly, or use built-in study tools."}` };
+    if (ctx.aiSettings.mode === "server_llm") {
+      return { content: `### Secure AI unavailable\n${result.error || "Try again shortly, or use built-in study tools."}` };
+    }
+    // Hybrid mode quietly falls back to the local study engine when online AI isn't configured.
   }
 
   // Try the optional user-configured LLM only when explicitly selected.
