@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   BookHeart,
@@ -139,7 +139,35 @@ export const KidsStoriesView: React.FC = () => {
   const [testamentFilter, setTestamentFilter] = useState<"all" | "old" | "new">("all");
   const [readStories, setReadStories] = useState<string[]>(readStoriesFromStorage);
   const storyDetailRef = useRef<HTMLElement | null>(null);
+  const promptCardsRef = useRef<Array<HTMLDivElement | null>>([]);
   const selectedStory = STORIES.find((story) => story.id === selectedId) || STORIES[0];
+
+  useLayoutEffect(() => {
+    const cards = promptCardsRef.current.filter((card): card is HTMLDivElement => card !== null);
+    const grid = cards[0]?.parentElement;
+    if (cards.length !== 4 || !grid) return;
+
+    const equalizeHeights = () => {
+      cards.forEach((card) => { card.style.height = "auto"; });
+      const tallestHeight = Math.ceil(Math.max(...cards.map((card) => card.getBoundingClientRect().height)));
+      cards.forEach((card) => { card.style.height = `${tallestHeight}px`; });
+    };
+
+    let animationFrame = 0;
+    const resizeObserver = new ResizeObserver(() => {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(equalizeHeights);
+    });
+
+    equalizeHeights();
+    resizeObserver.observe(grid);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      resizeObserver.disconnect();
+      cards.forEach((card) => { card.style.height = ""; });
+    };
+  }, [selectedStory.lesson, selectedStory.ask, selectedStory.activity, selectedStory.prayer]);
   const completedStoryCount = STORIES.filter((story) => readStories.includes(story.id)).length;
   const filteredStories = useMemo(() => {
     const value = query.trim().toLowerCase();
@@ -268,11 +296,11 @@ export const KidsStoriesView: React.FC = () => {
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-primary"><BookHeart className="h-4 w-4" /> {selectedStory.journey ? "The book at a glance" : "The story"}</div>
               <div className="space-y-4 font-scripture text-[17px] leading-8 text-foreground/90 sm:text-lg sm:leading-9">{selectedStory.story.map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
             </div>
-            <div className="grid auto-rows-fr gap-3 sm:grid-cols-2">
-              <div className="flex h-full min-w-0 flex-col rounded-2xl border border-amber-200/70 bg-amber-50/80 p-4 dark:border-amber-100/10 dark:bg-amber-200/5"><div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200"><Lightbulb className="h-4 w-4" /> The big idea</div><p className="mt-2 flex-1 text-sm leading-6 text-amber-950/80 dark:text-amber-100/80">{selectedStory.lesson}</p></div>
-              <div className="flex h-full min-w-0 flex-col rounded-2xl border border-sky-200/70 bg-sky-50/80 p-4 dark:border-sky-100/10 dark:bg-sky-200/5"><div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-900 dark:text-sky-200"><Heart className="h-4 w-4" /> Talk about it</div><p className="mt-2 flex-1 text-sm leading-6 text-sky-950/80 dark:text-sky-100/80">{selectedStory.ask}</p></div>
-              <div className="flex h-full min-w-0 flex-col rounded-2xl border border-emerald-200/70 bg-emerald-50/80 p-4 dark:border-emerald-100/10 dark:bg-emerald-200/5"><div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-200"><WandSparkles className="h-4 w-4" /> Try it together</div><p className="mt-2 flex-1 text-sm leading-6 text-emerald-950/80 dark:text-emerald-100/80">{selectedStory.activity}</p></div>
-              <div className="flex h-full min-w-0 flex-col rounded-2xl border border-violet-200/70 bg-violet-50/80 p-4 dark:border-violet-100/10 dark:bg-violet-200/5"><div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-900 dark:text-violet-200"><Music2 className="h-4 w-4" /> A little prayer</div><p className="mt-2 flex-1 text-sm leading-6 text-violet-950/80 dark:text-violet-100/80">{selectedStory.prayer}</p></div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div ref={(element) => { promptCardsRef.current[0] = element; }} className="flex h-full min-w-0 flex-col rounded-2xl border border-amber-200/70 bg-amber-50/80 p-4 dark:border-amber-100/10 dark:bg-amber-200/5"><div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200"><Lightbulb className="h-4 w-4" /> The big idea</div><p className="mt-2 flex-1 text-sm leading-6 text-amber-950/80 dark:text-amber-100/80">{selectedStory.lesson}</p></div>
+              <div ref={(element) => { promptCardsRef.current[1] = element; }} className="flex h-full min-w-0 flex-col rounded-2xl border border-sky-200/70 bg-sky-50/80 p-4 dark:border-sky-100/10 dark:bg-sky-200/5"><div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-900 dark:text-sky-200"><Heart className="h-4 w-4" /> Talk about it</div><p className="mt-2 flex-1 text-sm leading-6 text-sky-950/80 dark:text-sky-100/80">{selectedStory.ask}</p></div>
+              <div ref={(element) => { promptCardsRef.current[2] = element; }} className="flex h-full min-w-0 flex-col rounded-2xl border border-emerald-200/70 bg-emerald-50/80 p-4 dark:border-emerald-100/10 dark:bg-emerald-200/5"><div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-200"><WandSparkles className="h-4 w-4" /> Try it together</div><p className="mt-2 flex-1 text-sm leading-6 text-emerald-950/80 dark:text-emerald-100/80">{selectedStory.activity}</p></div>
+              <div ref={(element) => { promptCardsRef.current[3] = element; }} className="flex h-full min-w-0 flex-col rounded-2xl border border-violet-200/70 bg-violet-50/80 p-4 dark:border-violet-100/10 dark:bg-violet-200/5"><div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-900 dark:text-violet-200"><Music2 className="h-4 w-4" /> A little prayer</div><p className="mt-2 flex-1 text-sm leading-6 text-violet-950/80 dark:text-violet-100/80">{selectedStory.prayer}</p></div>
             </div>
             <div className="flex flex-wrap gap-3 border-t border-border pt-5">
               <button type="button" onClick={() => { navigateTo(selectedStory.book, selectedStory.chapter); setActiveSection("reader"); }} className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90"><BookOpen className="h-4 w-4" /> Read {selectedStory.reference} in the Bible</button>
