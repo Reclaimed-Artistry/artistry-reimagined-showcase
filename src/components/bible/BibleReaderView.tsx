@@ -846,7 +846,7 @@ export const BibleReaderView: React.FC = () => {
           renderSingleChapterColumn(primaryChapterData, activeVersion, true)
         ) : (
           <div
-            className={`grid gap-6 ${
+            className={`grid auto-rows-fr gap-6 ${
               parallelColumnsCount === 2 ? "md:grid-cols-2" : "lg:grid-cols-3"
             }`}
           >

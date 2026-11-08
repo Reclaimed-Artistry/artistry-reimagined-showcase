@@ -349,7 +349,7 @@ export const VersionVaultView: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid auto-rows-fr gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredVersions.slice(0, visibleLimit).map((v) => {
             const isOffline = isVersionOffline(v.id);
             const isActivePrimary = activeVersion.id === v.id;
@@ -370,7 +370,7 @@ export const VersionVaultView: React.FC = () => {
             return (
               <div
                 key={v.id}
-                className={`flex flex-col justify-between rounded-2xl border p-4 shadow-sm transition ${
+                className={`flex h-full flex-col justify-between rounded-2xl border p-4 shadow-sm transition ${
                   isActivePrimary
                     ? "border-primary bg-primary/6 ring-1 ring-primary/30"
                     : "border-border/80 bg-card hover:border-primary/40"
