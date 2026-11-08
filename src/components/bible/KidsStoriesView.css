@@ -2,3 +2,8 @@
 .kids-page * {
   font-size: 14px !important;
 }
+
+.kids-prompt-card {
+  box-sizing: border-box;
+  width: 100%;
+}
