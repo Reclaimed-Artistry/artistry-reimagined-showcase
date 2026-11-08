@@ -237,7 +237,7 @@ export const KidsStoriesView: React.FC = () => {
             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{completedStoryCount}/{STORIES.length} read</span>
           </div>
           <p className="-mt-2 text-xs text-muted-foreground">{COVERED_BOOK_COUNT}/66 books · {STORY_EPISODES.length + FEATURED_STORIES.length} Bible stories · {BOOK_JOURNEY_STORIES.length} book journeys</p>
-          <label className="flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-primary/30">
+          <label className="mx-auto flex w-4/5 items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-primary/30">
             <Search className="h-4 w-4 text-muted-foreground" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a Bible book, story, or idea" className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
           </label>
