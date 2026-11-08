@@ -114,13 +114,45 @@ export const CloudWorkspacePanel: React.FC = () => {
 
   const uploadSnapshot = useCallback(async (userId: string, payload: StudySnapshot) => {
     if (!supabase) return;
-    const { error } = await supabase.from("user_sync_snapshots").upsert({
-      user_id: userId,
-      payload,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id" });
-    if (error) throw error;
-  }, []);
+    // Read/merge/write with an updated_at compare-and-swap so concurrent devices don't
+    // silently replace one another's distinct edits. A conflict retries with fresh cloud data.
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const { data: current, error: readError } = await supabase
+        .from("user_sync_snapshots")
+        .select("payload,updated_at")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (readError) throw readError;
+      const remote = isValidStudySnapshot(current?.payload) ? current.payload : EMPTY_STUDY_SNAPSHOT;
+      const merged = mergeStudySnapshots(payload, remote);
+      const updatedAt = new Date().toISOString();
+      if (!current) {
+        const { error: insertError } = await supabase.from("user_sync_snapshots").insert({
+          user_id: userId,
+          payload: merged,
+          updated_at: updatedAt,
+        });
+        if (!insertError) {
+          if (JSON.stringify(merged) !== JSON.stringify(payload)) applyStudySnapshot(merged);
+          return;
+        }
+        if (insertError.code === "23505") continue;
+        throw insertError;
+      }
+      const { data: updated, error: updateError } = await supabase
+        .from("user_sync_snapshots")
+        .update({ payload: merged, updated_at: updatedAt })
+        .eq("user_id", userId)
+        .eq("updated_at", current.updated_at)
+        .select("user_id");
+      if (updateError) throw updateError;
+      if (updated?.length) {
+        if (JSON.stringify(merged) !== JSON.stringify(payload)) applyStudySnapshot(merged);
+        return;
+      }
+    }
+    throw new Error("Another device is syncing at the same time. Please retry in a moment.");
+  }, [applyStudySnapshot]);
 
   useEffect(() => {
     if (!supabase || !session?.user.id) {
