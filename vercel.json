@@ -60,7 +60,7 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!assets/|bibles/|icons/|favicon\\.svg|manifest\\.webmanifest|sw\\.js).*)",
+      "source": "/((?!api/|assets/|bibles/|icons/|favicon\\.svg|manifest\\.webmanifest|sw\\.js).*)",
       "destination": "/index.html"
     }
   ]

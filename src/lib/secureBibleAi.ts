@@ -71,11 +71,19 @@ export async function requestSecureBibleAnswer(
       }),
       signal: AbortSignal.timeout(45_000),
     });
-    const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+    let payload: Record<string, unknown>;
+    try {
+      payload = await response.json() as Record<string, unknown>;
+    } catch {
+      return {
+        answer: null,
+        error: `Selah’s AI endpoint returned an unexpected response (HTTP ${response.status}). Please refresh the app and try again.`,
+      };
+    }
     if (!response.ok) {
       return {
         answer: null,
-        error: typeof payload.error === "string" ? payload.error : "Online Selah AI is temporarily unavailable.",
+        error: typeof payload.error === "string" ? payload.error : `Online Selah AI returned an error (HTTP ${response.status}).`,
       };
     }
 

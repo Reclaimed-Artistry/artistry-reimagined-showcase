@@ -276,7 +276,13 @@ export async function generateAiBibleResponse(
         source: "online",
       };
     }
-    // Unauthenticated or unavailable online AI falls back to built-in offline study.
+    if (result.error && !/sign in/i.test(result.error)) {
+      return {
+        content: `### Online Selah AI is unavailable\n\n${result.error}\n\nThis turn was not answered by the online model. Please try again in a moment. You can still use the study tools while online AI reconnects.`,
+        source: "offline",
+      };
+    }
+    // Unauthenticated users can still use the built-in offline study tools.
   }
 
   // 1. WALKTHROUGH
