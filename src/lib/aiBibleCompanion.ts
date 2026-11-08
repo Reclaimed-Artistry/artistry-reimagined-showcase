@@ -7,6 +7,7 @@ import {
 import {
   CURATED_CROSS_REFERENCES,
   ORIGINAL_WORD_LEXICON,
+  SERMON_FRAMEWORKS,
   TOPICAL_LIFE_GUIDES,
 } from "@/data/scholarlyKnowledge";
 import {
@@ -25,7 +26,8 @@ export type AiQuickAction =
   | "word_study"
   | "cross_refs"
   | "prayer"
-  | "quiz";
+  | "quiz"
+  | "sermon";
 
 export interface AiCitationLink {
   label: string;
@@ -218,7 +220,7 @@ const TOPIC_ALIASES: Record<string, string[]> = {
   strength: ["tired", "weary", "exhausted", "burnout", "weak", "strength", "endurance", "rest"],
   purpose: ["purpose", "identity", "calling", "meaning", "future", "gift"],
   love: ["love", "loved", "loving", "relationship", "kindness", "charity"],
-  faith: ["faith", "believe", "belief", "trust", "doubt"],
+  faith: ["faith", "believe", "belief", "trust"],
   hope: ["hope", "encouragement", "discouraged", "despair", "waiting"],
   prayer: ["prayer", "pray", "praying", "talk to god"],
   salvation: ["salvation", "saved", "redeemed", "grace", "eternal life"],
@@ -227,6 +229,22 @@ const TOPIC_ALIASES: Record<string, string[]> = {
   anger: ["anger", "angry", "resentment", "reconcile", "conflict"],
   family: ["family", "marriage", "husband", "wife", "parent", "child", "relationship"],
   suffering: ["suffering", "pain", "tragedy", "why do bad things", "lament", "affliction"],
+  courage: ["bravery", "boldness", "fearless", "overcome fear"],
+  integrity: ["honesty", "truthfulness", "character", "trustworthy"],
+  gratitude: ["thanksgiving", "thankful", "grateful", "thankfulness"],
+  justice: ["injustice", "oppression", "the poor", "fairness"],
+  humility: ["humble", "pride", "servanthood"],
+  leadership: ["leader", "pastor", "church leaders", "servant leadership"],
+  perseverance: ["endurance", "persevere", "keep going", "persevering"],
+  stewardship: ["generosity", "giving", "creation care", "environment", "climate", "climate change", "earth care", "money", "resources"],
+  technology: ["social media", "internet", "artificial intelligence", "digital life", "screen time", "smartphone"],
+  work: ["vocation", "career", "job", "workplace", "employment"],
+  worship: ["praise", "worship music", "church service", "singing"],
+  patience: ["self-control", "self control", "gentleness", "waiting patiently"],
+  doubt: ["questions", "skepticism", "unbelief", "questioning faith"],
+  reconciliation: ["repair a relationship", "make peace", "reconcile", "restoration"],
+  healing: ["illness", "sickness", "health", "recovery", "physical healing"],
+  evangelism: ["mission", "outreach", "sharing faith", "witness", "sharing the gospel"],
 };
 
 function findTopicalGuide(question: string) {
@@ -239,6 +257,165 @@ function findTopicalGuide(question: string) {
     })
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score)[0]?.topic;
+}
+
+function isSermonRequest(question: string, action: AiQuickAction | string): boolean {
+  if (action === "sermon") return true;
+  return /\b(?:prepare|write|draft|create|build|make|give me|help me with)\b.{0,60}\b(?:sermon|homily|preaching message|sermon outline)\b/i.test(question) ||
+    /\b(?:sermon|homily|preaching outline)\s+(?:on|about|for|from)\b/i.test(question);
+}
+
+function extractSermonTopic(question: string, reference: string | null): string {
+  let topic = question.trim();
+  const sermonPhrase = topic.match(/\b(?:sermon|homily|preaching message|message)\b.*?\b(?:on|about|concerning|from|based on)\s+(.+)$/i);
+  if (sermonPhrase?.[1]) topic = sermonPhrase[1];
+  else {
+    topic = topic
+      .replace(/^(?:please\s+)?(?:can|could|would) you\s+/i, "")
+      .replace(/^(?:help me|i need|i want|prepare|write|draft|create|build|make|give me)\s+/i, "")
+      .replace(/\b(?:a|an|the)\s+(?:short\s+|brief\s+|bible-based\s+|biblical\s+)?(?:sermon|homily|preaching message|sermon outline|message)\b/i, " ");
+  }
+
+  if (reference) topic = topic.replace(reference, " ");
+  topic = topic
+    .replace(/\b(?:for|lasting|of)\s+\d+\s*(?:minutes?|mins?)\b.*$/i, "")
+    .replace(/\b(?:for|to)\s+(?:this\s+)?(?:sunday|a sunday service|church service|the congregation|youth|teens|students|children|young adults|leaders|families)\b.*$/i, "")
+    .replace(/\b(?:using|from|based on)\s*$/i, "")
+    .replace(/\b(?:with|including)\s+(?:an?\s+)?(?:outline|introduction|conclusion|prayer|discussion questions)\b.*$/i, "")
+    .replace(/^[\s:—-]*(?:on|about|concerning|regarding|from|based on)\s+/i, "")
+    .replace(/[?!.;,]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!topic && reference) return `the message of ${reference}`;
+  if (!topic || /^(?:any topic|any subject|anything|a topic|the bible|scripture)$/i.test(topic)) {
+    return "faithfulness to God";
+  }
+  return topic.slice(0, 100);
+}
+
+function passageExcerpt(passage: { text: string } | null): string {
+  if (!passage?.text) return "";
+  const lines = passage.text.split("\n");
+  const excerpt = lines.slice(0, 4).join("\n");
+  return lines.length > 4 ? `${excerpt}\n[Read the full passage in context.]` : excerpt;
+}
+
+async function buildSermonDraft(
+  topic: string,
+  ctx: AiContextPayload,
+  activeReference: string | null,
+  activePassage: { label: string; text: string; contextText?: string } | null,
+  guide: (typeof TOPICAL_LIFE_GUIDES)[number] | undefined,
+  fallbackReference: string
+): Promise<Omit<AiCompanionMessage, "id" | "role" | "timestamp">> {
+  const framework = guide ? SERMON_FRAMEWORKS[guide.id] : undefined;
+  const topicTerms = [...new Set(normalizeWords(topic))];
+  const rankedEvidence = await rankLocalBibleEvidence(topic, ctx, 10);
+  const minimumMatchedTerms = topicTerms.length <= 1 ? topicTerms.length : Math.max(2, Math.ceil(topicTerms.length * 0.55));
+  const evidence = rankedEvidence.filter((hit) => {
+    const verseWords = new Set(normalizeWords(hit.text));
+    return topicTerms.filter((term) => verseWords.has(term)).length >= minimumMatchedTerms;
+  });
+  const evidenceReferences = evidence.filter((hit, index, hits) =>
+    hits.findIndex((other) => other.bookNumber === hit.bookNumber && other.chapter === hit.chapter && other.verse === hit.verse) === index
+  ).map((hit) => ({
+    ref: `${hit.bookName} ${hit.chapter}:${hit.verse}`,
+    note: `Relevant wording in the locally installed ${hit.versionShortName} text`,
+    text: hit.text,
+  }));
+  const primaryReference = activeReference || guide?.passages[0]?.ref || evidenceReferences[0]?.ref || fallbackReference;
+  const frameworkReferences = (framework?.points || [])
+    .map((point) => extractScriptureReference(point.exposition))
+    .filter((ref): ref is string => Boolean(ref));
+  const candidates = [
+    { ref: primaryReference, note: "Primary preaching text" },
+    ...(guide?.passages || []),
+    ...frameworkReferences.map((ref) => ({ ref, note: "A supporting text in the sermon framework" })),
+    ...evidenceReferences,
+  ];
+  const passages: { ref: string; note: string; text: string }[] = [];
+  const seen = new Set<string>();
+
+  for (const candidate of candidates) {
+    const parsed = parseScriptureReference(candidate.ref);
+    if (!parsed) continue;
+    const key = `${parsed.bookNumber}:${parsed.chapter}:${parsed.verse || 1}:${parsed.verseEnd || parsed.verse || 0}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const loaded = candidate.ref === activeReference && activePassage
+      ? activePassage
+      : await loadReferenceText(candidate.ref, ctx);
+    const searched = evidenceReferences.find((item) => item.ref === candidate.ref);
+    passages.push({
+      ref: loaded?.label || candidate.ref,
+      note: candidate.note,
+      text: loaded?.text || (searched ? `[${parsed.verse || 1}] ${searched.text}` : ""),
+    });
+    if (passages.length >= 4) break;
+  }
+
+  const citations = passages.flatMap((passage) => {
+    const parsed = parseScriptureReference(passage.ref);
+    return parsed ? [{
+      label: passage.ref,
+      bookNumber: parsed.bookNumber,
+      chapter: parsed.chapter,
+      verse: parsed.verse,
+    }] : [];
+  });
+  const displayTopic = guide?.label || topic;
+  const hasRelevantAnchor = Boolean(activeReference || guide || evidenceReferences.length > 0);
+  const bigIdea = framework?.bigIdea || (hasRelevantAnchor
+    ? `The selected passages invite us to bring ${topic} under the wisdom of Scripture and respond with faithful love for God and neighbor.`
+    : `A responsible biblical response to ${topic} begins by listening closely to Scripture and distinguishing what a text says directly from a modern application.`);
+  const purpose = framework?.purpose ||
+    `Help listeners examine ${topic} through Scripture, read each text in context, and choose a thoughtful next step.`;
+  const topicMatchNote = !hasRelevantAnchor
+    ? `**Topic match note:** I could not find a close topical match in the Bible texts installed on this device. This draft uses **${fallbackReference}** from your current reading as a starting point; it does not claim that this passage directly addresses **${topic}**. Add a Bible reference or a key biblical term for a more focused draft.\n\n`
+    : "";
+  const points = framework?.points || [
+    {
+      title: `Listen carefully to what Scripture says about ${topic}`,
+      exposition: `Begin with the primary text, notice who is speaking and to whom, and explain the passage before drawing a lesson from it. ${passages[0]?.note || "Read the surrounding chapter to establish the setting."}`,
+      application: "Invite listeners to name what the text affirms, questions, or calls them to do; avoid making the passage say more than it does.",
+    },
+    {
+      title: `Let the wider biblical witness deepen the theme`,
+      exposition: passages[1]
+        ? `${passages[1].ref} adds another biblical perspective. Compare its setting and emphasis with the primary text rather than treating every verse as interchangeable.`
+        : `Search the surrounding chapter and the wider biblical story for context, repeated themes, and any tensions the text preserves.`,
+      application: "Ask what this second passage adds or corrects, and make room for questions and differing experiences in the congregation.",
+    },
+    {
+      title: `Respond with a concrete act of faithful love`,
+      exposition: passages[2]
+        ? `${passages[2].ref} offers a further witness to the topic. Keep the response connected to what these passages teach, not to a promise they do not make.`
+        : `Bring the message toward a response that follows from the primary text and honors the people who will hear it.`,
+      application: "Offer one practical invitation for the coming week, with support and safeguards appropriate to the situation.",
+    },
+  ];
+  const primary = passages[0];
+  const opening = `We have gathered around the question of **${displayTopic}**. Rather than reaching for a quick slogan, let us listen closely to the biblical text, notice its setting, and ask how its truth can shape our life together.`;
+  const outline = points.map((point, index) => {
+    const associatedPassage = passages[Math.min(index, passages.length - 1)];
+    const excerpt = passageExcerpt(associatedPassage || null);
+    return `**${index + 1}. ${point.title}**${associatedPassage ? ` (${associatedPassage.ref})` : ""}\n${point.exposition}\n\n*Preaching application:* ${point.application}${excerpt ? `\n\n> ${excerpt.split("\n").join("\n> ")}` : ""}`;
+  }).join("\n\n");
+  const additionalReferences = passages.length > 0
+    ? passages.map((passage) => `- **${passage.ref}** — ${passage.note}`).join("\n")
+    : `- **${fallbackReference}** — Read this passage in its full chapter context and select a primary text before preaching.`;
+
+  return {
+    content: `### Sermon draft: ${displayTopic}\n\n**Topic:** ${topic}\n**Primary text:** ${primary?.ref || fallbackReference} (${ctx.versionMeta.shortName})\n**Big idea:** ${bigIdea}\n**Purpose:** ${purpose}\n\n${topicMatchNote}**Introduction**\n${opening}\n\n**Sermon outline and exposition**\n\n${outline}\n\n**Conclusion**\nThe invitation is not to leave with a slogan, but to carry the truth of these passages into a concrete act of faith, hope, justice, mercy, or love this week. Re-state the big idea, allow a moment for reflection, and close with a prayer suited to the congregation's needs.\n\n**Bible portions to read and reference**\n${additionalReferences}\n\n*Preparation note:* Read each full passage and its surrounding chapter before preaching. These are locally curated study notes and a sermon draft; check interpretation against context and your church tradition, and adapt examples for your congregation.`,
+    citations,
+    suggestions: [
+      `Explain ${primary?.ref || fallbackReference} in simple words`,
+      `Show cross-references for ${primary?.ref || fallbackReference}`,
+      `What does the Bible say about ${topic}?`,
+    ],
+    source: "knowledge",
+  };
 }
 
 function simplifyArchaicPhrasing(text: string): string {
@@ -417,6 +594,13 @@ export async function generateAiBibleResponse(
   const isCrossRefs = actionOrPrompt === "cross_refs" || /cross.?references|related passages|other verses about|connected passages/.test(qLower);
   const isPrayer = actionOrPrompt === "prayer" || /\b(prayer|pray with me|help me pray)\b/.test(qLower);
   const isQuiz = actionOrPrompt === "quiz" || /\b(quiz me|test me on|make .* quiz)\b/.test(qLower);
+  const isSermon = isSermonRequest(effectivePrompt, actionOrPrompt);
+
+  if (isSermon) {
+    const sermonTopic = extractSermonTopic(effectivePrompt, reference);
+    const sermonGuide = findTopicalGuide(sermonTopic) || findTopicalGuide(retrievalQuestion);
+    return buildSermonDraft(sermonTopic, ctx, reference, referencePassage, sermonGuide, refLabel);
+  }
 
   // 1. WALKTHROUGH
   if (isWalkthrough) {

@@ -460,7 +460,504 @@ export const TOPICAL_LIFE_GUIDES: TopicalGuideTopic[] = [
       { ref: "2 Corinthians 1:3-7", note: "Paul writes about comfort amid affliction" },
     ],
   },
+  {
+    id: "courage",
+    label: "Courage & Fear",
+    emoji: "🦁",
+    summary: "Biblical courage grows from God's presence and faithful action; it does not require pretending danger or fear is absent.",
+    passages: [
+      { ref: "Joshua 1:5-9", note: "Joshua is called to courage grounded in God's presence and instruction" },
+      { ref: "Psalms 27:1-5", note: "The Lord is named as light and refuge amid threat" },
+      { ref: "Isaiah 41:8-13", note: "God promises presence and help to fearful Israel" },
+      { ref: "Acts 4:23-31", note: "The church prays for boldness in the face of opposition" },
+    ],
+  },
+  {
+    id: "integrity",
+    label: "Integrity & Honesty",
+    emoji: "🧭",
+    summary: "Integrity is whole-life faithfulness: truthful speech, just conduct, and consistency when no one is watching.",
+    passages: [
+      { ref: "Psalms 15:1-5", note: "A portrait of truthful and just life before God" },
+      { ref: "Proverbs 10:9", note: "Walking in integrity offers a secure path" },
+      { ref: "Daniel 6:3-5", note: "Daniel's public service is marked by trustworthiness" },
+      { ref: "Luke 16:10-13", note: "Faithfulness in small things reveals what we serve" },
+    ],
+  },
+  {
+    id: "gratitude",
+    label: "Gratitude & Thanksgiving",
+    emoji: "🌾",
+    summary: "Biblical gratitude notices God's gifts without denying grief, injustice, or unanswered questions.",
+    passages: [
+      { ref: "Psalms 100:1-5", note: "Give thanks because the Lord is good and steadfast in love" },
+      { ref: "1 Thessalonians 5:16-18", note: "Joy, prayer, and thanksgiving form a communal practice" },
+      { ref: "Colossians 3:15-17", note: "Gratitude shapes worship, speech, and shared life" },
+      { ref: "Luke 17:11-19", note: "One healed Samaritan returns to give thanks" },
+    ],
+  },
+  {
+    id: "justice",
+    label: "Justice & Mercy",
+    emoji: "⚖️",
+    summary: "The prophets join worship to justice, mercy, humility, and practical care for people facing oppression.",
+    passages: [
+      { ref: "Micah 6:6-8", note: "Do justice, love mercy, and walk humbly with God" },
+      { ref: "Isaiah 1:16-17", note: "Learn to do good and defend the vulnerable" },
+      { ref: "Amos 5:21-24", note: "Worship is rejected when justice is absent" },
+      { ref: "Luke 4:16-21", note: "Jesus announces good news and release in his mission" },
+    ],
+  },
+  {
+    id: "humility",
+    label: "Humility & Service",
+    emoji: "🫶",
+    summary: "Christian humility is not self-hatred; it is a Christ-shaped willingness to honor others and serve without seeking status.",
+    passages: [
+      { ref: "Philippians 2:1-11", note: "Paul points to Christ's self-giving humility" },
+      { ref: "John 13:1-17", note: "Jesus washes his disciples' feet and calls them to serve" },
+      { ref: "James 4:6-10", note: "Resist pride, draw near to God, and practice humility" },
+      { ref: "Micah 6:8", note: "Walk humbly while doing justice and loving mercy" },
+    ],
+  },
+  {
+    id: "leadership",
+    label: "Servant Leadership",
+    emoji: "🪔",
+    summary: "Jesus contrasts leadership by domination with leadership expressed through service, care, and accountable example.",
+    passages: [
+      { ref: "Mark 10:35-45", note: "Jesus teaches greatness through serving rather than lording power" },
+      { ref: "John 13:12-17", note: "The teacher and Lord models humble service" },
+      { ref: "1 Peter 5:1-4", note: "Shepherd the community willingly and without domineering" },
+      { ref: "1 Timothy 3:1-7", note: "Leadership is tied to character and trustworthy conduct" },
+    ],
+  },
+  {
+    id: "stewardship",
+    label: "Stewardship & Generosity",
+    emoji: "🌱",
+    summary: "Resources, gifts, and creation are entrusted responsibilities to be used faithfully, generously, and with care.",
+    passages: [
+      { ref: "Genesis 1:26-31", note: "Human vocation includes responsibility for God's good creation" },
+      { ref: "Luke 12:35-48", note: "Faithfulness is pictured as responsible stewardship" },
+      { ref: "2 Corinthians 9:6-11", note: "Generosity is willing, cheerful, and directed toward shared need" },
+      { ref: "1 Peter 4:10-11", note: "Use received gifts to serve one another" },
+    ],
+  },
+  {
+    id: "perseverance",
+    label: "Perseverance & Endurance",
+    emoji: "🏃",
+    summary: "Scripture encourages endurance through hope, community, and renewed faithfulness—not through denying exhaustion or refusing help.",
+    passages: [
+      { ref: "Hebrews 12:1-3", note: "Run with endurance while looking to Jesus" },
+      { ref: "James 1:2-8", note: "Trials can form endurance as believers ask God for wisdom" },
+      { ref: "Galatians 6:7-10", note: "Do not grow weary in doing good" },
+      { ref: "Romans 5:1-5", note: "Paul traces a hope-filled pattern through suffering and endurance" },
+    ],
+  },
+  {
+    id: "technology",
+    label: "Technology & Wisdom",
+    emoji: "📱",
+    summary: "The Bible does not address modern devices directly, but it offers wisdom about attention, truth, speech, self-control, and loving our neighbors.",
+    passages: [
+      { ref: "Philippians 4:8-9", note: "Attend to what is true, honorable, just, pure, and worthy of praise" },
+      { ref: "Ephesians 4:25-32", note: "Use truthful speech that builds others up and refuses destructive words" },
+      { ref: "1 Corinthians 10:23-24", note: "Ask not only what is allowed, but what builds others up" },
+      { ref: "James 3:1-12", note: "The tongue can cause great harm and needs wise discipline" },
+    ],
+  },
+  {
+    id: "work",
+    label: "Work & Vocation",
+    emoji: "🛠️",
+    summary: "Scripture connects work with service, justice, rest, and the dignity of people; ancient household texts need careful historical reading.",
+    passages: [
+      { ref: "Ecclesiastes 3:9-13", note: "Work is part of life, and its fruit can be received as a gift" },
+      { ref: "Colossians 3:22-24", note: "A first-century instruction to enslaved people, not an endorsement of slavery or abusive labor" },
+      { ref: "Ephesians 2:8-10", note: "Good works are a result of grace, not a way to earn worth" },
+      { ref: "1 Thessalonians 4:9-12", note: "Paul commends quiet faithfulness and responsible work" },
+    ],
+  },
+  {
+    id: "worship",
+    label: "Worship & Everyday Life",
+    emoji: "🎶",
+    summary: "Biblical worship includes praise and gathered prayer, and the prophets insist that it must be joined to justice and faithful living.",
+    passages: [
+      { ref: "Psalms 95:1-7", note: "Worship celebrates God and listens for God's voice" },
+      { ref: "John 4:19-24", note: "Jesus speaks about worship in spirit and truth" },
+      { ref: "Romans 12:1-2", note: "Paul describes a whole-life response shaped by renewed minds" },
+      { ref: "Amos 5:21-24", note: "Ritual without justice is rejected by the prophet" },
+    ],
+  },
+  {
+    id: "patience",
+    label: "Patience & Self-Control",
+    emoji: "⏳",
+    summary: "Patience is Spirit-shaped endurance and gentleness, not passive acceptance of harm or injustice.",
+    passages: [
+      { ref: "Galatians 5:22-26", note: "Patience and self-control are named among the fruit of the Spirit" },
+      { ref: "Ephesians 4:1-3", note: "Bear with one another in love while seeking unity" },
+      { ref: "James 5:7-11", note: "James encourages patient endurance in hardship" },
+      { ref: "Proverbs 15:1", note: "A gentle answer can turn away wrath" },
+    ],
+  },
+  {
+    id: "doubt",
+    label: "Doubt & Honest Questions",
+    emoji: "❓",
+    summary: "The Bible preserves honest questions and stories of struggle; doubt should be met with truth, compassion, and room to seek.",
+    passages: [
+      { ref: "Mark 9:14-29", note: "A father brings both belief and doubt to Jesus" },
+      { ref: "Psalms 73:1-17", note: "A psalmist voices confusion and seeks understanding in worship" },
+      { ref: "John 20:24-29", note: "Thomas is met by Jesus in the midst of his questions" },
+      { ref: "James 1:5-8", note: "James encourages asking God for wisdom" },
+    ],
+  },
+  {
+    id: "reconciliation",
+    label: "Reconciliation & Repair",
+    emoji: "🧩",
+    summary: "Scripture calls for truthful repair and peace where possible, while reconciliation must never be used to force unsafe contact.",
+    passages: [
+      { ref: "Matthew 5:21-26", note: "Jesus calls disciples to take damaged relationships seriously" },
+      { ref: "2 Corinthians 5:17-21", note: "Paul describes reconciliation as God's work in Christ" },
+      { ref: "Ephesians 4:25-32", note: "Truthful speech, kindness, and forgiveness shape community" },
+      { ref: "Romans 12:17-21", note: "Pursue peace as far as it depends on you without taking revenge" },
+    ],
+  },
+  {
+    id: "healing",
+    label: "Healing & Care",
+    emoji: "🩹",
+    summary: "The Bible includes prayer for healing, compassionate care, and faithful life amid ongoing illness; it does not promise every person will be cured now.",
+    passages: [
+      { ref: "Psalms 103:1-5", note: "A song of praise that remembers God's care and restoration" },
+      { ref: "Mark 2:1-12", note: "Jesus responds to a paralyzed man brought by a caring community" },
+      { ref: "James 5:13-16", note: "The community prays for the sick and cares for one another" },
+      { ref: "2 Corinthians 12:7-10", note: "Paul speaks of weakness and sustaining grace without receiving the healing he sought" },
+    ],
+  },
+  {
+    id: "evangelism",
+    label: "Witness & Sharing Faith",
+    emoji: "🕊️",
+    summary: "Christian witness is grounded in Jesus and expressed with gentleness, respect, truthful speech, and attentive listening.",
+    passages: [
+      { ref: "Matthew 28:16-20", note: "Jesus commissions disciples to teach and make disciples" },
+      { ref: "1 Peter 3:13-17", note: "Give an account of hope with gentleness and respect" },
+      { ref: "Acts 17:16-34", note: "Paul engages listeners in Athens by attending to their context" },
+      { ref: "Colossians 4:2-6", note: "Speak graciously and wisely with those outside the community" },
+    ],
+  },
 ];
+
+export interface SermonFrameworkPoint {
+  title: string;
+  exposition: string;
+  application: string;
+}
+
+export interface SermonFramework {
+  bigIdea: string;
+  purpose: string;
+  points: [SermonFrameworkPoint, SermonFrameworkPoint, SermonFrameworkPoint];
+}
+
+/** Curated sermon-building notes paired with the topical reading guides above. */
+export const SERMON_FRAMEWORKS: Record<string, SermonFramework> = {
+  anxiety: {
+    bigIdea: "God meets anxious people with presence, prayer, and care; Scripture does not shame them for feeling fear.",
+    purpose: "Invite honest prayer and wise support while remembering God's nearness.",
+    points: [
+      { title: "Name what weighs on the heart", exposition: "The Psalms make room for fear and lament rather than hiding them.", application: "Let people name a real concern without being rushed into a slogan." },
+      { title: "Bring the concern to God", exposition: "Philippians 4 connects prayer and thanksgiving with God's guarding peace.", application: "Practice one honest prayer and identify a trusted person or practical next step." },
+      { title: "Receive care one day at a time", exposition: "Jesus points to the Father's care in Matthew 6 without promising a trouble-free life.", application: "Separate today's faithful action from tomorrow's imagined burdens." },
+    ],
+  },
+  wisdom: {
+    bigIdea: "God gives wisdom, and Scripture trains us to seek it with humility, discernment, and faithful action.",
+    purpose: "Help listeners take a wise next step rather than demand certainty about the entire future.",
+    points: [
+      { title: "Ask God for wisdom", exposition: "James 1:5 invites people who lack wisdom to ask God generously.", application: "Turn a decision into a specific prayer, not just a request for a preferred outcome." },
+      { title: "Let trust reshape the decision", exposition: "Proverbs 3:5-6 calls for trust in God rather than self-sufficient certainty.", application: "Test options against Scripture, character, and the counsel of mature people." },
+      { title: "Walk the light you have", exposition: "Psalm 119 pictures God's word as a lamp for the next step.", application: "Name one responsible action you can take now, and remain open to correction." },
+    ],
+  },
+  grief: {
+    bigIdea: "God's people may lament honestly, and the community of faith is called to share comfort and hope.",
+    purpose: "Offer companionship and scriptural hope without minimizing loss or prescribing a timetable for grief.",
+    points: [
+      { title: "Tell the truth about sorrow", exposition: "The Psalms and Lamentations give faithful language to pain and unanswered questions.", application: "Make room for silence, tears, and honest questions in the congregation." },
+      { title: "Notice God beside the brokenhearted", exposition: "Psalm 34:18 speaks of God's nearness; John 11 shows Jesus weeping with mourners.", application: "Be present before offering explanations; ask what practical care is needed." },
+      { title: "Hold hope without rushing grief", exposition: "Christian hope looks toward God's promised restoration while taking present suffering seriously.", application: "Offer one concrete act of support and let lament and hope coexist." },
+    ],
+  },
+  forgiveness: {
+    bigIdea: "God's mercy frees people from condemnation and forms communities marked by truthful, costly forgiveness.",
+    purpose: "Invite people to receive grace and pursue repair without excusing abuse or removing wise boundaries.",
+    points: [
+      { title: "Receive mercy honestly", exposition: "Psalm 103 and 1 John 1:9 describe God's compassion and cleansing.", application: "Name wrong honestly; grace is not pretending harm did not happen." },
+      { title: "Release vengeance to God", exposition: "Jesus and the apostles call disciples away from retaliation and toward mercy.", application: "Forgiveness is not the same as instant trust, reconciliation, or access to an unsafe person." },
+      { title: "Practice repair where possible", exposition: "Ephesians 4 joins forgiveness with kindness and changed speech.", application: "Where it is safe and appropriate, make amends, seek accountability, and rebuild trust over time." },
+    ],
+  },
+  strength: {
+    bigIdea: "God meets human limits with sustaining grace, rest, and the help of others.",
+    purpose: "Encourage weary listeners to receive care and take sustainable steps rather than glorify burnout.",
+    points: [
+      { title: "Admit our limits", exposition: "Biblical lament and the ministry of Jesus make room for human weakness and rest.", application: "Notice exhaustion without treating it as a spiritual failure." },
+      { title: "Receive grace for today", exposition: "Isaiah 40 and 2 Corinthians 12 speak of strength that comes from God, not self-sufficiency.", application: "Ask what support, rest, or help is needed now." },
+      { title: "Keep going together", exposition: "The church is called to bear burdens and encourage one another.", application: "Choose one small faithful action and one person who can walk alongside you." },
+    ],
+  },
+  purpose: {
+    bigIdea: "In Christ, people are welcomed by grace and formed for good works that serve the world.",
+    purpose: "Ground identity in God's grace and invite service without turning vocation into a measure of worth.",
+    points: [
+      { title: "Receive identity as gift", exposition: "Ephesians 2 places good works after God's gift of grace, not as a way to earn it.", application: "Separate your worth from productivity, role, or public recognition." },
+      { title: "Notice how you are being formed", exposition: "Scripture describes gifts and character as resources for serving neighbors.", application: "Ask what needs and gifts are already present in your community." },
+      { title: "Take the next faithful step", exposition: "Micah 6:8 joins justice, mercy, and humility in everyday life with God.", application: "Choose a concrete act of service rather than waiting for a perfect life plan." },
+    ],
+  },
+  love: {
+    bigIdea: "God's love, revealed in Christ, becomes a practical pattern of patient and self-giving love for neighbors.",
+    purpose: "Move listeners from sentiment about love to concrete, truthful care for others.",
+    points: [
+      { title: "Begin with the love of God", exposition: "1 John 4 says love originates in God, who loved us first.", application: "Receive love as grace before treating love as a performance test." },
+      { title: "Look at love's shape", exposition: "1 Corinthians 13 describes patience, kindness, truth, and endurance in community.", application: "Ask which of these qualities a real relationship needs this week." },
+      { title: "Practice love through service", exposition: "Jesus connects love with laying down status and serving others.", application: "Choose a specific act of care that respects the other person's dignity and safety." },
+    ],
+  },
+  faith: {
+    bigIdea: "Biblical faith is trust in God that can speak honestly about doubt and grows into faithful action.",
+    purpose: "Invite listeners to bring questions to Jesus and take a grounded next step of trust.",
+    points: [
+      { title: "Hear the promise and story", exposition: "Hebrews 11 remembers people who trusted God amid unfinished outcomes.", application: "Read the whole story, not only a slogan about faith." },
+      { title: "Bring honest doubt to Jesus", exposition: "In Mark 9:24 a father voices both belief and need for help.", application: "Make room for questions and prayer for help within the community." },
+      { title: "Let trust become action", exposition: "James 2 insists that living faith bears fruit in practical care.", application: "Identify one act of obedience or neighbor-love that follows from trust." },
+    ],
+  },
+  hope: {
+    bigIdea: "Christian hope is grounded in God's character and resurrection, and it can live alongside grief and waiting.",
+    purpose: "Encourage patient, active hope without denying hardship or promising a quick outcome.",
+    points: [
+      { title: "Remember what is true", exposition: "Biblical hope often begins by recalling God's steadfast love in difficult circumstances.", application: "Name a trustworthy promise in its original context, not as a guarantee of ease." },
+      { title: "Look toward resurrection hope", exposition: "The New Testament roots hope in the resurrection of Jesus and God's future renewal.", application: "Let future hope strengthen compassion in the present." },
+      { title: "Practice hope together", exposition: "Scripture calls communities to encourage one another and persevere in doing good.", application: "Offer a practical word or act of support to someone who is waiting." },
+    ],
+  },
+  prayer: {
+    bigIdea: "Prayer is honest relationship with God: praise, lament, confession, asking, gratitude, and listening.",
+    purpose: "Help listeners build a truthful, sustainable rhythm of prayer shaped by Jesus.",
+    points: [
+      { title: "Begin with God's name and kingdom", exposition: "The Lord's Prayer centers prayer on God's holiness and purposes before personal requests.", application: "Pray one line of the Lord's Prayer slowly and connect it to daily life." },
+      { title: "Bring daily need honestly", exposition: "Jesus teaches people to ask for daily bread and forgiveness, not to perform for an audience.",
+        application: "Name one need and one relationship in which you need grace." },
+      { title: "Keep prayer rooted in life", exposition: "Paul joins prayer with thanksgiving and the pursuit of peace.", application: "Choose a simple time and place to pray, and let prayer lead to faithful action." },
+    ],
+  },
+  salvation: {
+    bigIdea: "Salvation is God's gracious rescue and new life, received by faith and expressed in good works.",
+    purpose: "Explain grace clearly while acknowledging that Christian traditions differ on some details of salvation.",
+    points: [
+      { title: "Start with God's initiative", exposition: "Ephesians 2:8-10 presents salvation as a gift of grace, not a human achievement.", application: "Reject boasting and despair alike; neither earns God's welcome." },
+      { title: "See the cost and reach of love", exposition: "Romans 5 describes God's love shown toward people while they were still weak and sinful.", application: "Let received mercy produce gratitude and humility." },
+      { title: "Walk in the new life grace creates", exposition: "The same passage connects grace with good works prepared for the community.", application: "Choose a work of justice, service, or reconciliation as fruit, not payment, for grace." },
+    ],
+  },
+  "holy-spirit": {
+    bigIdea: "The Holy Spirit is God's empowering presence, forming Christlike character and equipping the church for witness and service.",
+    purpose: "Explore the Spirit through biblical texts while avoiding claims that go beyond what a passage says.",
+    points: [
+      { title: "Receive the Spirit's presence", exposition: "Jesus promises the Spirit's help and teaching to his disciples in John 14.", application: "Seek God's guidance with humility and test impressions alongside Scripture and wise community." },
+      { title: "Be empowered to witness", exposition: "Acts 1:8 connects the Spirit's power with witness to Jesus.", application: "Speak and serve with courage, humility, and respect for others." },
+      { title: "Look for the Spirit's fruit", exposition: "Galatians 5 names love, joy, peace, patience, and other marks of Spirit-shaped life.", application: "Ask which fruit needs to grow in your relationships this week." },
+    ],
+  },
+  temptation: {
+    bigIdea: "Scripture names temptation honestly and calls people to seek God's help, wise boundaries, and supportive community.",
+    purpose: "Offer practical hope without shaming people or implying that every struggle has a simple solution.",
+    points: [
+      { title: "Understand the pull", exposition: "James 1 describes how desire can grow toward harmful choices.", application: "Notice triggers and patterns without reducing a person to a struggle." },
+      { title: "Remember God's faithfulness", exposition: "1 Corinthians 10:13 points to God's faithfulness and a way to endure temptation.", application: "Make a concrete plan for the moment of temptation and seek trusted support." },
+      { title: "Approach Jesus for help", exposition: "Hebrews 4 presents Jesus as compassionate toward human weakness.", application: "Ask for help early; include pastoral, medical, or recovery support when appropriate." },
+    ],
+  },
+  anger: {
+    bigIdea: "Scripture takes anger seriously and calls people toward listening, truthful speech, justice, and repair.",
+    purpose: "Help listeners respond to anger without excusing harm or silencing people who have been wronged.",
+    points: [
+      { title: "Listen before reacting", exposition: "James 1:19-20 warns that human anger does not automatically produce God's justice.", application: "Pause long enough to hear what is happening and who may be harmed." },
+      { title: "Speak truth without cruelty", exposition: "Ephesians 4 urges truthful speech and warns against letting anger become destructive.", application: "Set clear limits; do not use reconciliation language to pressure someone into danger." },
+      { title: "Pursue repair and justice", exposition: "Jesus connects worship with seeking reconciliation where possible.", application: "Take accountable steps toward repair, with protection and outside help when needed." },
+    ],
+  },
+  family: {
+    bigIdea: "The biblical vision for relationships includes mutual care, patience, and love that protects the dignity of each person.",
+    purpose: "Encourage healthy, reciprocal relationships without using household texts to excuse coercion or abuse.",
+    points: [
+      { title: "Put on compassion and patience", exposition: "Colossians 3 calls the community to kindness, forgiveness, and love.", application: "Name one way to listen and speak with respect at home." },
+      { title: "Practice mutual responsibility", exposition: "The New Testament addresses households within their historical setting and also calls believers to care for one another.", application: "Read household passages carefully; never use them to justify violence or coercive control." },
+      { title: "Build a home of safety and grace", exposition: "Love is patient and seeks the good of the neighbor.", application: "Make safety, truth, and support priorities when a relationship is harmful." },
+    ],
+  },
+  suffering: {
+    bigIdea: "The Bible gives language for lament and shows God drawing near; suffering is not proof that a person has failed.",
+    purpose: "Stand with people in pain and offer hope without blaming, minimizing, or forcing a quick resolution.",
+    points: [
+      { title: "Give pain its truthful voice", exposition: "Psalm 13 asks 'How long?' and still turns toward God in prayer.", application: "Let lament be part of faithful worship and do not silence hard questions." },
+      { title: "Remember God shares our grief", exposition: "John 11 shows Jesus weeping with mourners before the story turns toward hope.", application: "Offer presence and practical help before offering explanations." },
+      { title: "Receive and pass on comfort", exposition: "2 Corinthians 1 describes comfort received from God and shared with others.", application: "Connect people to community and professional care when needed." },
+    ],
+  },
+  courage: {
+    bigIdea: "Courage is faithful action rooted in God's presence, not the absence of fear.",
+    purpose: "Encourage a faithful next step while acknowledging real risks and seeking wise support.",
+    points: [
+      { title: "Ground courage in God's presence", exposition: "Joshua 1 links courage with God's presence and attention to the instruction given to Joshua.", application: "Ask what faithfulness looks like in this situation, not what fearlessness would look like." },
+      { title: "Pray for courage together", exposition: "Acts 4 shows the early church asking for boldness amid opposition.", application: "Name a challenge in community and pray for wise, truthful speech." },
+      { title: "Act with courage and care", exposition: "Biblical courage serves God's purposes rather than seeking danger for its own sake.", application: "Take a responsible step and use appropriate protection and counsel." },
+    ],
+  },
+  integrity: {
+    bigIdea: "Integrity joins inner conviction to honest, dependable action in public and private life.",
+    purpose: "Call listeners to truthful conduct, accountability, and repair when they fail.",
+    points: [
+      { title: "Walk truthfully", exposition: "Psalm 15 portrays worship as inseparable from truthful speech and just conduct.", application: "Tell the truth even when doing so requires accountability." },
+      { title: "Be faithful in small things", exposition: "Jesus teaches that faithfulness in little matters reflects the heart.", application: "Review ordinary commitments—money, time, words, and promises." },
+      { title: "Let integrity serve the common good", exposition: "Daniel's trustworthiness is visible in public life, not only private devotion.", application: "Use influence to protect others and correct wrongdoing." },
+    ],
+  },
+  gratitude: {
+    bigIdea: "Gratitude is a practiced response to God's goodness that can coexist with lament and the work of justice.",
+    purpose: "Cultivate thankfulness without telling people to be grateful for abuse, loss, or injustice.",
+    points: [
+      { title: "Remember goodness received", exposition: "Psalm 100 grounds thanksgiving in God's enduring goodness and faithfulness.", application: "Name gifts honestly without denying what remains hard." },
+      { title: "Practice gratitude in community", exposition: "Colossians connects thankfulness with worship and words that build others up.", application: "Offer specific thanks to God and to someone whose care you have received." },
+      { title: "Let gratitude become generosity", exposition: "Paul's teaching connects God's gifts with sharing and care for others.", application: "Respond to what you have received with a concrete act of generosity." },
+    ],
+  },
+  justice: {
+    bigIdea: "Faithful worship bears fruit in justice, mercy, humility, and practical solidarity with the vulnerable.",
+    purpose: "Move from religious words toward truthful, accountable action that seeks neighbors' well-being.",
+    points: [
+      { title: "Hear the prophets' challenge", exposition: "Amos rejects worship detached from justice; Micah joins justice with mercy and humility.", application: "Ask who is excluded or harmed by the way a community operates." },
+      { title: "Practice justice concretely", exposition: "Isaiah calls God's people to defend the vulnerable and learn to do good.", application: "Choose an action that addresses a real need, with affected people heard and involved." },
+      { title: "Follow the mission of Jesus", exposition: "Luke 4 presents Jesus announcing good news and release as part of his mission.", application: "Pair compassion with sustained service and accountability." },
+    ],
+  },
+  humility: {
+    bigIdea: "Christ-shaped humility releases status-seeking and turns toward honoring and serving others.",
+    purpose: "Invite humble service without teaching people to accept humiliation or abuse.",
+    points: [
+      { title: "See humility in Jesus", exposition: "Philippians 2 points to Christ's self-giving pattern.", application: "Use status or influence to make room for others, not to diminish yourself." },
+      { title: "Take the posture of a servant", exposition: "In John 13 Jesus washes the disciples' feet and calls them to follow his example.", application: "Choose one unnoticed act of care that respects the receiver's dignity." },
+      { title: "Walk humbly with God", exposition: "Micah 6:8 joins humility to justice and mercy.", application: "Stay teachable, receive correction, and act for your neighbor's good." },
+    ],
+  },
+  leadership: {
+    bigIdea: "In Jesus' teaching, leadership is accountable service rather than domination or self-promotion.",
+    purpose: "Call leaders to protect, equip, and serve people entrusted to their care.",
+    points: [
+      { title: "Reject power used to dominate", exposition: "Mark 10 contrasts Jesus' way with rulers who 'lord it over' others.", application: "Examine where authority is being used for personal benefit." },
+      { title: "Lead by serving", exposition: "Jesus models humble service and calls disciples to do likewise.", application: "Ask those affected what support they need; make service visible in decisions." },
+      { title: "Remain accountable", exposition: "1 Peter 5 warns shepherds not to domineer and points to willing example.", application: "Welcome oversight, safeguarding, and honest feedback." },
+    ],
+  },
+  stewardship: {
+    bigIdea: "What we receive is entrusted to us for faithful care, generosity, and service to others.",
+    purpose: "Encourage responsible care of resources and creation without reducing faithfulness to wealth.",
+    points: [
+      { title: "Recognize what is entrusted", exposition: "Genesis presents humans with responsibility within God's good creation.", application: "Consider how time, money, skills, and the natural world are being cared for." },
+      { title: "Give freely, not under pressure", exposition: "2 Corinthians 9 commends willing generosity rather than reluctant compulsion.", application: "Make a thoughtful plan to share in ways that are sustainable and transparent." },
+      { title: "Use gifts to serve", exposition: "1 Peter 4 calls people to use their gifts for one another.", application: "Offer a skill or resource to meet a concrete community need." },
+    ],
+  },
+  perseverance: {
+    bigIdea: "Christian endurance keeps moving toward faithful love with eyes on Jesus and help from community.",
+    purpose: "Strengthen weary listeners without shaming them for needing rest, support, or a changed course.",
+    points: [
+      { title: "Lay aside what hinders", exposition: "Hebrews 12 pictures endurance as a race focused on Jesus.", application: "Identify one burden to share or one unhelpful pattern to release." },
+      { title: "Ask for wisdom in trials", exposition: "James 1 connects endurance with wisdom asked from God.", application: "Seek counsel and take the next safe, faithful step rather than forcing certainty." },
+      { title: "Do not grow weary in doing good", exposition: "Galatians 6 encourages sustained good while recognizing a season of harvest.", application: "Rest, share the work, and celebrate small acts of faithfulness." },
+    ],
+  },
+  technology: {
+    bigIdea: "Technology should be evaluated by truth, wisdom, self-control, and whether its use builds up our neighbors.",
+    purpose: "Offer a biblical framework for modern tools without pretending Scripture directly discusses contemporary devices.",
+    points: [
+      { title: "Attend to what forms the mind", exposition: "Philippians 4 calls the church to attend to what is true, just, and worthy.", application: "Review what receives your attention and how it shapes hope, fear, and habits." },
+      { title: "Ask whether it builds people up", exposition: "First Corinthians 10 asks what is beneficial and what serves another's good.", application: "Set boundaries around tools that exploit attention or harm relationships." },
+      { title: "Use words to give grace", exposition: "Ephesians 4 and James 3 warn that speech can wound or strengthen a community.", application: "Choose truth, kindness, and accountability in digital conversations." },
+    ],
+  },
+  work: {
+    bigIdea: "Work has dignity when it serves life and neighbor, but a person's worth is never measured by productivity.",
+    purpose: "Connect work with vocation, justice, rest, and grace while reading ancient labor texts in their historical setting.",
+    points: [
+      { title: "Receive work without making it an idol", exposition: "Ecclesiastes recognizes both the labor and the gift of enjoying its fruit.", application: "Name what is meaningful in work and where rest or change is needed." },
+      { title: "Seek fairness and dignity", exposition: "New Testament household instructions addressed an ancient unequal system and must not be used to excuse exploitation.", application: "Ask whether workers are treated safely, fairly, and with respect." },
+      { title: "Let grace shape vocation", exposition: "Ephesians 2 places good works after grace as a way of serving, not earning worth.", application: "Use skills to contribute to the common good and honor limits." },
+    ],
+  },
+  worship: {
+    bigIdea: "Worship is praise and attentive response to God that must take shape in justice and everyday life.",
+    purpose: "Join gathered worship with ethical living, listening, and care for neighbors.",
+    points: [
+      { title: "Come with praise and attention", exposition: "Psalm 95 joins joyful praise with listening to God's voice.", application: "Make room for gratitude, silence, and attentive reading in worship." },
+      { title: "Offer your whole life", exposition: "Romans 12 describes a life of service shaped by a renewed mind.", application: "Connect Sunday worship with decisions, work, and relationships during the week." },
+      { title: "Let worship bear justice", exposition: "Amos challenges religious practice that ignores injustice.", application: "Ask what change in community life would make worship more truthful." },
+    ],
+  },
+  patience: {
+    bigIdea: "Patience is Spirit-shaped steadiness and love, not passivity in the face of harm.",
+    purpose: "Encourage thoughtful restraint and endurance while preserving boundaries and justice.",
+    points: [
+      { title: "Let the Spirit form patience", exposition: "Galatians 5 names patience and self-control among the fruit of the Spirit.", application: "Pause before reacting and seek help to change a harmful pattern." },
+      { title: "Bear with one another in love", exposition: "Ephesians 4 connects patience with humility and the work of unity.", application: "Practice listening and repair without demanding that harmed people stay unsafe." },
+      { title: "Wait with active hope", exposition: "James 5 uses the farmer's patience to picture endurance while awaiting justice.", application: "Keep doing good and seek support through a long season." },
+    ],
+  },
+  doubt: {
+    bigIdea: "Honest questions can be brought into relationship with God and a community that makes room for seeking.",
+    purpose: "Invite listeners to explore doubt without shame and to attend carefully to what Scripture says.",
+    points: [
+      { title: "Tell the truth about questions", exposition: "The Psalms preserve confusion and protest as part of faithful prayer.", application: "Let people ask real questions without labeling them faithless." },
+      { title: "Bring uncertainty to Jesus", exposition: "In Mark 9 a father brings both belief and doubt while asking Jesus for help.", application: "Pray honestly and seek conversation with patient, trustworthy people." },
+      { title: "Keep seeking with the community", exposition: "John 20 tells how Jesus meets Thomas among the disciples after his questions.", application: "Read, discuss, and test claims together rather than demanding instant certainty." },
+    ],
+  },
+  reconciliation: {
+    bigIdea: "God's reconciling work calls for truth, accountability, and peace where possible, never coerced contact with an unsafe person.",
+    purpose: "Teach repair and peacemaking with clear safeguards against excusing abuse or injustice.",
+    points: [
+      { title: "Name the breach truthfully", exposition: "Jesus treats damaged relationships as serious and calls disciples to address them.", application: "Acknowledge harm specifically and listen to those affected." },
+      { title: "Pursue repair with accountability", exposition: "Paul describes reconciliation as God's work and calls communities into a new way of life.", application: "Where safe, take responsible steps; include mediation or professional help when needed." },
+      { title: "Seek peace without enabling harm", exposition: "Romans 12 urges peace as far as it depends on us while rejecting vengeance.", application: "Set boundaries, protect the vulnerable, and do not promise restored trust without evidence." },
+    ],
+  },
+  healing: {
+    bigIdea: "God's people pray for healing and care for the sick while remaining honest that cure is not guaranteed in this life.",
+    purpose: "Offer comfort and communal care without blaming sick people or discouraging medical treatment.",
+    points: [
+      { title: "Bring illness and need into community", exposition: "James 5 invites prayer and care for the sick within the community.", application: "Ask what practical, medical, emotional, and spiritual support is wanted." },
+      { title: "Notice Christ's compassionate attention", exposition: "The Gospel stories show Jesus meeting suffering people with compassion and dignity.", application: "Center the person's voice and needs rather than making them an illustration." },
+      { title: "Trust grace amid unanswered prayer", exposition: "Paul's account in 2 Corinthians 12 holds weakness and sustaining grace together.", application: "Do not promise a cure or blame the sufferer; continue care and prayer." },
+    ],
+  },
+  evangelism: {
+    bigIdea: "Christian witness shares hope in Jesus through truthful words, attentive listening, and gentleness.",
+    purpose: "Encourage faithful witness that respects the dignity and freedom of the people being addressed.",
+    points: [
+      { title: "Ground witness in Jesus' way", exposition: "Matthew 28 commissions disciples to teach and make disciples among the nations.", application: "Let teaching and practice reflect Jesus' commands and character." },
+      { title: "Speak with gentleness and respect", exposition: "First Peter 3 calls believers to give an account of hope without coercion.", application: "Listen first, answer honestly, and respect a person's freedom to disagree." },
+      { title: "Attend to the listener's context", exposition: "Acts 17 shows Paul observing his audience and reasoning from their setting.", application: "Use clear language, build relationships, and avoid manipulation or pressure." },
+    ],
+  },
+};
 
 /**
  * Checks whether a verse in Gospels/Acts/Revelation likely contains direct speech of Jesus

@@ -4,6 +4,7 @@ import {
   BookOpen,
   CheckCircle2,
   Compass,
+  FileText,
   HelpCircle,
   Languages,
   Link2,
@@ -280,6 +281,12 @@ export const AiCompanionPanel: React.FC = () => {
       promptLabel: `Show connected passages across Scripture for ${activeRefLabel}`,
     },
     {
+      id: "sermon",
+      label: "Prepare Sermon",
+      icon: <FileText className="h-3 w-3" />,
+      promptLabel: `Prepare a sermon on ${activeRefLabel}`,
+    },
+    {
       id: "quiz",
       label: "Quiz Me",
       icon: <HelpCircle className="h-3 w-3" />,
@@ -331,7 +338,7 @@ export const AiCompanionPanel: React.FC = () => {
           <div>
             <p className="text-xs font-semibold text-foreground">Selah’s Bible Knowledge Centre is ready</p>
             <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-              Searches Bible text and curated study notes on this device. No AI sign-in, external model, or API key is needed.
+              Searches Bible text, prepares sermon drafts with linked passages, and uses curated study notes on this device. No AI sign-in, external model, or API key is needed.
             </p>
           </div>
         </div>
