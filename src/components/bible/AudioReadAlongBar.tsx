@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Check,
+  ChevronDown,
   Headphones,
   Music2,
   Pause,
@@ -49,7 +51,15 @@ export const AudioReadAlongBar: React.FC = () => {
   const [engineMode, setEngineMode] = useState<"speech" | "studio">("speech");
   const [studioReaderKey, setStudioReaderKey] = useState<string>("");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [voicePickerOpen, setVoicePickerOpen] = useState(false);
+  const voicePickerRef = useRef<HTMLDivElement>(null);
   const [sleepMinutes, setSleepMinutes] = useState<number | null>(null);
+
+  const voiceLanguagePrefix = (activeVersion.languageCode || "en").slice(0, 2).toLowerCase();
+  const languageVoices = useMemo(
+    () => voices.filter((voice) => voice.lang.toLowerCase().startsWith(voiceLanguagePrefix)),
+    [voices, voiceLanguagePrefix]
+  );
 
   const speechSessionRef = useRef<number>(0);
   const htmlAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -64,16 +74,16 @@ export const AudioReadAlongBar: React.FC = () => {
   );
   const studioKeys = useMemo(() => Object.keys(studioLinks), [studioLinks]);
   const femaleVoices = useMemo(
-    () => voices.filter((voice) => getVoiceGender(voice) === "female"),
-    [voices]
+    () => languageVoices.filter((voice) => getVoiceGender(voice) === "female"),
+    [languageVoices]
   );
   const maleVoices = useMemo(
-    () => voices.filter((voice) => getVoiceGender(voice) === "male"),
-    [voices]
+    () => languageVoices.filter((voice) => getVoiceGender(voice) === "male"),
+    [languageVoices]
   );
   const otherVoices = useMemo(
-    () => voices.filter((voice) => getVoiceGender(voice) === null),
-    [voices]
+    () => languageVoices.filter((voice) => getVoiceGender(voice) === null),
+    [languageVoices]
   );
 
   useEffect(() => {
@@ -88,6 +98,24 @@ export const AudioReadAlongBar: React.FC = () => {
   // Use the voice list preloaded by AppShell; it includes every voice the
   // browser/operating system exposes across its installed languages.
   useEffect(() => subscribeToSpeechVoices(setVoices), []);
+
+  useEffect(() => {
+    if (!voicePickerOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!voicePickerRef.current?.contains(event.target as Node)) {
+        setVoicePickerOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setVoicePickerOpen(false);
+    };
+    window.addEventListener("pointerdown", closeOnOutsideClick);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      window.removeEventListener("pointerdown", closeOnOutsideClick);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [voicePickerOpen]);
 
   // Gentle WebAudio Contemplative Pad
   useEffect(() => {
@@ -190,19 +218,16 @@ export const AudioReadAlongBar: React.FC = () => {
             ? `${bookMeta.name}, chapter ${chapter}. ${v.text}`
             : v.text;
         const utter = new SpeechSynthesisUtterance(utterText);
+        utter.lang = activeVersion.languageCode || "en";
         utter.rate = prefs.speechRate || 1.0;
 
-        const langPrefix = (activeVersion.languageCode || "en").slice(0, 2).toLowerCase();
-        const languageVoices = voices.filter((voice) =>
-          voice.lang.toLowerCase().startsWith(langPrefix)
-        );
         const matchingGenderVoices =
           prefs.preferredVoiceGender === "auto"
             ? languageVoices
             : languageVoices.filter(
                 (voice) => getVoiceGender(voice) === prefs.preferredVoiceGender
               );
-        const selectedVoice = voices.find(
+        const selectedVoice = languageVoices.find(
           (voice) => voice.voiceURI === prefs.preferredVoiceURI
         );
 
@@ -244,7 +269,7 @@ export const AudioReadAlongBar: React.FC = () => {
       prefs.preferredVoiceURI,
       prefs.preferredVoiceGender,
       prefs.autoAdvanceChapter,
-      voices,
+      languageVoices,
       activeVersion.languageCode,
       nextChapter,
       setActiveAudioVerse,
@@ -414,13 +439,38 @@ export const AudioReadAlongBar: React.FC = () => {
   if (!audioBarOpen) return null;
 
   const speeds = [0.85, 1.0, 1.15, 1.3, 1.5];
-  const voiceLanguagePrefix = (activeVersion.languageCode || "en").slice(0, 2).toLowerCase();
-  const hasFemaleVoiceForLanguage = femaleVoices.some((voice) =>
-    voice.lang.toLowerCase().startsWith(voiceLanguagePrefix)
+  const hasFemaleVoiceForLanguage = femaleVoices.length > 0;
+  const hasMaleVoiceForLanguage = maleVoices.length > 0;
+  const otherLanguageVoiceCount = voices.length - languageVoices.length;
+  const speechLanguageName = (() => {
+    try {
+      return new Intl.DisplayNames(
+        [typeof navigator === "undefined" ? "en" : navigator.language],
+        { type: "language" }
+      ).of(voiceLanguagePrefix) || voiceLanguagePrefix.toUpperCase();
+    } catch {
+      return voiceLanguagePrefix.toUpperCase();
+    }
+  })();
+  const selectedLanguageVoice = languageVoices.find(
+    (voice) => voice.voiceURI === prefs.preferredVoiceURI
   );
-  const hasMaleVoiceForLanguage = maleVoices.some((voice) =>
-    voice.lang.toLowerCase().startsWith(voiceLanguagePrefix)
-  );
+  const pickerLabel = voices.length === 0
+    ? "Loading voices…"
+    : selectedLanguageVoice?.name || `${prefs.preferredVoiceGender === "auto" ? "Auto" : prefs.preferredVoiceGender} voice`;
+  const chooseVoiceGender = (gender: "auto" | "female" | "male") => {
+    stopAllPlayback();
+    updatePrefs({ preferredVoiceGender: gender, preferredVoiceURI: "" });
+    setVoicePickerOpen(false);
+  };
+  const chooseDeviceVoice = (voice: SpeechSynthesisVoice) => {
+    stopAllPlayback();
+    updatePrefs({
+      preferredVoiceURI: voice.voiceURI,
+      preferredVoiceGender: getVoiceGender(voice) || "auto",
+    });
+    setVoicePickerOpen(false);
+  };
 
   return (
     <div className="sticky z-20 border-t border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur-md" style={{ bottom: "calc(4.75rem + env(safe-area-inset-bottom, 0px))" }}>
@@ -516,75 +566,124 @@ export const AudioReadAlongBar: React.FC = () => {
           )}
 
           {engineMode === "speech" && (
-            <select
-              disabled={voices.length === 0}
-              value={
-                prefs.preferredVoiceURI && voices.some((voice) => voice.voiceURI === prefs.preferredVoiceURI)
-                  ? `voice:${prefs.preferredVoiceURI}`
-                  : `gender:${prefs.preferredVoiceGender || "auto"}`
-              }
-              onChange={(event) => {
-                const value = event.target.value;
-                stopAllPlayback();
-                if (value.startsWith("gender:")) {
-                  updatePrefs({
-                    preferredVoiceGender: value.slice(7) as "auto" | "female" | "male",
-                    preferredVoiceURI: "",
-                  });
-                  return;
-                }
-                const voiceURI = value.slice(6);
-                const selectedVoice = voices.find((voice) => voice.voiceURI === voiceURI);
-                updatePrefs({
-                  preferredVoiceURI: voiceURI,
-                  preferredVoiceGender: selectedVoice ? getVoiceGender(selectedVoice) || "auto" : "auto",
-                });
-              }}
-              className="max-w-[185px] truncate rounded-xl border border-border bg-background px-2.5 py-1.5 text-[11px] outline-none disabled:opacity-60"
-              title="Choose an AI reading voice or voice gender"
-              aria-label="Choose AI reading voice or gender"
-            >
-              {voices.length === 0 ? (
-                <option value="gender:auto">Loading device voices…</option>
-              ) : (
-                <>
-                  <option value="gender:auto">Auto voice</option>
-                  <option value="gender:female" disabled={!hasFemaleVoiceForLanguage}>
-                    Female voice{hasFemaleVoiceForLanguage ? "" : " (not available for this language)"}
-                  </option>
-                  <option value="gender:male" disabled={!hasMaleVoiceForLanguage}>
-                    Male voice{hasMaleVoiceForLanguage ? "" : " (not available for this language)"}
-                  </option>
-                  {femaleVoices.length > 0 && (
-                    <optgroup label="Female voices">
-                      {femaleVoices.map((voice) => (
-                        <option key={voice.voiceURI} value={`voice:${voice.voiceURI}`}>
-                          {voice.name} ({voice.lang})
-                        </option>
-                      ))}
-                    </optgroup>
+            <div ref={voicePickerRef} className="relative">
+              <button
+                type="button"
+                disabled={voices.length === 0}
+                onClick={() => setVoicePickerOpen((open) => !open)}
+                aria-haspopup="dialog"
+                aria-expanded={voicePickerOpen}
+                aria-label={`AI reading voice: ${pickerLabel}`}
+                className="inline-flex max-w-[185px] items-center gap-1.5 truncate rounded-xl border border-border bg-background px-2.5 py-1.5 text-[11px] outline-none disabled:opacity-60"
+                title="Choose an AI reading voice"
+              >
+                <span className="truncate">{pickerLabel}</span>
+                <ChevronDown className="h-3 w-3 shrink-0" />
+              </button>
+
+              {voicePickerOpen && (
+                <div
+                  role="dialog"
+                  aria-label="Choose an AI reading voice"
+                  className="absolute bottom-full right-0 z-50 mb-2 max-h-[70dvh] w-[min(22rem,88vw)] overflow-y-auto rounded-2xl border border-border bg-card p-3 text-card-foreground shadow-2xl"
+                >
+                  <div className="mb-2 text-xs font-semibold">Voices for {speechLanguageName}</div>
+                  <button
+                    type="button"
+                    onClick={() => chooseVoiceGender("auto")}
+                    aria-pressed={!selectedLanguageVoice && prefs.preferredVoiceGender === "auto"}
+                    className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm hover:bg-accent"
+                  >
+                    <span>Auto voice</span>
+                    {!selectedLanguageVoice && prefs.preferredVoiceGender === "auto" && <Check className="h-4 w-4" />}
+                  </button>
+                  <div className="my-2 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled={!hasFemaleVoiceForLanguage}
+                      onClick={() => chooseVoiceGender("female")}
+                      aria-pressed={!selectedLanguageVoice && prefs.preferredVoiceGender === "female"}
+                      className="rounded-lg border border-border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      Female{hasFemaleVoiceForLanguage ? "" : " · unavailable"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!hasMaleVoiceForLanguage}
+                      onClick={() => chooseVoiceGender("male")}
+                      aria-pressed={!selectedLanguageVoice && prefs.preferredVoiceGender === "male"}
+                      className="rounded-lg border border-border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      Male{hasMaleVoiceForLanguage ? "" : " · unavailable"}
+                    </button>
+                  </div>
+
+                  {languageVoices.length === 0 ? (
+                    <div className="rounded-xl bg-muted/60 p-3 text-xs leading-relaxed text-muted-foreground">
+                      <p className="font-medium text-foreground">No {speechLanguageName} voices are installed on this device.</p>
+                      <p className="mt-1">Auto voice can still use the device default. To choose a {speechLanguageName} male or female voice, install voices for this language in your device’s Text-to-speech settings.</p>
+                      {otherLanguageVoiceCount > 0 && (
+                        <p className="mt-2">{otherLanguageVoiceCount} installed voice{otherLanguageVoiceCount === 1 ? " is" : "s are"} for other languages, so they’re hidden here to avoid mispronouncing Scripture.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      {femaleVoices.length > 0 && (
+                        <div className="mt-2">
+                          <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">Female voices</div>
+                          {femaleVoices.map((voice) => (
+                            <button
+                              key={voice.voiceURI}
+                              type="button"
+                              onClick={() => chooseDeviceVoice(voice)}
+                              aria-pressed={prefs.preferredVoiceURI === voice.voiceURI}
+                              className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm hover:bg-accent"
+                            >
+                              <span className="min-w-0 truncate">{voice.name} <span className="text-xs text-muted-foreground">({voice.lang})</span></span>
+                              {prefs.preferredVoiceURI === voice.voiceURI && <Check className="h-4 w-4 shrink-0" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {maleVoices.length > 0 && (
+                        <div className="mt-2">
+                          <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">Male voices</div>
+                          {maleVoices.map((voice) => (
+                            <button
+                              key={voice.voiceURI}
+                              type="button"
+                              onClick={() => chooseDeviceVoice(voice)}
+                              aria-pressed={prefs.preferredVoiceURI === voice.voiceURI}
+                              className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm hover:bg-accent"
+                            >
+                              <span className="min-w-0 truncate">{voice.name} <span className="text-xs text-muted-foreground">({voice.lang})</span></span>
+                              {prefs.preferredVoiceURI === voice.voiceURI && <Check className="h-4 w-4 shrink-0" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {otherVoices.length > 0 && (
+                        <div className="mt-2">
+                          <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">Other voices</div>
+                          {otherVoices.map((voice) => (
+                            <button
+                              key={voice.voiceURI}
+                              type="button"
+                              onClick={() => chooseDeviceVoice(voice)}
+                              aria-pressed={prefs.preferredVoiceURI === voice.voiceURI}
+                              className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm hover:bg-accent"
+                            >
+                              <span className="min-w-0 truncate">{voice.name} <span className="text-xs text-muted-foreground">({voice.lang})</span></span>
+                              {prefs.preferredVoiceURI === voice.voiceURI && <Check className="h-4 w-4 shrink-0" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
-                  {maleVoices.length > 0 && (
-                    <optgroup label="Male voices">
-                      {maleVoices.map((voice) => (
-                        <option key={voice.voiceURI} value={`voice:${voice.voiceURI}`}>
-                          {voice.name} ({voice.lang})
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {otherVoices.length > 0 && (
-                    <optgroup label="Other device voices">
-                      {otherVoices.map((voice) => (
-                        <option key={voice.voiceURI} value={`voice:${voice.voiceURI}`}>
-                          {voice.name} ({voice.lang})
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                </>
+                </div>
               )}
-            </select>
+            </div>
           )}
 
           {engineMode === "studio" && studioKeys.length > 0 && (
