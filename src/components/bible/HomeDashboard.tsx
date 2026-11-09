@@ -8,6 +8,7 @@ import { useBibleApp } from "@/context/useBibleApp";
 import type { AppSection } from "@/types/bible";
 import { Switch } from "@/components/ui/switch";
 import { SelahIcon, type SelahIconName } from "./SelahIcon";
+import { AdSenseSlot } from "@/components/ads/AdSenseSlot";
 import { disableRemotePushReminder, enableRemotePushReminder, REMOTE_PUSH_ACTIVE_KEY, updateRemotePushReminder } from "@/lib/webPushReminders";
 
 type HomeDashboardProps = {
@@ -269,6 +270,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
           />
         </div>
       </section>
+      <AdSenseSlot />
     </div>
   );
 };

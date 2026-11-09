@@ -424,6 +424,9 @@ export const AppShell: React.FC = () => {
               {activeSection === "about" && <ExplainerView />}
             </Suspense>
           </SectionErrorBoundary>
+          <footer className="mx-auto flex w-full max-w-6xl justify-end px-4 pb-28 pt-4 text-xs text-muted-foreground sm:px-8">
+            <a href="/privacy" className="rounded underline decoration-border underline-offset-4 hover:text-primary">Privacy &amp; advertising</a>
+          </footer>
         </main>
 
         <Suspense fallback={null}>{prefs.showBibleCompanion && <AiCompanionPanel />}</Suspense>
