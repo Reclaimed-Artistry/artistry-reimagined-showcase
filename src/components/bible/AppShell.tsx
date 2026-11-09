@@ -29,6 +29,16 @@ const VersionVaultView = lazy(() => import("./VersionVaultView").then((module) =
 const KidsStoriesView = lazy(() => import("./KidsStoriesView").then((module) => ({ default: module.KidsStoriesView })));
 const ExplainerView = lazy(() => import("./ExplainerView").then((module) => ({ default: module.ExplainerView })));
 
+const preloadSectionModules = () => Promise.allSettled([
+  import("./BibleReaderView"),
+  import("./VersionVaultView"),
+  import("./ReadingPlansView"),
+  import("./DailyReflectionView"),
+  import("./SearchAndStudyView"),
+  import("./KidsStoriesView"),
+  import("./ExplainerView"),
+]);
+
 type SectionErrorBoundaryProps = {
   resetKey: AppSection;
   onReturnHome: () => void;
@@ -114,6 +124,38 @@ export const AppShell: React.FC = () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
     };
   }, [prefs.showBibleCompanion, setActiveSection, setAiPanelOpen]);
+
+  // Warm section modules after first paint so navigation is immediate on
+  // normal connections. Respect data-saver and very slow mobile connections.
+  useEffect(() => {
+    const connection = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }).connection;
+    if (connection?.saveData || /(^|-)2g$/i.test(connection?.effectiveType || "")) return;
+
+    let cancelled = false;
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const warmSections = () => {
+      if (!cancelled) void preloadSectionModules();
+    };
+
+    if (idleWindow.requestIdleCallback) {
+      const idleHandle = idleWindow.requestIdleCallback(warmSections, { timeout: 1800 });
+      return () => {
+        cancelled = true;
+        idleWindow.cancelIdleCallback?.(idleHandle);
+      };
+    }
+
+    const timeoutHandle = window.setTimeout(warmSections, 1200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutHandle);
+    };
+  }, []);
 
   // Sync iOS/Android StatusBar & browser theme-color whenever theme changes
   useEffect(() => {

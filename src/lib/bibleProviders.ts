@@ -27,6 +27,7 @@ import type {
 } from "@/types/bible";
 
 const memoryBibleCache = new Map<string, NormalizedBible>();
+const memoryChapterCache = new Map<string, NormalizedChapter>();
 
 export const BUNDLED_VERSIONS: BibleVersionMeta[] = [
   {
@@ -688,6 +689,43 @@ export async function getInstalledFullBible(
   return null;
 }
 
+async function getBundledChapter(
+  meta: BibleVersionMeta,
+  bookNumber: number,
+  chapter: number,
+): Promise<NormalizedChapter | null> {
+  const cacheKey = `${meta.id}:${bookNumber}:${chapter}`;
+  const cached = memoryChapterCache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(`/bibles/chapters/${meta.providerSlug}/${bookNumber}/${chapter}.json`);
+    if (!response.ok) return null;
+    const rawBook = await response.json();
+    const normalized = parseCdnArrayBible(
+      [rawBook],
+      meta,
+      Number(response.headers.get("Content-Length")) || 0,
+    );
+    const chapterData = normalized.books.find((book) => book.bookNumber === bookNumber)?.chapters[0];
+    if (!chapterData) return null;
+
+    if (meta.id === "bundled:en_bsb") {
+      const canon = getBookMeta(bookNumber);
+      chapterData.audioLinks = {
+        "Dan Hays (Studio)": `https://audio.bible.helloao.org/api/BSB/${canon.usfm}/${chapter}/audio/hays.mp3`,
+        "Souer (Dramatic)": `https://audio.bible.helloao.org/api/BSB/${canon.usfm}/${chapter}/audio/souer.mp3`,
+      };
+    }
+
+    memoryChapterCache.set(cacheKey, chapterData);
+    return chapterData;
+  } catch {
+    // Fall back to the complete bundled file for old offline installs or unusual hosts.
+    return null;
+  }
+}
+
 /**
  * Downloads ANY version in full and persists it into the IndexedDB Offline Vault!
  */
@@ -896,7 +934,14 @@ export async function getChapterContent(
 ): Promise<{ chapterData: NormalizedChapter; isOfflineInstalled: boolean }> {
   const canon = getBookMeta(bookNumber);
 
-  // 1. Check full offline Bible (bundled or IndexedDB)
+  // Bundled Bible chapters are split into small static files so opening Read
+  // never needs to download and parse the entire 4 MB translation first.
+  if (meta.provider === "bundled") {
+    const chapterData = await getBundledChapter(meta, bookNumber, chapter);
+    if (chapterData) return { chapterData, isOfflineInstalled: true };
+  }
+
+  // 1. Check full offline Bible (bundled fallback or IndexedDB)
   const fullBible = await getInstalledFullBible(meta);
   if (fullBible) {
     const book =

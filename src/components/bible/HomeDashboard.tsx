@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { ArrowRight, BellRing } from "lucide-react";
 import { toast } from "sonner";
 import { formatReference, getBookMeta } from "@/data/canonicalBooks";
 import { getDevotionalForDate } from "@/data/dailyReflections";
-import { getChapterContent } from "@/lib/bibleProviders";
 import { useBibleApp } from "@/context/useBibleApp";
 import type { AppSection } from "@/types/bible";
 import { Switch } from "@/components/ui/switch";
@@ -39,7 +38,6 @@ const HOME_LINKS: {
 
 export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, onOpenCompanion }) => {
   const {
-    activeVersion,
     bookNumber,
     chapter,
     navigateTo,
@@ -55,7 +53,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
     devotional.verse,
     devotional.verseEnd,
   );
-  const [verseText, setVerseText] = useState(devotional.fallbackText);
+  const verseText = devotional.fallbackText;
   const [notificationPermission, setNotificationPermission] = useState<string>(() =>
     typeof window !== "undefined" && "Notification" in window
       ? Notification.permission
@@ -65,27 +63,6 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
     typeof window !== "undefined" && localStorage.getItem(REMOTE_PUSH_ACTIVE_KEY) === "true",
   );
   const lastBook = getBookMeta(bookNumber);
-
-  useEffect(() => {
-    let cancelled = false;
-    setVerseText(devotional.fallbackText);
-    void getChapterContent(activeVersion, devotional.bookNumber, devotional.chapter)
-      .then(({ chapterData }) => {
-        if (cancelled) return;
-        const end = devotional.verseEnd || devotional.verse;
-        const text = chapterData.verses
-          .filter((verse) => verse.verse >= devotional.verse && verse.verse <= end)
-          .map((verse) => verse.text)
-          .join(" ");
-        if (text) setVerseText(text);
-      })
-      .catch(() => {
-        // Keep the curated passage text available if this edition cannot be loaded offline.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeVersion, devotional]);
 
   const setReminderEnabled = async (enabled: boolean) => {
     if (!enabled) {

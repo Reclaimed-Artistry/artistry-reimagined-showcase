@@ -276,7 +276,8 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Chapter content states
   const [primaryChapterData, setPrimaryChapterData] = useState<NormalizedChapter | null>(null);
-  const [primaryLoading, setPrimaryLoading] = useState<boolean>(true);
+  const [loadedPrimaryChapterKey, setLoadedPrimaryChapterKey] = useState<string | null>(null);
+  const [primaryLoading, setPrimaryLoading] = useState<boolean>(false);
   const [primaryError, setPrimaryError] = useState<string | null>(null);
   const [isPrimaryOfflineInstalled, setIsPrimaryOfflineInstalled] = useState<boolean>(true);
   const [parallelChapterData, setParallelChapterData] = useState<NormalizedChapter | null>(null);
@@ -432,9 +433,17 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     writeLocal(STORAGE_KEYS.ACTIVE_VERSION, id);
   }, []);
 
-  // Load Primary + Parallel + Third chapters whenever version/book/chapter changes
+  // Load Scripture only while the Reader or Companion is visible. This keeps
+  // the Home screen and other sections free of large Bible/API requests.
   useEffect(() => {
     let cancelled = false;
+    const readerIsVisible = activeSection === "reader" || activeSection === "companion";
+    if (!readerIsVisible) {
+      setPrimaryLoading(false);
+      setPrimaryError(null);
+      return;
+    }
+
     setPrimaryLoading(true);
     setPrimaryError(null);
 
@@ -444,6 +453,7 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       .then(({ chapterData, isOfflineInstalled }) => {
         if (cancelled) return;
         setPrimaryChapterData(chapterData);
+        setLoadedPrimaryChapterKey(`${activeVersion.id}:${bookNumber}:${chapter}:${reloadTick}`);
         setIsPrimaryOfflineInstalled(isOfflineInstalled);
         setPrimaryLoading(false);
         if (isOfflineInstalled && activeVersion.provider !== "bundled") {
@@ -459,7 +469,7 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => {
       cancelled = true;
     };
-  }, [activeVersion, bookNumber, chapter, reloadTick, refreshOfflineList]);
+  }, [activeSection, activeVersion, bookNumber, chapter, reloadTick, refreshOfflineList]);
 
   // Load Parallel 2nd column if enabled
   useEffect(() => {
@@ -1088,7 +1098,11 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     exportVersionJson,
     importVersionJson,
     primaryChapterData,
-    primaryLoading,
+    primaryLoading:
+      primaryLoading ||
+      ((activeSection === "reader" || activeSection === "companion") &&
+        loadedPrimaryChapterKey !== `${activeVersion.id}:${bookNumber}:${chapter}:${reloadTick}` &&
+        !primaryError),
     primaryError,
     isPrimaryOfflineInstalled,
     parallelChapterData,
