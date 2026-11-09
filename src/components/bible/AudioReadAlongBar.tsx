@@ -13,6 +13,17 @@ import {
 import { getBookMeta } from "@/data/canonicalBooks";
 import { useBibleApp } from "@/context/useBibleApp";
 
+function getVoiceGender(voice: SpeechSynthesisVoice): "female" | "male" | null {
+  const label = `${voice.name} ${voice.voiceURI}`.toLowerCase();
+  if (/\b(female|woman|feminine|girl)\b|samantha|victoria|karen|moira|tessa|zira|susan|allison|ava|aria|emma|jenny|hazel/.test(label)) {
+    return "female";
+  }
+  if (/\b(male|man|masculine|boy)\b|daniel|david|alex|guy|fred|tom|mark|james|john|aaron|arthur|oliver|liam|ryan|matthew|thomas|george|andrew|jorge|juan|pablo|carlos|miguel|diego/.test(label)) {
+    return "male";
+  }
+  return null;
+}
+
 export const AudioReadAlongBar: React.FC = () => {
   const {
     audioBarOpen,
@@ -47,6 +58,18 @@ export const AudioReadAlongBar: React.FC = () => {
     [primaryChapterData]
   );
   const studioKeys = useMemo(() => Object.keys(studioLinks), [studioLinks]);
+  const femaleVoices = useMemo(
+    () => voices.filter((voice) => getVoiceGender(voice) === "female"),
+    [voices]
+  );
+  const maleVoices = useMemo(
+    () => voices.filter((voice) => getVoiceGender(voice) === "male"),
+    [voices]
+  );
+  const otherVoices = useMemo(
+    () => voices.filter((voice) => getVoiceGender(voice) === null),
+    [voices]
+  );
 
   useEffect(() => {
     if (studioKeys.length > 0 && !studioKeys.includes(studioReaderKey)) {
@@ -176,17 +199,31 @@ export const AudioReadAlongBar: React.FC = () => {
         const utter = new SpeechSynthesisUtterance(utterText);
         utter.rate = prefs.speechRate || 1.0;
 
-        if (prefs.preferredVoiceURI) {
-          const matched = voices.find((vc) => vc.voiceURI === prefs.preferredVoiceURI);
-          if (matched) utter.voice = matched;
+        const langPrefix = (activeVersion.languageCode || "en").slice(0, 2).toLowerCase();
+        const languageVoices = voices.filter((voice) =>
+          voice.lang.toLowerCase().startsWith(langPrefix)
+        );
+        const matchingGenderVoices =
+          prefs.preferredVoiceGender === "auto"
+            ? languageVoices
+            : languageVoices.filter(
+                (voice) => getVoiceGender(voice) === prefs.preferredVoiceGender
+              );
+        const selectedVoice = voices.find(
+          (voice) => voice.voiceURI === prefs.preferredVoiceURI
+        );
+
+        if (
+          selectedVoice &&
+          (prefs.preferredVoiceGender === "auto" ||
+            getVoiceGender(selectedVoice) === prefs.preferredVoiceGender)
+        ) {
+          utter.voice = selectedVoice;
         } else {
-          const langPrefix = (activeVersion.languageCode || "en").slice(0, 2).toLowerCase();
           const autoVoice =
-            voices.find(
-              (vc) =>
-                vc.lang.toLowerCase().startsWith(langPrefix) &&
-                /natural|neural|google|samantha|daniel|premium/i.test(vc.name)
-            ) || voices.find((vc) => vc.lang.toLowerCase().startsWith(langPrefix));
+            matchingGenderVoices.find((voice) =>
+              /natural|neural|google|premium/i.test(voice.name)
+            ) || matchingGenderVoices[0];
           if (autoVoice) utter.voice = autoVoice;
         }
 
@@ -212,6 +249,7 @@ export const AudioReadAlongBar: React.FC = () => {
       chapter,
       prefs.speechRate,
       prefs.preferredVoiceURI,
+      prefs.preferredVoiceGender,
       prefs.autoAdvanceChapter,
       voices,
       activeVersion.languageCode,
@@ -383,6 +421,13 @@ export const AudioReadAlongBar: React.FC = () => {
   if (!audioBarOpen) return null;
 
   const speeds = [0.85, 1.0, 1.15, 1.3, 1.5];
+  const voiceLanguagePrefix = (activeVersion.languageCode || "en").slice(0, 2).toLowerCase();
+  const hasFemaleVoiceForLanguage = femaleVoices.some((voice) =>
+    voice.lang.toLowerCase().startsWith(voiceLanguagePrefix)
+  );
+  const hasMaleVoiceForLanguage = maleVoices.some((voice) =>
+    voice.lang.toLowerCase().startsWith(voiceLanguagePrefix)
+  );
 
   return (
     <div className="sticky z-20 border-t border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur-md" style={{ bottom: "calc(4.75rem + env(safe-area-inset-bottom, 0px))" }}>
@@ -479,18 +524,66 @@ export const AudioReadAlongBar: React.FC = () => {
 
           {engineMode === "speech" && voices.length > 0 && (
             <select
-              value={prefs.preferredVoiceURI}
-              onChange={(e) => updatePrefs({ preferredVoiceURI: e.target.value })}
-              className="max-w-[135px] truncate rounded-xl border border-border bg-background px-2.5 py-1.5 text-[11px] outline-none"
-              title="Choose Reading Voice"
-              aria-label="Choose reading voice"
+              value={
+                prefs.preferredVoiceURI && voices.some((voice) => voice.voiceURI === prefs.preferredVoiceURI)
+                  ? `voice:${prefs.preferredVoiceURI}`
+                  : `gender:${prefs.preferredVoiceGender || "auto"}`
+              }
+              onChange={(event) => {
+                const value = event.target.value;
+                stopAllPlayback();
+                if (value.startsWith("gender:")) {
+                  updatePrefs({
+                    preferredVoiceGender: value.slice(7) as "auto" | "female" | "male",
+                    preferredVoiceURI: "",
+                  });
+                  return;
+                }
+                const voiceURI = value.slice(6);
+                const selectedVoice = voices.find((voice) => voice.voiceURI === voiceURI);
+                updatePrefs({
+                  preferredVoiceURI: voiceURI,
+                  preferredVoiceGender: selectedVoice ? getVoiceGender(selectedVoice) || "auto" : "auto",
+                });
+              }}
+              className="max-w-[185px] truncate rounded-xl border border-border bg-background px-2.5 py-1.5 text-[11px] outline-none"
+              title="Choose an AI reading voice or voice gender"
+              aria-label="Choose AI reading voice or gender"
             >
-              <option value="">Auto Smart Voice</option>
-              {voices.slice(0, 25).map((vc) => (
-                <option key={vc.voiceURI} value={vc.voiceURI}>
-                  {vc.name} ({vc.lang})
-                </option>
-              ))}
+              <option value="gender:auto">Auto voice</option>
+              <option value="gender:female" disabled={!hasFemaleVoiceForLanguage}>
+                Female voice{hasFemaleVoiceForLanguage ? "" : " (not available for this language)"}
+              </option>
+              <option value="gender:male" disabled={!hasMaleVoiceForLanguage}>
+                Male voice{hasMaleVoiceForLanguage ? "" : " (not available for this language)"}
+              </option>
+              {femaleVoices.length > 0 && (
+                <optgroup label="Female voices">
+                  {femaleVoices.slice(0, 25).map((voice) => (
+                    <option key={voice.voiceURI} value={`voice:${voice.voiceURI}`}>
+                      {voice.name} ({voice.lang})
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {maleVoices.length > 0 && (
+                <optgroup label="Male voices">
+                  {maleVoices.slice(0, 25).map((voice) => (
+                    <option key={voice.voiceURI} value={`voice:${voice.voiceURI}`}>
+                      {voice.name} ({voice.lang})
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {otherVoices.length > 0 && (
+                <optgroup label="Other device voices">
+                  {otherVoices.slice(0, 25).map((voice) => (
+                    <option key={voice.voiceURI} value={`voice:${voice.voiceURI}`}>
+                      {voice.name} ({voice.lang})
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           )}
 

@@ -214,6 +214,7 @@ export interface ReaderPreferences {
   thirdVersionId: string | null;
   speechRate: number;
   preferredVoiceURI: string;
+  preferredVoiceGender: "auto" | "female" | "male";
   autoAdvanceChapter: boolean;
   ambientSound: boolean;
   showBibleCompanion: boolean;
