@@ -198,13 +198,6 @@ export type ReaderTheme = "parchment" | "sepia" | "night";
 export type ReaderFont = "scripture" | "display" | "sans" | "mono";
 export type ReaderLayoutMode = "verse" | "paragraph";
 
-export interface AiConnectionSettings {
-  mode: "hybrid" | "custom_llm";
-  endpointUrl: string;
-  apiKey: string;
-  model: string;
-}
-
 export interface ReaderPreferences {
   theme: ReaderTheme;
   fontFamily: ReaderFont;
@@ -221,13 +214,18 @@ export interface ReaderPreferences {
   thirdVersionId: string | null;
   speechRate: number;
   preferredVoiceURI: string;
+  preferredVoiceGender: "auto" | "female" | "male";
   autoAdvanceChapter: boolean;
   ambientSound: boolean;
-  aiSettings: AiConnectionSettings;
+  showBibleCompanion: boolean;
+  dailyStudyReminderEnabled: boolean;
+  dailyStudyReminderTime: string;
 }
 
 export type AppSection =
+  | "home"
   | "reader"
+  | "companion"
   | "versions"
   | "plans"
   | "reflection"

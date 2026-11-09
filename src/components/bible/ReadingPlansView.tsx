@@ -16,7 +16,7 @@ import {
   buildCustomReadingPlan,
   formatPassageRangeLabel,
 } from "@/data/readingPlans";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import {
   Dialog,
   DialogContent,
@@ -153,7 +153,7 @@ export const ReadingPlansView: React.FC = () => {
               <div
                 key={plan.id}
                 onClick={() => setSelectedPlanId(plan.id)}
-                className={`cursor-pointer rounded-2xl border p-4 transition ${
+                className={`flex h-48 flex-col justify-between cursor-pointer rounded-2xl border p-4 transition ${
                   isSelected
                     ? "border-primary bg-primary/8 shadow-sm ring-1 ring-primary/30"
                     : "border-border/80 bg-card hover:border-primary/40"
@@ -171,10 +171,10 @@ export const ReadingPlansView: React.FC = () => {
                   </span>
                 </div>
 
-                <h3 className="mt-2 font-display text-xl font-bold text-foreground">
+                <h3 className="mt-2 min-h-14 line-clamp-2 font-display text-xl font-bold text-foreground">
                   {plan.title}
                 </h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">{plan.subtitle}</p>
+                <p className="mt-0.5 min-h-8 line-clamp-2 text-xs text-muted-foreground">{plan.subtitle}</p>
 
                 {enrollment ? (
                   <div className="mt-3 space-y-1.5">

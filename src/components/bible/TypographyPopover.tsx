@@ -10,7 +10,7 @@ import {
   Type,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import {
   Popover,
   PopoverContent,
@@ -54,20 +54,20 @@ export const TypographyPopover: React.FC = () => {
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const wallpaperColor =
     prefs.appearanceBackgroundColor ||
-    (prefs.theme === "night" ? "#050914" : prefs.theme === "sepia" ? "#EDE6D5" : "#FFFFFF");
+    (prefs.theme === "night" ? "#101813" : prefs.theme === "sepia" ? "#EDE6D5" : "#F6F4EF");
 
   const themes: { id: ReaderTheme; label: string; icon: React.ReactNode; swatch: string }[] = [
     {
       id: "parchment",
-      label: "Navy light",
+      label: "Light",
       icon: <Sun className="h-3.5 w-3.5" />,
-      swatch: "bg-white text-slate-900 border-slate-200",
+      swatch: "bg-[#F6F4EF] text-[#23352C] border-[#D5D5C9]",
     },
     {
       id: "night",
-      label: "Blue night",
+      label: "Night",
       icon: <Moon className="h-3.5 w-3.5" />,
-      swatch: "bg-[#070b14] text-blue-50 border-[#263750]",
+      swatch: "bg-[#101813] text-[#E8E6D9] border-[#28392F]",
     },
     {
       id: "sepia",
@@ -125,6 +125,18 @@ export const TypographyPopover: React.FC = () => {
       </PopoverTrigger>
 
       <PopoverContent align="end" className="max-h-[82vh] w-[min(22rem,calc(100vw-1rem))] space-y-4 overflow-y-auto p-4">
+        <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+          <div>
+            <div className="text-xs font-semibold">Selah Bible Companion</div>
+            <div className="mt-0.5 text-[10px] leading-4 text-muted-foreground">Show or hide the companion panel and its header shortcut.</div>
+          </div>
+          <Switch
+            aria-label="Show Selah Bible Companion"
+            checked={prefs.showBibleCompanion}
+            onCheckedChange={(value) => updatePrefs({ showBibleCompanion: value })}
+          />
+        </div>
+
         <div>
           <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Theme

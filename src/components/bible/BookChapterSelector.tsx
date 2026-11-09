@@ -6,7 +6,7 @@ import {
   getBookMeta,
   parseScriptureReference,
 } from "@/data/canonicalBooks";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import {
   Dialog,
   DialogContent,
@@ -181,7 +181,7 @@ export const BookChapterSelector: React.FC = () => {
 
         <div className="max-h-[65vh] overflow-y-auto p-5">
           {step === "book" ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="grid auto-rows-fr grid-cols-2 gap-2 sm:grid-cols-3">
               {filteredBooks.map((b) => {
                 const isCurrent = b.bookNumber === bookNumber;
                 return (
@@ -197,7 +197,7 @@ export const BookChapterSelector: React.FC = () => {
                         setStep("chapter");
                       }
                     }}
-                    className={`group flex flex-col items-start rounded-xl border p-3 text-left transition ${
+                    className={`group flex h-full flex-col items-start rounded-xl border p-3 text-left transition ${
                       isCurrent
                         ? "border-primary bg-primary/10 shadow-sm"
                         : "border-border/70 bg-card hover:border-primary/40 hover:bg-accent/40"

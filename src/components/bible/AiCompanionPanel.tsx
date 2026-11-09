@@ -4,18 +4,18 @@ import {
   BookOpen,
   CheckCircle2,
   Compass,
+  FileText,
   HelpCircle,
   Languages,
   Link2,
   Loader2,
   Send,
-  Settings2,
   Sparkles,
   Volume2,
   X,
 } from "lucide-react";
 import { formatReference, getBookMeta } from "@/data/canonicalBooks";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import {
   AiCompanionMessage,
   AiQuickAction,
@@ -153,19 +153,21 @@ export const AiCompanionPanel: React.FC = () => {
     selectedVerses,
     primaryChapterData,
     activeVersion,
+    catalog,
+    offlineSummaries,
     navigateTo,
     startAudioFromVerse,
-    prefs,
-    updatePrefs,
   } = useBibleApp();
 
   const [messages, setMessages] = useState<AiCompanionMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
 
   const scrollEndRef = useRef<HTMLDivElement | null>(null);
   const bookMeta = getBookMeta(bookNumber);
+  const availableOfflineVersions = catalog.filter(
+    (version) => version.provider === "bundled" || offlineSummaries.some((summary) => summary.versionId === version.id)
+  );
 
   const activeRefLabel =
     selectedVerses.length > 0
@@ -182,8 +184,9 @@ export const AiCompanionPanel: React.FC = () => {
     if (aiPanelOpen && messages.length === 0 && primaryChapterData) {
       handleTriggerAction("walkthrough", "Walk me through this chapter");
     }
+    // Wait for the chapter data too, in case the panel opens before the reader finishes loading.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aiPanelOpen]);
+  }, [aiPanelOpen, primaryChapterData, messages.length]);
 
   useEffect(() => {
     scrollEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -206,7 +209,9 @@ export const AiCompanionPanel: React.FC = () => {
         selectedVerses,
         chapterData: primaryChapterData,
         versionMeta: activeVersion,
-        aiSettings: prefs.aiSettings,
+        availableOfflineVersions,
+        userPrompt: userLabel || actionOrText,
+        conversationHistory: messages.slice(-6).map(({ role, content }) => ({ role, content })),
       });
 
       setMessages((prev) => [
@@ -215,6 +220,17 @@ export const AiCompanionPanel: React.FC = () => {
           id: `a-${Date.now()}`,
           role: "assistant",
           ...reply,
+          source: "knowledge",
+          timestamp: Date.now(),
+        },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          content: "I couldn’t complete that study just now. Please try again; your question is still here, and your reading progress is unchanged.",
           timestamp: Date.now(),
         },
       ]);
@@ -265,6 +281,12 @@ export const AiCompanionPanel: React.FC = () => {
       promptLabel: `Show connected passages across Scripture for ${activeRefLabel}`,
     },
     {
+      id: "sermon",
+      label: "Prepare Sermon",
+      icon: <FileText className="h-3 w-3" />,
+      promptLabel: `Prepare a sermon on ${activeRefLabel}`,
+    },
+    {
       id: "quiz",
       label: "Quiz Me",
       icon: <HelpCircle className="h-3 w-3" />,
@@ -273,7 +295,7 @@ export const AiCompanionPanel: React.FC = () => {
   ];
 
   return (
-    <aside className="fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col border-l border-border bg-card shadow-2xl xl:static xl:z-10 xl:w-[390px] xl:shadow-none">
+    <aside className="fixed right-0 top-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-40 flex w-full max-w-md flex-col border-l border-border bg-card shadow-2xl xl:static xl:z-10 xl:w-[390px] xl:shadow-none">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border/80 bg-muted/40 px-4 py-3">
         <div className="flex items-center gap-2.5">
@@ -282,7 +304,7 @@ export const AiCompanionPanel: React.FC = () => {
           </div>
           <div>
             <h2 className="font-display text-lg font-bold leading-none text-foreground">
-              Selah AI Companion
+              Selah Bible Companion
             </h2>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
               Reading <strong>{activeRefLabel}</strong> ({activeVersion.shortName})
@@ -301,18 +323,6 @@ export const AiCompanionPanel: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => setShowSettings((s) => !s)}
-            className={`rounded-lg p-1.5 transition ${
-              showSettings
-                ? "bg-primary/15 text-primary"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground"
-            }`}
-            title="AI Engine Settings (Built-in Offline + Custom API Key)"
-          >
-            <Settings2 className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
             onClick={() => setAiPanelOpen(false)}
             className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
             title="Close AI Panel"
@@ -322,83 +332,17 @@ export const AiCompanionPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Optional Custom LLM Settings Drawer */}
-      {showSettings && (
-        <div className="space-y-2.5 border-b border-border bg-secondary/40 p-4 text-xs">
-          <div className="font-semibold text-foreground">AI Reading Engine Mode</div>
-          <p className="text-[11px] text-muted-foreground">
-            Selah AI works <strong>100% instantly &amp; offline</strong> out of the box using its
-            built-in Scripture Intelligence &amp; Lexicon engine. Optionally connect an
-            OpenAI-compatible endpoint for open-ended generative study:
-          </p>
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              type="button"
-              onClick={() =>
-                updatePrefs({ aiSettings: { ...prefs.aiSettings, mode: "hybrid" } })
-              }
-              className={`rounded-lg border py-1.5 font-semibold ${
-                prefs.aiSettings.mode === "hybrid"
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card"
-              }`}
-            >
-              Built-in Instant AI
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                updatePrefs({ aiSettings: { ...prefs.aiSettings, mode: "custom_llm" } })
-              }
-              className={`rounded-lg border py-1.5 font-semibold ${
-                prefs.aiSettings.mode === "custom_llm"
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card"
-              }`}
-            >
-              Custom LLM API
-            </button>
+      <div className="border-b border-border bg-secondary/40 px-4 py-3">
+        <div className="flex items-start gap-2.5">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+          <div>
+            <p className="text-xs font-semibold text-foreground">Selah Bible Companion is ready</p>
+            <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+              Searches Bible text, prepares sermon drafts with linked passages, and uses curated study notes on this device. No AI sign-in, external model, or API key is needed.
+            </p>
           </div>
-
-          {prefs.aiSettings.mode === "custom_llm" && (
-            <div className="space-y-2 pt-1">
-              <input
-                type="text"
-                value={prefs.aiSettings.endpointUrl}
-                onChange={(e) =>
-                  updatePrefs({
-                    aiSettings: { ...prefs.aiSettings, endpointUrl: e.target.value },
-                  })
-                }
-                placeholder="https://api.openai.com/v1/chat/completions"
-                className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs"
-              />
-              <input
-                type="password"
-                value={prefs.aiSettings.apiKey}
-                onChange={(e) =>
-                  updatePrefs({
-                    aiSettings: { ...prefs.aiSettings, apiKey: e.target.value },
-                  })
-                }
-                placeholder="API Key (stored locally on your device)"
-                className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs"
-              />
-              <input
-                type="text"
-                value={prefs.aiSettings.model}
-                onChange={(e) =>
-                  updatePrefs({
-                    aiSettings: { ...prefs.aiSettings, model: e.target.value },
-                  })
-                }
-                placeholder="Model (e.g. gpt-4o-mini)"
-                className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs"
-              />
-            </div>
-          )}
         </div>
-      )}
+      </div>
 
       {/* Quick Study Chips */}
       <div className="flex flex-wrap gap-1.5 border-b border-border/60 bg-background/60 p-3">
@@ -431,7 +375,35 @@ export const AiCompanionPanel: React.FC = () => {
               <p>{m.content}</p>
             ) : (
               <>
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {m.quiz ? "Interactive Bible quiz" : "Selah Bible Companion"}
+                </div>
                 {renderFormattedMarkdownText(m.content)}
+
+                {m.clarifyingQuestion && (
+                  <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-xs text-foreground">
+                    <strong>To tailor this:</strong> {m.clarifyingQuestion}
+                  </p>
+                )}
+
+                {m.suggestions && m.suggestions.length > 0 && (
+                  <div className="mt-3 border-t border-border/60 pt-2.5">
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">You could ask</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {m.suggestions.map((suggestion, idx) => (
+                        <button
+                          key={`${m.id}-suggestion-${idx}`}
+                          type="button"
+                          disabled={loading}
+                          onClick={() => handleTriggerAction(suggestion)}
+                          className="rounded-full border border-primary/25 bg-primary/5 px-2.5 py-1 text-left text-[11px] text-primary transition hover:bg-primary/10 disabled:opacity-50"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {m.quiz && m.quiz.length > 0 && <QuizInteractiveWidget quiz={m.quiz} />}
 
@@ -458,7 +430,7 @@ export const AiCompanionPanel: React.FC = () => {
         {loading && (
           <div className="flex items-center gap-2 rounded-2xl border border-border bg-background/80 p-3.5 text-xs text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            Studying {activeRefLabel}...
+            Searching installed Bible text and study notes...
           </div>
         )}
 
@@ -475,14 +447,14 @@ export const AiCompanionPanel: React.FC = () => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about this passage, a topic, or verse..."
+            placeholder="Ask about a Bible passage, person, word, or theme..."
             className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
           />
           <button
             type="submit"
             disabled={!input.trim() || loading}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition hover:opacity-95 disabled:opacity-40"
-            title="Ask Selah AI"
+            title="Ask Selah Bible Companion"
           >
             <Send className="h-3.5 w-3.5" />
           </button>

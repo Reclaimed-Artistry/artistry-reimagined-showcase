@@ -20,7 +20,7 @@ import {
   HEART_MOOD_COMPASS,
 } from "@/data/dailyReflections";
 import { getChapterContent } from "@/lib/bibleProviders";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import type { PrayerJournalItem } from "@/types/bible";
 
 export const DailyReflectionView: React.FC = () => {

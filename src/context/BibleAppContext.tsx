@@ -1,13 +1,13 @@
 import React, {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
 import { toast } from "sonner";
+import { BibleAppContext } from "./BibleAppContextInstance";
 import { getBookMeta } from "@/data/canonicalBooks";
+import type { StudySnapshot } from "@/lib/cloudWorkspace";
 import { BUILTIN_READING_PLANS } from "@/data/readingPlans";
 import {
   BUNDLED_VERSIONS,
@@ -18,6 +18,7 @@ import {
   importCustomBibleJson,
   loadUnifiedCatalog,
 } from "@/lib/bibleProviders";
+import type { CatalogSyncStatus } from "@/lib/bibleProviders";
 import {
   deleteOfflineBible,
   listOfflineBibleSummaries,
@@ -55,11 +56,12 @@ const STORAGE_KEYS = {
   MEMORY_CARDS: "selah_memory_cards_v1",
   READ_CHAPTERS: "selah_read_chapters_v1",
   STREAK_DATES: "selah_streak_dates_v1",
+  DELETED_ITEMS: "selah_study_deletions_v1",
 };
 
 const DEFAULT_PREFS: ReaderPreferences = {
   theme: "parchment",
-  fontFamily: "scripture",
+  fontFamily: "mono",
   appearanceBackgroundColor: null,
   appearanceBackgroundImage: "",
   appearanceImageDarken: 28,
@@ -73,14 +75,12 @@ const DEFAULT_PREFS: ReaderPreferences = {
   thirdVersionId: null,
   speechRate: 1.0,
   preferredVoiceURI: "",
+  preferredVoiceGender: "auto",
   autoAdvanceChapter: true,
   ambientSound: false,
-  aiSettings: {
-    mode: "hybrid",
-    endpointUrl: "https://api.openai.com/v1/chat/completions",
-    apiKey: "",
-    model: "gpt-4o-mini",
-  },
+  showBibleCompanion: true,
+  dailyStudyReminderEnabled: false,
+  dailyStudyReminderTime: "19:00",
 };
 
 function readLocal<T>(key: string, fallback: T): T {
@@ -106,7 +106,7 @@ export interface ActivePlanReadingSession {
   day: number;
 }
 
-interface BibleAppContextValue {
+export interface BibleAppContextValue {
   activeSection: AppSection;
   setActiveSection: (s: AppSection) => void;
 
@@ -129,6 +129,8 @@ interface BibleAppContextValue {
 
   // Versions & Offline Vault
   catalog: BibleVersionMeta[];
+  catalogSyncStatus: CatalogSyncStatus;
+  refreshCatalog: () => Promise<void>;
   activeVersionId: string;
   activeVersion: BibleVersionMeta;
   setActiveVersionId: (id: string) => void;
@@ -162,9 +164,12 @@ interface BibleAppContextValue {
   notes: VerseNote[];
   saveNote: (note: Omit<VerseNote, "id" | "createdAt" | "updatedAt"> & { id?: string }) => void;
   deleteNote: (id: string) => void;
+  studyDeletionMarkers: Record<string, number>;
+  applyStudySnapshot: (snapshot: StudySnapshot) => void;
 
   // Progress & Streaks
   readChapters: string[];
+  streakDates: string[];
   markChapterRead: (bookNumber?: number, chapter?: number) => void;
   streakCount: number;
 
@@ -207,8 +212,6 @@ interface BibleAppContextValue {
   setVerseArtModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const BibleAppContext = createContext<BibleAppContextValue | null>(null);
-
 function getTodayIso(): string {
   const d = new Date();
   const y = d.getFullYear();
@@ -217,8 +220,18 @@ function getTodayIso(): string {
   return `${y}-${m}-${day}`;
 }
 
+function mergeCatalogVersions(
+  preferred: BibleVersionMeta[],
+  fallback: BibleVersionMeta[]
+): BibleVersionMeta[] {
+  const versions = new Map<string, BibleVersionMeta>();
+  for (const version of fallback) versions.set(version.id, version);
+  for (const version of preferred) versions.set(version.id, version);
+  return Array.from(versions.values());
+}
+
 export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeSection, setActiveSection] = useState<AppSection>("reader");
+  const [activeSection, setActiveSection] = useState<AppSection>("home");
 
   const initialLoc = useMemo(
     () => readLocal<{ bookNumber: number; chapter: number }>(STORAGE_KEYS.LOCATION, { bookNumber: 43, chapter: 1 }),
@@ -229,15 +242,19 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [selectedVerses, setSelectedVerses] = useState<number[]>([]);
   const [focusedVerse, setFocusedVerse] = useState<number | null>(null);
 
-  const [prefs, setPrefs] = useState<ReaderPreferences>(() => ({
-    ...DEFAULT_PREFS,
-    ...readLocal<Partial<ReaderPreferences>>(STORAGE_KEYS.PREFS, {}),
-  }));
+  const [prefs, setPrefs] = useState<ReaderPreferences>(() => {
+    const storedPrefs = readLocal<Partial<ReaderPreferences> & { aiSettings?: unknown }>(STORAGE_KEYS.PREFS, {});
+    delete storedPrefs.aiSettings; // Ignore legacy provider settings from earlier app builds.
+    // Migrate the previous built-in reading-font default to Study Mono.
+    if (storedPrefs.fontFamily === "scripture") storedPrefs.fontFamily = "mono";
+    return { ...DEFAULT_PREFS, ...storedPrefs };
+  });
 
   const [customVersions, setCustomVersions] = useState<BibleVersionMeta[]>(() =>
     readLocal<BibleVersionMeta[]>(STORAGE_KEYS.CUSTOM_VERSIONS, [])
   );
   const [baseCatalog, setBaseCatalog] = useState<BibleVersionMeta[]>(BUNDLED_VERSIONS);
+  const [catalogSyncStatus, setCatalogSyncStatus] = useState<CatalogSyncStatus>("loading");
 
   const catalog = useMemo(() => {
     const map = new Map<string, BibleVersionMeta>();
@@ -260,7 +277,8 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Chapter content states
   const [primaryChapterData, setPrimaryChapterData] = useState<NormalizedChapter | null>(null);
-  const [primaryLoading, setPrimaryLoading] = useState<boolean>(true);
+  const [loadedPrimaryChapterKey, setLoadedPrimaryChapterKey] = useState<string | null>(null);
+  const [primaryLoading, setPrimaryLoading] = useState<boolean>(false);
   const [primaryError, setPrimaryError] = useState<string | null>(null);
   const [isPrimaryOfflineInstalled, setIsPrimaryOfflineInstalled] = useState<boolean>(true);
   const [parallelChapterData, setParallelChapterData] = useState<NormalizedChapter | null>(null);
@@ -270,6 +288,9 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // User study items
   const [highlights, setHighlights] = useState<Record<string, VerseHighlight>>(() =>
     readLocal<Record<string, VerseHighlight>>(STORAGE_KEYS.HIGHLIGHTS, {})
+  );
+  const [studyDeletionMarkers, setStudyDeletionMarkers] = useState<Record<string, number>>(() =>
+    readLocal<Record<string, number>>(STORAGE_KEYS.DELETED_ITEMS, {})
   );
   const [bookmarks, setBookmarks] = useState<VerseBookmark[]>(() =>
     readLocal<VerseBookmark[]>(STORAGE_KEYS.BOOKMARKS, [])
@@ -378,12 +399,19 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setOfflineSummaries(dbList);
   }, []);
 
+  const refreshCatalog = useCallback(async () => {
+    const initial = await loadUnifiedCatalog(
+      (remoteUpdated) => {
+        setBaseCatalog((current) => mergeCatalogVersions(remoteUpdated, current));
+      },
+      setCatalogSyncStatus
+    );
+    // Keep any remote update that may have completed before the local promise.
+    setBaseCatalog((current) => mergeCatalogVersions(current, initial));
+  }, []);
+
   useEffect(() => {
-    loadUnifiedCatalog((remoteUpdated) => {
-      setBaseCatalog(remoteUpdated);
-    }).then((initial) => {
-      setBaseCatalog(initial);
-    });
+    void refreshCatalog();
     refreshOfflineList();
 
     // Record today's visit in reading streak
@@ -394,7 +422,7 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       writeLocal(STORAGE_KEYS.STREAK_DATES, next);
       return next;
     });
-  }, [refreshOfflineList]);
+  }, [refreshCatalog, refreshOfflineList]);
 
   // Persist location
   useEffect(() => {
@@ -406,9 +434,17 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     writeLocal(STORAGE_KEYS.ACTIVE_VERSION, id);
   }, []);
 
-  // Load Primary + Parallel + Third chapters whenever version/book/chapter changes
+  // Load Scripture only while the Reader or Companion is visible. This keeps
+  // the Home screen and other sections free of large Bible/API requests.
   useEffect(() => {
     let cancelled = false;
+    const readerIsVisible = activeSection === "reader" || activeSection === "companion";
+    if (!readerIsVisible) {
+      setPrimaryLoading(false);
+      setPrimaryError(null);
+      return;
+    }
+
     setPrimaryLoading(true);
     setPrimaryError(null);
 
@@ -418,6 +454,7 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       .then(({ chapterData, isOfflineInstalled }) => {
         if (cancelled) return;
         setPrimaryChapterData(chapterData);
+        setLoadedPrimaryChapterKey(`${activeVersion.id}:${bookNumber}:${chapter}:${reloadTick}`);
         setIsPrimaryOfflineInstalled(isOfflineInstalled);
         setPrimaryLoading(false);
         if (isOfflineInstalled && activeVersion.provider !== "bundled") {
@@ -433,7 +470,7 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => {
       cancelled = true;
     };
-  }, [activeVersion, bookNumber, chapter, reloadTick, refreshOfflineList]);
+  }, [activeSection, activeVersion, bookNumber, chapter, reloadTick, refreshOfflineList]);
 
   // Load Parallel 2nd column if enabled
   useEffect(() => {
@@ -645,8 +682,19 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [refreshOfflineList, setActiveVersionId]
   );
 
+  const markStudyItemDeleted = useCallback((kind: string, id: string) => {
+    setStudyDeletionMarkers((prev) => {
+      const next = { ...prev, [`${kind}:${id}`]: Date.now() };
+      writeLocal(STORAGE_KEYS.DELETED_ITEMS, next);
+      return next;
+    });
+  }, []);
+
   const setVerseHighlight = useCallback(
     (verses: number[], color: HighlightColor | null) => {
+      if (!color) {
+        verses.forEach((verse) => markStudyItemDeleted("highlight", `${bookNumber}:${chapter}:${verse}`));
+      }
       setHighlights((prev) => {
         const next = { ...prev };
         for (const v of verses) {
@@ -668,49 +716,52 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return next;
       });
     },
-    [bookNumber, chapter]
+    [bookNumber, chapter, markStudyItemDeleted]
   );
 
   const toggleBookmark = useCallback(
     (verse: number, textSnippet: string) => {
+      const existing = bookmarks.find(
+        (bookmark) => bookmark.bookNumber === bookNumber && bookmark.chapter === chapter && bookmark.verse === verse
+      );
+      if (existing) {
+        markStudyItemDeleted("bookmark", existing.id);
+        setBookmarks((prev) => {
+          const next = prev.filter((bookmark) => bookmark.id !== existing.id);
+          writeLocal(STORAGE_KEYS.BOOKMARKS, next);
+          return next;
+        });
+        toast.info("Bookmark removed");
+        return;
+      }
+      const bookmark: VerseBookmark = {
+        id: `bm-${Date.now()}-${verse}`,
+        bookNumber,
+        chapter,
+        verse,
+        versionId: activeVersion.id,
+        versionShortName: activeVersion.shortName,
+        textSnippet,
+        createdAt: Date.now(),
+      };
       setBookmarks((prev) => {
-        const existing = prev.find(
-          (b) => b.bookNumber === bookNumber && b.chapter === chapter && b.verse === verse
-        );
-        let next: VerseBookmark[];
-        if (existing) {
-          next = prev.filter((b) => b.id !== existing.id);
-          toast.info("Bookmark removed");
-        } else {
-          next = [
-            {
-              id: `bm-${Date.now()}-${verse}`,
-              bookNumber,
-              chapter,
-              verse,
-              versionId: activeVersion.id,
-              versionShortName: activeVersion.shortName,
-              textSnippet,
-              createdAt: Date.now(),
-            },
-            ...prev,
-          ];
-          toast.success(`Bookmarked ${getBookMeta(bookNumber).name} ${chapter}:${verse}`);
-        }
+        const next = [bookmark, ...prev];
         writeLocal(STORAGE_KEYS.BOOKMARKS, next);
         return next;
       });
+      toast.success(`Bookmarked ${getBookMeta(bookNumber).name} ${chapter}:${verse}`);
     },
-    [bookNumber, chapter, activeVersion]
+    [bookNumber, chapter, activeVersion, bookmarks, markStudyItemDeleted]
   );
 
   const removeBookmark = useCallback((id: string) => {
+    markStudyItemDeleted("bookmark", id);
     setBookmarks((prev) => {
-      const next = prev.filter((b) => b.id !== id);
+      const next = prev.filter((bookmark) => bookmark.id !== id);
       writeLocal(STORAGE_KEYS.BOOKMARKS, next);
       return next;
     });
-  }, []);
+  }, [markStudyItemDeleted]);
 
   const saveNote = useCallback(
     (noteInput: Omit<VerseNote, "id" | "createdAt" | "updatedAt"> & { id?: string }) => {
@@ -742,12 +793,13 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 
   const deleteNote = useCallback((id: string) => {
+    markStudyItemDeleted("note", id);
     setNotes((prev) => {
       const next = prev.filter((n) => n.id !== id);
       writeLocal(STORAGE_KEYS.NOTES, next);
       return next;
     });
-  }, []);
+  }, [markStudyItemDeleted]);
 
   const markChapterRead = useCallback(
     (bNum = bookNumber, chNum = chapter) => {
@@ -915,12 +967,13 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const deletePrayer = useCallback((id: string) => {
+    markStudyItemDeleted("prayer", id);
     setPrayers((prev) => {
       const next = prev.filter((p) => p.id !== id);
       writeLocal(STORAGE_KEYS.PRAYERS, next);
       return next;
     });
-  }, []);
+  }, [markStudyItemDeleted]);
 
   const addMemoryCard = useCallback(
     (verses: number[], text: string) => {
@@ -980,11 +1033,37 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const deleteMemoryCard = useCallback((id: string) => {
+    markStudyItemDeleted("memory", id);
     setMemoryCards((prev) => {
       const next = prev.filter((c) => c.id !== id);
       writeLocal(STORAGE_KEYS.MEMORY_CARDS, next);
       return next;
     });
+  }, [markStudyItemDeleted]);
+
+  const applyStudySnapshot = useCallback((snapshot: StudySnapshot) => {
+    setBookmarks(snapshot.bookmarks);
+    setHighlights(snapshot.highlights);
+    setNotes(snapshot.notes);
+    setReadChapters(snapshot.readChapters);
+    setStreakDates(snapshot.streakDates || []);
+    setEnrollments(snapshot.enrollments);
+    setCustomPlans(snapshot.customPlans);
+    setReflections(snapshot.reflections);
+    setPrayers(snapshot.prayers);
+    setMemoryCards(snapshot.memoryCards);
+    setStudyDeletionMarkers(snapshot.deletedItems || {});
+    writeLocal(STORAGE_KEYS.DELETED_ITEMS, snapshot.deletedItems || {});
+    writeLocal(STORAGE_KEYS.BOOKMARKS, snapshot.bookmarks);
+    writeLocal(STORAGE_KEYS.HIGHLIGHTS, snapshot.highlights);
+    writeLocal(STORAGE_KEYS.NOTES, snapshot.notes);
+    writeLocal(STORAGE_KEYS.READ_CHAPTERS, snapshot.readChapters);
+    writeLocal(STORAGE_KEYS.STREAK_DATES, snapshot.streakDates || []);
+    writeLocal(STORAGE_KEYS.ENROLLMENTS, snapshot.enrollments);
+    writeLocal(STORAGE_KEYS.CUSTOM_PLANS, snapshot.customPlans);
+    writeLocal(STORAGE_KEYS.REFLECTIONS, snapshot.reflections);
+    writeLocal(STORAGE_KEYS.PRAYERS, snapshot.prayers);
+    writeLocal(STORAGE_KEYS.MEMORY_CARDS, snapshot.memoryCards);
   }, []);
 
   const startAudioFromVerse = useCallback((verse = 1) => {
@@ -1007,6 +1086,8 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     nextChapter,
     prevChapter,
     catalog,
+    catalogSyncStatus,
+    refreshCatalog,
     activeVersionId,
     activeVersion,
     setActiveVersionId,
@@ -1018,7 +1099,11 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     exportVersionJson,
     importVersionJson,
     primaryChapterData,
-    primaryLoading,
+    primaryLoading:
+      primaryLoading ||
+      ((activeSection === "reader" || activeSection === "companion") &&
+        loadedPrimaryChapterKey !== `${activeVersion.id}:${bookNumber}:${chapter}:${reloadTick}` &&
+        !primaryError),
     primaryError,
     isPrimaryOfflineInstalled,
     parallelChapterData,
@@ -1034,7 +1119,10 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     notes,
     saveNote,
     deleteNote,
+    studyDeletionMarkers,
+    applyStudySnapshot,
     readChapters,
+    streakDates,
     markChapterRead,
     streakCount,
     allPlans,
@@ -1075,11 +1163,3 @@ export const BibleAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     <BibleAppContext.Provider value={value}>{children}</BibleAppContext.Provider>
   );
 };
-
-export function useBibleApp(): BibleAppContextValue {
-  const ctx = useContext(BibleAppContext);
-  if (!ctx) {
-    throw new Error("useBibleApp must be used inside BibleAppProvider");
-  }
-  return ctx;
-}

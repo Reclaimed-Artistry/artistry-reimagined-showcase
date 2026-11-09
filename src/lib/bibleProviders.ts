@@ -27,6 +27,7 @@ import type {
 } from "@/types/bible";
 
 const memoryBibleCache = new Map<string, NormalizedBible>();
+const memoryChapterCache = new Map<string, NormalizedChapter>();
 
 export const BUNDLED_VERSIONS: BibleVersionMeta[] = [
   {
@@ -156,10 +157,13 @@ function cleanBollsHtml(raw: string): string {
  * 1) 2 Pre-installed Offline Bundled Bibles (BSB + KJV)
  * 2) 141 Global Open CDN Bibles (/bibles/cdn_catalog.json)
  * 3) 146 Bolls Open Archive Bibles (/bibles/bolls_catalog.json + live refresh)
- * 4) 1,256+ HelloAO Free Use Bible API Translations (live fetch + cached in IndexedDB)
+ * 4) HelloAO Free Use Bible API translations (live fetch + cached in IndexedDB)
  */
+export type CatalogSyncStatus = "loading" | "ready" | "error";
+
 export async function loadUnifiedCatalog(
-  onRemoteUpdate?: (allVersions: BibleVersionMeta[]) => void
+  onRemoteUpdate?: (allVersions: BibleVersionMeta[]) => void,
+  onRemoteStatus?: (status: CatalogSyncStatus) => void
 ): Promise<BibleVersionMeta[]> {
   const map = new Map<string, BibleVersionMeta>();
   for (const v of BUNDLED_VERSIONS) {
@@ -250,7 +254,7 @@ export async function loadUnifiedCatalog(
     // Ignore
   }
 
-  // 3. Check cached HelloAO 1,256+ catalog first for instant offline rendering
+  // 3. Check cached HelloAO catalog first for instant offline rendering
   const cachedHello = await getCachedCatalog("helloao_v1");
   if (cachedHello && cachedHello.length > 0) {
     for (const hv of cachedHello) {
@@ -258,27 +262,53 @@ export async function loadUnifiedCatalog(
     }
   }
 
-  // Kick off live background refresh from HelloAO (1,256+ translations across 700+ languages!)
+  // Refresh through our same-origin Vercel function so provider access is not
+  // dependent on each device's browser CORS, DNS, or network configuration.
   if (typeof navigator === "undefined" || navigator.onLine !== false) {
-    fetch("https://bible.helloao.org/api/available_translations.json")
-      .then((r) => (r.ok ? r.json() : null))
+    onRemoteStatus?.("loading");
+    const getHelloAoPayload = async () => {
+      try {
+        const proxyResponse = await fetch("/api/helloao/translations", {
+          cache: "no-store",
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (proxyResponse.ok) {
+          const proxyPayload = await proxyResponse.json();
+          if (Array.isArray(proxyPayload?.translations)) return proxyPayload;
+        }
+      } catch {
+        // Local development and non-Vercel hosts may not provide the proxy.
+      }
+
+      const directResponse = await fetch("https://bible.helloao.org/api/available_translations.json", {
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!directResponse.ok) throw new Error("The translation catalog request failed");
+      const directPayload = await directResponse.json();
+      if (!Array.isArray(directPayload?.translations)) {
+        throw new Error("The translation catalog response was invalid");
+      }
+      return directPayload;
+    };
+
+    getHelloAoPayload()
       .then(async (payload) => {
-        if (!payload || !Array.isArray(payload.translations)) return;
         const freshHello: BibleVersionMeta[] = [];
         for (const t of payload.translations) {
+          if (!t || typeof t.id !== "string" || !t.id) continue;
           const id = `helloao:${t.id}`;
           const langDisplay = t.languageEnglishName || t.languageName || t.language || "Global";
           const meta: BibleVersionMeta = {
             id,
             shortName: t.shortName || t.id,
-            name: t.englishName || t.name,
+            name: t.englishName || t.name || t.id,
             language: langDisplay,
             languageCode: t.language || "und",
             textDirection: t.textDirection === "rtl" ? "rtl" : "ltr",
             provider: "helloao",
             providerSlug: t.id,
             estimatedSizeMB: Number(((t.totalNumberOfChapters || 1189) * 0.0052).toFixed(1)),
-            description: `${t.name} (${langDisplay} • ${t.numberOfBooks || 66} books) — Free Use Bible API with footnotes & formatting.`,
+            description: `${t.name || t.id} (${langDisplay} • ${t.numberOfBooks || 66} books) — Free Use Bible API with footnotes & formatting.`,
             regionTag: inferRegionTag(langDisplay),
             hasFootnotes: true,
             hasRedLetter: true,
@@ -289,14 +319,16 @@ export async function loadUnifiedCatalog(
           freshHello.push(meta);
           map.set(id, meta);
         }
+        if (freshHello.length === 0) throw new Error("The provider returned no translations");
         await saveCachedCatalog("helloao_v1", freshHello);
-        if (onRemoteUpdate) {
-          onRemoteUpdate(sortCatalog(Array.from(map.values())));
-        }
+        onRemoteUpdate?.(sortCatalog(Array.from(map.values())));
+        onRemoteStatus?.("ready");
       })
       .catch(() => {
-        // Offline or unreachable — local catalog already has ~290 versions!
+        onRemoteStatus?.("error");
       });
+  } else {
+    onRemoteStatus?.("error");
   }
 
   return sortCatalog(Array.from(map.values()));
@@ -657,6 +689,43 @@ export async function getInstalledFullBible(
   return null;
 }
 
+async function getBundledChapter(
+  meta: BibleVersionMeta,
+  bookNumber: number,
+  chapter: number,
+): Promise<NormalizedChapter | null> {
+  const cacheKey = `${meta.id}:${bookNumber}:${chapter}`;
+  const cached = memoryChapterCache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(`/bibles/chapters/${meta.providerSlug}/${bookNumber}/${chapter}.json`);
+    if (!response.ok) return null;
+    const rawBook = await response.json();
+    const normalized = parseCdnArrayBible(
+      [rawBook],
+      meta,
+      Number(response.headers.get("Content-Length")) || 0,
+    );
+    const chapterData = normalized.books.find((book) => book.bookNumber === bookNumber)?.chapters[0];
+    if (!chapterData) return null;
+
+    if (meta.id === "bundled:en_bsb") {
+      const canon = getBookMeta(bookNumber);
+      chapterData.audioLinks = {
+        "Dan Hays (Studio)": `https://audio.bible.helloao.org/api/BSB/${canon.usfm}/${chapter}/audio/hays.mp3`,
+        "Souer (Dramatic)": `https://audio.bible.helloao.org/api/BSB/${canon.usfm}/${chapter}/audio/souer.mp3`,
+      };
+    }
+
+    memoryChapterCache.set(cacheKey, chapterData);
+    return chapterData;
+  } catch {
+    // Fall back to the complete bundled file for old offline installs or unusual hosts.
+    return null;
+  }
+}
+
 /**
  * Downloads ANY version in full and persists it into the IndexedDB Offline Vault!
  */
@@ -865,7 +934,14 @@ export async function getChapterContent(
 ): Promise<{ chapterData: NormalizedChapter; isOfflineInstalled: boolean }> {
   const canon = getBookMeta(bookNumber);
 
-  // 1. Check full offline Bible (bundled or IndexedDB)
+  // Bundled Bible chapters are split into small static files so opening Read
+  // never needs to download and parse the entire 4 MB translation first.
+  if (meta.provider === "bundled") {
+    const chapterData = await getBundledChapter(meta, bookNumber, chapter);
+    if (chapterData) return { chapterData, isOfflineInstalled: true };
+  }
+
+  // 1. Check full offline Bible (bundled fallback or IndexedDB)
   const fullBible = await getInstalledFullBible(meta);
   if (fullBible) {
     const book =
@@ -1141,37 +1217,4 @@ export async function importCustomBibleJson(
   throw new Error(
     "Unrecognized JSON Bible schema. Supported formats: Selah export JSON, 66-book chapters array, or verse objects array."
   );
-}
-
-/**
- * Live Hebrew/Greek dictionary lookup via Bolls BDB/Thayer lexicon when online
- */
-export async function lookupOriginalLexiconOnline(query: string): Promise<
-  {
-    topic: string;
-    lexeme: string;
-    transliteration: string;
-    pronunciation: string;
-    short_definition: string;
-  }[]
-> {
-  try {
-    const res = await fetch(
-      `https://bolls.life/dictionary-definition/BDBT/${encodeURIComponent(query.trim())}/`
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    if (!Array.isArray(data)) return [];
-    return data.slice(0, 5).map((item: Record<string, unknown>) => ({
-      topic: String(item.topic || ""),
-      lexeme: String(item.lexeme || ""),
-      transliteration: String(item.transliteration || ""),
-      pronunciation: String(item.pronunciation || ""),
-      short_definition: cleanBollsHtml(
-        String(item.short_definition || item.definition || "")
-      ).slice(0, 360),
-    }));
-  } catch {
-    return [];
-  }
 }

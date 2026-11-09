@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   BookHeart,
@@ -13,8 +13,10 @@ import {
   Star,
   WandSparkles,
 } from "lucide-react";
-import { useBibleApp } from "@/context/BibleAppContext";
+import { useBibleApp } from "@/context/useBibleApp";
 import { KIDS_BIBLE_TRAIL } from "@/data/kidsBibleTrail";
+import { KIDS_BIBLE_EPISODES } from "@/data/kidsBibleEpisodes";
+import "./KidsStoriesView.css";
 
 type Story = {
   id: string;
@@ -102,13 +104,30 @@ const BOOK_JOURNEY_STORIES: Story[] = KIDS_BIBLE_TRAIL.map((entry) => ({
   journey: true,
 }));
 
-const STORIES: Story[] = [...FEATURED_STORIES, ...BOOK_JOURNEY_STORIES];
+const EPISODE_COLORS = [
+  "from-cyan-800 via-blue-700 to-indigo-900",
+  "from-emerald-800 via-teal-700 to-cyan-900",
+  "from-amber-700 via-orange-700 to-rose-900",
+  "from-violet-800 via-purple-700 to-fuchsia-900",
+  "from-sky-800 via-blue-700 to-slate-900",
+  "from-rose-800 via-pink-700 to-red-900",
+];
+const EPISODE_ICONS = ["✨", "🧭", "🌿", "🕊️", "⭐", "💛", "🌈", "📖"];
+const STORY_EPISODES: Story[] = KIDS_BIBLE_EPISODES.map((entry, index) => ({
+  ...entry,
+  age: "4–11",
+  minutes: Math.max(2, Math.min(6, Math.ceil(entry.story.join(" ").split(/\s+/).length / 45))),
+  icon: EPISODE_ICONS[index % EPISODE_ICONS.length],
+  colors: EPISODE_COLORS[index % EPISODE_COLORS.length],
+}));
+
+const STORIES: Story[] = [...FEATURED_STORIES, ...STORY_EPISODES, ...BOOK_JOURNEY_STORIES];
 const STORY_SHELF = [...STORIES].sort(
   (first, second) => first.book - second.book || first.chapter - second.chapter
 );
 const COVERED_BOOK_COUNT = new Set(STORIES.map((story) => story.book)).size;
-const OLD_TESTAMENT_BOOK_COUNT = new Set(STORIES.filter((story) => story.book <= 39).map((story) => story.book)).size;
-const NEW_TESTAMENT_BOOK_COUNT = new Set(STORIES.filter((story) => story.book >= 40).map((story) => story.book)).size;
+const OLD_TESTAMENT_STORY_COUNT = STORIES.filter((story) => story.book <= 39).length;
+const NEW_TESTAMENT_STORY_COUNT = STORIES.filter((story) => story.book >= 40).length;
 
 const readStoriesFromStorage = (): string[] => {
   try { return JSON.parse(localStorage.getItem("selah_kids_read_v1") || "[]") as string[]; } catch { return []; }
@@ -121,7 +140,36 @@ export const KidsStoriesView: React.FC = () => {
   const [testamentFilter, setTestamentFilter] = useState<"all" | "old" | "new">("all");
   const [readStories, setReadStories] = useState<string[]>(readStoriesFromStorage);
   const storyDetailRef = useRef<HTMLElement | null>(null);
+  const promptCardsRef = useRef<Array<HTMLDivElement | null>>([]);
   const selectedStory = STORIES.find((story) => story.id === selectedId) || STORIES[0];
+
+  useLayoutEffect(() => {
+    const cards = promptCardsRef.current.filter((card): card is HTMLDivElement => card !== null);
+    const grid = cards[0]?.parentElement;
+    if (cards.length !== 4 || !grid) return;
+
+    const equalizeHeights = () => {
+      cards.forEach((card) => { card.style.height = "auto"; });
+      const tallestHeight = Math.ceil(Math.max(...cards.map((card) => card.getBoundingClientRect().height)));
+      cards.forEach((card) => { card.style.height = `${tallestHeight}px`; });
+    };
+
+    let animationFrame = 0;
+    const resizeObserver = new ResizeObserver(() => {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(equalizeHeights);
+    });
+
+    equalizeHeights();
+    resizeObserver.observe(grid);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      resizeObserver.disconnect();
+      cards.forEach((card) => { card.style.height = ""; });
+    };
+  }, [selectedStory.lesson, selectedStory.ask, selectedStory.activity, selectedStory.prayer]);
+  const completedStoryCount = STORIES.filter((story) => readStories.includes(story.id)).length;
   const filteredStories = useMemo(() => {
     const value = query.trim().toLowerCase();
     return STORY_SHELF.filter((story) => {
@@ -150,9 +198,9 @@ export const KidsStoriesView: React.FC = () => {
   };
 
   return (
-    <div className="kids-page mx-auto max-w-6xl space-y-8 px-4 pb-32 pt-7 sm:px-8 sm:pt-10">
-      <section className="kids-intro overflow-hidden rounded-[2rem] border border-amber-200/60 bg-[#fffaf1] shadow-[0_24px_70px_-36px_rgba(77,45,12,.35)] dark:border-white/10 dark:bg-[#191b24]">
-        <div className="grid lg:grid-cols-[1.02fr_.98fr]">
+    <div className="kids-page box-border mx-auto w-full min-w-0 max-w-6xl space-y-8 overflow-x-clip px-4 pb-32 pt-7 sm:px-8 sm:pt-10">
+      <section className="kids-intro kids-width-box min-w-0 overflow-hidden rounded-[2rem] border border-amber-200/60 bg-[#fffaf1] shadow-[0_24px_70px_-36px_rgba(77,45,12,.35)] dark:border-white/10 dark:bg-[#191b24]">
+        <div className="grid min-w-0 lg:grid-cols-[minmax(0,1.02fr)_minmax(0,.98fr)]">
           <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-12">
             <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-amber-300/70 bg-amber-100/80 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[.16em] text-amber-900 dark:border-amber-200/20 dark:bg-amber-200/10 dark:text-amber-200">
               <Sparkles className="h-3.5 w-3.5" /> A little light for little hearts
@@ -160,14 +208,14 @@ export const KidsStoriesView: React.FC = () => {
             <h1 className="max-w-xl font-display text-4xl font-semibold leading-[1.06] tracking-tight text-stone-900 dark:text-stone-50 sm:text-5xl">
               Big stories. <span className="text-amber-700 dark:text-amber-300">Gentle beginnings.</span>
             </h1>
-            <p className="mt-5 max-w-lg text-sm leading-7 text-stone-600 dark:text-stone-300 sm:text-base">
-              Explore all 66 books of the Bible through child-friendly book journeys and memorable stories, each with a big idea, a question to share, and a simple activity.
+            <p className="mt-5 max-w-lg text-sm leading-7 text-stone-600 dark:text-stone-300 sm:text-sm">
+              Explore major Bible stories from across the Old and New Testaments, plus a child-friendly journey through every one of the 66 books. Each guide includes a big idea, a question to share, and a simple activity.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <a href="#story-time" className="inline-flex items-center gap-2 rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-stone-900/15 transition hover:-translate-y-0.5 dark:bg-amber-200 dark:text-stone-900">
                 <BookOpen className="h-4 w-4" /> Start story time <ArrowRight className="h-4 w-4" />
               </a>
-              <span className="text-xs font-medium text-stone-500 dark:text-stone-400">{COVERED_BOOK_COUNT} of 66 books · Old and New Testaments</span>
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400">{COVERED_BOOK_COUNT} books · {STORIES.length} story guides</span>
             </div>
             <p className="mt-6 max-w-lg text-[11px] leading-5 text-stone-500 dark:text-stone-400">A parent or caregiver can read aloud, explore the Bible reference together, and adapt each guide for the child’s age. These introductions and retellings are not a replacement for the Bible text.</p>
           </div>
@@ -182,22 +230,22 @@ export const KidsStoriesView: React.FC = () => {
         </div>
       </section>
 
-      <section id="story-time" className="grid gap-7 lg:grid-cols-[.85fr_1.15fr]">
-        <aside className="space-y-4">
-          <div className="flex items-end justify-between gap-4">
+      <section id="story-time" className="grid min-w-0 gap-7 lg:grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)]">
+        <aside className="min-w-0 space-y-4">
+          <div className="flex flex-col items-start gap-2">
             <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-primary">Explore the Bible</p><h2 className="mt-1 font-display text-2xl font-semibold">Story shelf</h2></div>
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{readStories.length}/{STORIES.length} read</span>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{completedStoryCount}/{STORIES.length} read</span>
           </div>
-          <p className="-mt-2 text-xs text-muted-foreground">{COVERED_BOOK_COUNT}/66 books · {STORIES.length} story paths</p>
-          <label className="flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-primary/30">
+          <p className="-mt-2 text-xs text-muted-foreground">{COVERED_BOOK_COUNT}/66 books · {STORY_EPISODES.length + FEATURED_STORIES.length} Bible stories · {BOOK_JOURNEY_STORIES.length} book journeys</p>
+          <label className="kids-width-box flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-primary/30">
             <Search className="h-4 w-4 text-muted-foreground" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a Bible book, story, or idea" className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a Bible book, story, or idea" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
           </label>
-          <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted/70 p-1">
+          <div className="kids-width-box grid grid-cols-3 gap-1 rounded-xl bg-muted/70 p-1">
             {([
-              ["all", `All ${COVERED_BOOK_COUNT}`],
-              ["old", `Old ${OLD_TESTAMENT_BOOK_COUNT}`],
-              ["new", `New ${NEW_TESTAMENT_BOOK_COUNT}`],
+              ["all", `All ${STORIES.length}`],
+              ["old", `OT ${OLD_TESTAMENT_STORY_COUNT}`],
+              ["new", `NT ${NEW_TESTAMENT_STORY_COUNT}`],
             ] as const).map(([value, label]) => (
               <button
                 key={value}
@@ -212,16 +260,16 @@ export const KidsStoriesView: React.FC = () => {
           </div>
           <div className="max-h-[34rem] space-y-2 overflow-y-auto pr-1">
             {filteredStories.map((story, index) => (
-              <button key={story.id} type="button" aria-label={`Open full story: ${story.title}`} aria-pressed={selectedId === story.id} onClick={() => openFullStory(story.id)} className={`group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${selectedId === story.id ? "border-primary/40 bg-primary/8 shadow-sm" : "border-border/70 bg-card/70 hover:border-primary/25 hover:bg-card"}`}>
+              <button key={story.id} type="button" aria-label={`Open full story: ${story.title}`} aria-pressed={selectedId === story.id} onClick={() => openFullStory(story.id)} className={`kids-width-box group flex h-[4.75rem] shrink-0 items-center gap-3 rounded-2xl border p-3 text-left transition ${selectedId === story.id ? "border-primary/40 bg-primary/8 shadow-sm" : "border-border/70 bg-card/70 hover:border-primary/25 hover:bg-card"}`}>
                 <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] bg-gradient-to-br ${story.colors} text-2xl shadow-inner shadow-white/10`}>{story.icon}</span>
                 <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{story.title}</span><span className="mt-1 block truncate text-xs text-muted-foreground">{story.journey ? `${story.reference} · Book journey` : `${story.theme} · ${story.minutes} min · Ages ${story.age}`}</span></span>
                 {readStories.includes(story.id) ? <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"><Check className="h-4 w-4" /></span> : <ChevronRight className={`h-4 w-4 text-muted-foreground transition group-hover:translate-x-0.5 ${selectedId === story.id ? "text-primary" : ""}`} />}
                 <span className="sr-only">Story {index + 1}</span>
               </button>
             ))}
-            {filteredStories.length === 0 && <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No story or book matches that search yet.</p>}
+            {filteredStories.length === 0 && <p className="kids-width-box rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No story or book matches that search yet.</p>}
           </div>
-          <div className="rounded-2xl border border-violet-200/70 bg-violet-50/80 p-4 text-violet-950 dark:border-violet-200/10 dark:bg-violet-300/5 dark:text-violet-100">
+          <div className="kids-width-box rounded-2xl border border-violet-200/70 bg-violet-50/80 p-4 text-violet-950 dark:border-violet-200/10 dark:bg-violet-300/5 dark:text-violet-100">
             <div className="flex items-center gap-2 text-sm font-semibold"><Heart className="h-4 w-4 text-violet-600 dark:text-violet-300" /> Grown-up note</div>
             <p className="mt-2 text-xs leading-5 text-violet-900/75 dark:text-violet-100/75">Stories are adapted for young listeners. Read the linked passage for the full account, and feel free to pause, ask questions, and follow your child’s curiosity.</p>
           </div>
@@ -232,7 +280,7 @@ export const KidsStoriesView: React.FC = () => {
           ref={storyDetailRef}
           tabIndex={-1}
           aria-label={`Full story: ${selectedStory.title}`}
-          className="scroll-mt-24 overflow-hidden rounded-[2rem] border border-border bg-card shadow-[0_24px_70px_-48px_rgba(15,23,42,.4)] focus:outline-none"
+          className="kids-width-box min-w-0 scroll-mt-24 overflow-hidden rounded-[2rem] border border-border bg-card shadow-[0_24px_70px_-48px_rgba(15,23,42,.4)] focus:outline-none"
         >
           <div className={`relative overflow-hidden bg-gradient-to-br ${selectedStory.colors} px-6 py-7 text-white sm:px-9 sm:py-9`}>
             {selectedStory.illustrated && <img src="/kids-story-hero.webp" alt="A calm lake and boat from the story" className="absolute inset-0 h-full w-full object-cover opacity-45 mix-blend-screen" />}
@@ -247,13 +295,13 @@ export const KidsStoriesView: React.FC = () => {
           <div className="space-y-7 p-6 sm:p-9">
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-primary"><BookHeart className="h-4 w-4" /> {selectedStory.journey ? "The book at a glance" : "The story"}</div>
-              <div className="space-y-4 font-scripture text-[17px] leading-8 text-foreground/90 sm:text-lg sm:leading-9">{selectedStory.story.map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
+              <div className="space-y-4 font-scripture text-sm leading-6 text-foreground/90 sm:text-sm sm:leading-7">{selectedStory.story.map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-amber-200/70 bg-amber-50/80 p-4 dark:border-amber-100/10 dark:bg-amber-200/5"><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200"><Lightbulb className="h-4 w-4" /> The big idea</div><p className="mt-2 text-sm leading-6 text-amber-950/80 dark:text-amber-100/80">{selectedStory.lesson}</p></div>
-              <div className="rounded-2xl border border-sky-200/70 bg-sky-50/80 p-4 dark:border-sky-100/10 dark:bg-sky-200/5"><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-900 dark:text-sky-200"><Heart className="h-4 w-4" /> Talk about it</div><p className="mt-2 text-sm leading-6 text-sky-950/80 dark:text-sky-100/80">{selectedStory.ask}</p></div>
-              <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50/80 p-4 dark:border-emerald-100/10 dark:bg-emerald-200/5"><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-200"><WandSparkles className="h-4 w-4" /> Try it together</div><p className="mt-2 text-sm leading-6 text-emerald-950/80 dark:text-emerald-100/80">{selectedStory.activity}</p></div>
-              <div className="rounded-2xl border border-violet-200/70 bg-violet-50/80 p-4 dark:border-violet-100/10 dark:bg-violet-200/5"><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-900 dark:text-violet-200"><Music2 className="h-4 w-4" /> A little prayer</div><p className="mt-2 text-sm leading-6 text-violet-950/80 dark:text-violet-100/80">{selectedStory.prayer}</p></div>
+              <div ref={(element) => { promptCardsRef.current[0] = element; }} className="kids-prompt-card flex h-full min-w-0 flex-col rounded-2xl border border-amber-200/70 bg-amber-50/80 p-4 dark:border-amber-100/10 dark:bg-amber-200/5"><div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200"><Lightbulb className="h-4 w-4" /> The big idea</div><p className="mt-2 flex-1 text-sm leading-6 text-amber-950/80 dark:text-amber-100/80">{selectedStory.lesson}</p></div>
+              <div ref={(element) => { promptCardsRef.current[1] = element; }} className="kids-prompt-card flex h-full min-w-0 flex-col rounded-2xl border border-sky-200/70 bg-sky-50/80 p-4 dark:border-sky-100/10 dark:bg-sky-200/5"><div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-900 dark:text-sky-200"><Heart className="h-4 w-4" /> Talk about it</div><p className="mt-2 flex-1 text-sm leading-6 text-sky-950/80 dark:text-sky-100/80">{selectedStory.ask}</p></div>
+              <div ref={(element) => { promptCardsRef.current[2] = element; }} className="kids-prompt-card flex h-full min-w-0 flex-col rounded-2xl border border-emerald-200/70 bg-emerald-50/80 p-4 dark:border-emerald-100/10 dark:bg-emerald-200/5"><div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-200"><WandSparkles className="h-4 w-4" /> Try it together</div><p className="mt-2 flex-1 text-sm leading-6 text-emerald-950/80 dark:text-emerald-100/80">{selectedStory.activity}</p></div>
+              <div ref={(element) => { promptCardsRef.current[3] = element; }} className="kids-prompt-card flex h-full min-w-0 flex-col rounded-2xl border border-violet-200/70 bg-violet-50/80 p-4 dark:border-violet-100/10 dark:bg-violet-200/5"><div className="flex shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-900 dark:text-violet-200"><Music2 className="h-4 w-4" /> A little prayer</div><p className="mt-2 flex-1 text-sm leading-6 text-violet-950/80 dark:text-violet-100/80">{selectedStory.prayer}</p></div>
             </div>
             <div className="flex flex-wrap gap-3 border-t border-border pt-5">
               <button type="button" onClick={() => { navigateTo(selectedStory.book, selectedStory.chapter); setActiveSection("reader"); }} className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90"><BookOpen className="h-4 w-4" /> Read {selectedStory.reference} in the Bible</button>
