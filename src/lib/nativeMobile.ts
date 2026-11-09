@@ -74,15 +74,15 @@ export async function initMobileRuntime(): Promise<void> {
 
 /**
  * Synchronize iOS/Android native StatusBar + browser theme-color meta tag
- * whenever the user switches between Parchment, Sepia, and Night themes.
+ * whenever the user switches between Light, Sepia, and Night themes.
  */
 export async function syncStatusBarWithTheme(theme: ReaderTheme): Promise<void> {
   const hexByTheme: Record<ReaderTheme, string> = {
-    parchment: "#FFFFFF",
+    parchment: "#F6F4EF",
     sepia: "#EDE3D2",
-    night: "#050914",
+    night: "#101813",
   };
-  const hex = hexByTheme[theme] || "#FFFFFF";
+  const hex = hexByTheme[theme] || "#F6F4EF";
 
   if (typeof document !== "undefined") {
     const meta = document.querySelector('meta[name="theme-color"]');

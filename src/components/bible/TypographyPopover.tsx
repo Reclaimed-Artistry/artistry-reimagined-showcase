@@ -54,20 +54,20 @@ export const TypographyPopover: React.FC = () => {
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const wallpaperColor =
     prefs.appearanceBackgroundColor ||
-    (prefs.theme === "night" ? "#050914" : prefs.theme === "sepia" ? "#EDE6D5" : "#FFFFFF");
+    (prefs.theme === "night" ? "#101813" : prefs.theme === "sepia" ? "#EDE6D5" : "#F6F4EF");
 
   const themes: { id: ReaderTheme; label: string; icon: React.ReactNode; swatch: string }[] = [
     {
       id: "parchment",
-      label: "Navy light",
+      label: "Light",
       icon: <Sun className="h-3.5 w-3.5" />,
-      swatch: "bg-white text-slate-900 border-slate-200",
+      swatch: "bg-[#F6F4EF] text-[#23352C] border-[#D5D5C9]",
     },
     {
       id: "night",
-      label: "Blue night",
+      label: "Night",
       icon: <Moon className="h-3.5 w-3.5" />,
-      swatch: "bg-[#070b14] text-blue-50 border-[#263750]",
+      swatch: "bg-[#101813] text-[#E8E6D9] border-[#28392F]",
     },
     {
       id: "sepia",

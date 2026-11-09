@@ -235,12 +235,12 @@ export const CommandPaletteModal: React.FC = () => {
                 {prefs.theme === "night" ? (
                   <>
                     <Sun className="h-3.5 w-3.5 text-primary" />
-                    Switch to Warm Parchment Mode
+                    Switch to Light Mode
                   </>
                 ) : (
                   <>
                     <Moon className="h-3.5 w-3.5 text-primary" />
-                    Switch to Obsidian Night Mode
+                    Switch to Night Mode
                   </>
                 )}
               </button>

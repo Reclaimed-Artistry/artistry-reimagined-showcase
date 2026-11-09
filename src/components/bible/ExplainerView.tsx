@@ -131,13 +131,13 @@ export const ExplainerView: React.FC = () => {
         <div className="space-y-4">
           <p className="text-[10px] font-bold uppercase tracking-[.2em] text-primary">Your space, your light</p>
           <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Choose how the page feels.</h2>
-          <p className="max-w-md text-sm leading-7 text-muted-foreground">Switch between a warm, paper-like reading canvas and a restful dark appearance. Your choice is saved on this device. Prefer the classic sepia tone? It remains available in the reader’s Aa appearance menu.</p>
+          <p className="max-w-md text-sm leading-7 text-muted-foreground">Switch between the Light and Night appearances. Your choice is saved on this device. Prefer the classic sepia tone? It remains available in the reader’s Aa appearance menu.</p>
           <div className="grid max-w-md grid-cols-2 gap-3 pt-2">
-            <button type="button" onClick={() => setTheme("parchment")} className={`rounded-2xl border p-4 text-left transition ${!isDark ? "border-amber-500/50 bg-amber-50 text-stone-900 ring-2 ring-amber-500/15 dark:bg-amber-100" : "border-border bg-card hover:border-primary/30"}`}>
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-200 text-amber-900"><Sun className="h-4 w-4" /></span><span className="mt-3 block text-sm font-semibold">Warm light</span><span className="mt-1 block text-xs opacity-70">Soft parchment tones</span>
+            <button type="button" onClick={() => setTheme("parchment")} className={`rounded-2xl border p-4 text-left transition ${!isDark ? "border-primary/30 bg-[#F6F4EF] text-[#23352C] ring-2 ring-primary/10 dark:bg-[#F6F4EF]" : "border-border bg-card hover:border-primary/30"}`}>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><Sun className="h-4 w-4" /></span><span className="mt-3 block text-sm font-semibold">Light</span><span className="mt-1 block text-xs opacity-70">Soft cream and evergreen tones</span>
             </button>
-            <button type="button" onClick={() => setTheme("night")} className={`rounded-2xl border p-4 text-left transition ${isDark ? "border-indigo-400/40 bg-slate-900 text-white ring-2 ring-indigo-400/15" : "border-border bg-card hover:border-primary/30"}`}>
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-200/15 text-indigo-300"><MoonStar className="h-4 w-4" /></span><span className="mt-3 block text-sm font-semibold">Quiet dark</span><span className="mt-1 block text-xs opacity-70">Gentle on evening eyes</span>
+            <button type="button" onClick={() => setTheme("night")} className={`rounded-2xl border p-4 text-left transition ${isDark ? "border-primary/40 bg-[#101813] text-[#E8E6D9] ring-2 ring-primary/15" : "border-border bg-card hover:border-primary/30"}`}>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary"><MoonStar className="h-4 w-4" /></span><span className="mt-3 block text-sm font-semibold">Night</span><span className="mt-1 block text-xs opacity-70">Deep forest tones, gentle on evening eyes</span>
             </button>
           </div>
         </div>
