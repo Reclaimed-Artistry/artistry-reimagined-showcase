@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Check,
   ChevronDown,
@@ -15,6 +16,14 @@ import {
 import { getBookMeta } from "@/data/canonicalBooks";
 import { subscribeToSpeechVoices } from "@/lib/speechVoices";
 import { useBibleApp } from "@/context/useBibleApp";
+
+type VoicePickerPosition = {
+  left: number;
+  width: number;
+  maxHeight: number;
+  top?: number;
+  bottom?: number;
+};
 
 function getVoiceGender(voice: SpeechSynthesisVoice): "female" | "male" | null {
   const metadataGender = (voice as SpeechSynthesisVoice & { gender?: string }).gender?.toLowerCase();
@@ -52,7 +61,10 @@ export const AudioReadAlongBar: React.FC = () => {
   const [studioReaderKey, setStudioReaderKey] = useState<string>("");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [voicePickerOpen, setVoicePickerOpen] = useState(false);
+  const [voicePickerPosition, setVoicePickerPosition] = useState<VoicePickerPosition | null>(null);
   const voicePickerRef = useRef<HTMLDivElement>(null);
+  const voicePickerButtonRef = useRef<HTMLButtonElement>(null);
+  const voicePickerPopoverRef = useRef<HTMLDivElement>(null);
   const [sleepMinutes, setSleepMinutes] = useState<number | null>(null);
 
   const voiceLanguagePrefix = (activeVersion.languageCode || "en").slice(0, 2).toLowerCase();
@@ -102,7 +114,11 @@ export const AudioReadAlongBar: React.FC = () => {
   useEffect(() => {
     if (!voicePickerOpen) return;
     const closeOnOutsideClick = (event: PointerEvent) => {
-      if (!voicePickerRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        !voicePickerRef.current?.contains(target) &&
+        !voicePickerPopoverRef.current?.contains(target)
+      ) {
         setVoicePickerOpen(false);
       }
     };
@@ -114,6 +130,51 @@ export const AudioReadAlongBar: React.FC = () => {
     return () => {
       window.removeEventListener("pointerdown", closeOnOutsideClick);
       window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [voicePickerOpen]);
+
+  useEffect(() => {
+    if (!voicePickerOpen) {
+      setVoicePickerPosition(null);
+      return;
+    }
+
+    const updatePosition = () => {
+      const anchor = voicePickerButtonRef.current?.getBoundingClientRect();
+      if (!anchor) return;
+
+      const margin = 12;
+      const gap = 8;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const width = Math.max(200, Math.min(352, viewportWidth - margin * 2));
+      const left = Math.max(margin, Math.min(anchor.right - width, viewportWidth - width - margin));
+      const spaceAbove = Math.max(0, anchor.top - gap - margin);
+      const spaceBelow = Math.max(0, viewportHeight - anchor.bottom - gap - margin);
+      const openAbove = spaceAbove >= spaceBelow;
+      const maxHeight = Math.max(100, Math.min(480, openAbove ? spaceAbove : spaceBelow));
+
+      setVoicePickerPosition({
+        left,
+        width,
+        maxHeight,
+        ...(openAbove
+          ? { bottom: Math.max(margin, viewportHeight - anchor.top + gap) }
+          : { top: Math.min(viewportHeight - margin, anchor.bottom + gap) }),
+      });
+    };
+
+    const frame = window.requestAnimationFrame(updatePosition);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    window.visualViewport?.addEventListener("resize", updatePosition);
+    window.visualViewport?.addEventListener("scroll", updatePosition);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+      window.visualViewport?.removeEventListener("resize", updatePosition);
+      window.visualViewport?.removeEventListener("scroll", updatePosition);
     };
   }, [voicePickerOpen]);
 
@@ -568,9 +629,13 @@ export const AudioReadAlongBar: React.FC = () => {
           {engineMode === "speech" && (
             <div ref={voicePickerRef} className="relative">
               <button
+                ref={voicePickerButtonRef}
                 type="button"
                 disabled={voices.length === 0}
-                onClick={() => setVoicePickerOpen((open) => !open)}
+                onClick={() => {
+                  setVoicePickerPosition(null);
+                  setVoicePickerOpen((open) => !open);
+                }}
                 aria-haspopup="dialog"
                 aria-expanded={voicePickerOpen}
                 aria-label={`AI reading voice: ${pickerLabel}`}
@@ -581,11 +646,20 @@ export const AudioReadAlongBar: React.FC = () => {
                 <ChevronDown className="h-3 w-3 shrink-0" />
               </button>
 
-              {voicePickerOpen && (
+              {voicePickerOpen && voicePickerPosition && createPortal(
                 <div
+                  ref={voicePickerPopoverRef}
                   role="dialog"
                   aria-label="Choose an AI reading voice"
-                  className="absolute bottom-full right-0 z-50 mb-2 max-h-[70dvh] w-[min(22rem,88vw)] overflow-y-auto rounded-2xl border border-border bg-card p-3 text-card-foreground shadow-2xl"
+                  style={{
+                    position: "fixed",
+                    left: voicePickerPosition.left,
+                    width: voicePickerPosition.width,
+                    maxHeight: voicePickerPosition.maxHeight,
+                    top: voicePickerPosition.top,
+                    bottom: voicePickerPosition.bottom,
+                  }}
+                  className="z-[1000] overflow-y-auto rounded-2xl border border-border bg-card p-3 text-card-foreground shadow-2xl"
                 >
                   <div className="mb-2 text-xs font-semibold">Voices for {speechLanguageName}</div>
                   <button
@@ -681,7 +755,8 @@ export const AudioReadAlongBar: React.FC = () => {
                       )}
                     </>
                   )}
-                </div>
+                </div>,
+                document.body
               )}
             </div>
           )}
