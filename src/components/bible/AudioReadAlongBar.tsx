@@ -14,7 +14,19 @@ import {
   X,
 } from "lucide-react";
 import { getBookMeta } from "@/data/canonicalBooks";
-import { subscribeToSpeechVoices } from "@/lib/speechVoices";
+import {
+  subscribeToSpeechVoices,
+  type AppSpeechVoice,
+} from "@/lib/speechVoices";
+import {
+  needsNativeTts,
+  nativeVoiceGender,
+  openNativeTtsInstall,
+  resolveNativeVoiceIndex,
+  speakNative,
+  stopNativeSpeech,
+  type NativeSpeechVoice,
+} from "@/lib/nativeSpeech";
 import { useBibleApp } from "@/context/useBibleApp";
 
 type VoicePickerPosition = {
@@ -29,6 +41,11 @@ function getVoiceGender(voice: SpeechSynthesisVoice): "female" | "male" | null {
   const metadataGender = (voice as SpeechSynthesisVoice & { gender?: string }).gender?.toLowerCase();
   if (metadataGender && /female|woman|feminine/.test(metadataGender)) return "female";
   if (metadataGender && /male|man|masculine/.test(metadataGender)) return "male";
+
+  // Android engine voices are named like `en-us-x-sfg#female_1-local`, so the
+  // gender only appears in the voice URI there.
+  const nativeGender = nativeVoiceGender({ name: voice.name, voiceURI: voice.voiceURI });
+  if (nativeGender) return nativeGender;
 
   const label = `${voice.name} ${voice.voiceURI}`.toLowerCase();
   if (/\b(female|woman|feminine|girl)\b|samantha|victoria|karen|moira|tessa|zira|susan|allison|ava|aria|emma|jenny|hazel/.test(label)) {
@@ -59,7 +76,9 @@ export const AudioReadAlongBar: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [engineMode, setEngineMode] = useState<"speech" | "studio">("speech");
   const [studioReaderKey, setStudioReaderKey] = useState<string>("");
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [voices, setVoices] = useState<AppSpeechVoice[]>([]);
+  const [nativeSpeechUnavailable, setNativeSpeechUnavailable] = useState(false);
+  const [speechError, setSpeechError] = useState<string | null>(null);
   const [voicePickerOpen, setVoicePickerOpen] = useState(false);
   const [voicePickerPosition, setVoicePickerPosition] = useState<VoicePickerPosition | null>(null);
   const voicePickerRef = useRef<HTMLDivElement>(null);
@@ -110,6 +129,20 @@ export const AudioReadAlongBar: React.FC = () => {
   // Use the voice list preloaded by AppShell; it includes every voice the
   // browser/operating system exposes across its installed languages.
   useEffect(() => subscribeToSpeechVoices(setVoices), []);
+
+  // In the native app the Android engine may be missing or have no voices for
+  // this language installed. Surface that instead of leaving a silent play button.
+  useEffect(() => {
+    if (!needsNativeTts()) return;
+    if (voices.length > 0) {
+      setNativeSpeechUnavailable(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      if (voices.length === 0) setNativeSpeechUnavailable(true);
+    }, 4000);
+    return () => window.clearTimeout(timer);
+  }, [voices.length]);
 
   useEffect(() => {
     if (!voicePickerOpen) return;
@@ -228,6 +261,9 @@ export const AudioReadAlongBar: React.FC = () => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
+    if (needsNativeTts()) {
+      void stopNativeSpeech();
+    }
     if (htmlAudioRef.current) {
       htmlAudioRef.current.pause();
     }
@@ -253,10 +289,19 @@ export const AudioReadAlongBar: React.FC = () => {
 
   const speakFromIndex = useCallback(
     (startIndex: number) => {
-      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+      if (typeof window === "undefined") return;
+      const useNative = needsNativeTts();
+      // On the web speechSynthesis must exist; in the native app the operating
+      // system engine speaks instead (the Android WebView has no Web Speech).
+      if (!useNative && !("speechSynthesis" in window)) return;
       if (verses.length === 0) return;
 
-      window.speechSynthesis.cancel();
+      setSpeechError(null);
+      if (useNative) {
+        void stopNativeSpeech();
+      } else {
+        window.speechSynthesis.cancel();
+      }
       const sessionId = ++speechSessionRef.current;
       setIsPlaying(true);
 
@@ -278,6 +323,42 @@ export const AudioReadAlongBar: React.FC = () => {
           idx === 0
             ? `${bookMeta.name}, chapter ${chapter}. ${v.text}`
             : v.text;
+        if (useNative) {
+          const nativeVoiceIndex = resolveNativeVoiceIndex(
+            voices as unknown as NativeSpeechVoice[],
+            {
+              languagePrefix: voiceLanguagePrefix,
+              preferredVoiceURI: prefs.preferredVoiceURI,
+              preferredVoiceGender: prefs.preferredVoiceGender,
+            },
+          );
+          const finishNative = () => {
+            if (speechSessionRef.current === sessionId) step(idx + 1);
+          };
+          void speakNative(
+            utterText,
+            activeVersion.languageCode || "en",
+            prefs.speechRate || 1,
+            nativeVoiceIndex,
+          )
+            .then(finishNative)
+            .catch((error: unknown) => {
+              if (speechSessionRef.current !== sessionId) return;
+              setIsPlaying(false);
+              const message = error instanceof Error ? error.message : String(error || "");
+              setSpeechError(
+                /not available in this build/i.test(message)
+                  ? "The speech engine is not available in this build. Rebuild the Android app so the Text-to-speech plugin is included."
+                  : /not supported/i.test(message)
+                    ? `No ${activeVersion.name} voice is installed on this device. Install the language in Android Text-to-speech settings.`
+                    : "The device speech engine could not read this chapter.",
+              );
+            });
+          return;
+        }
+
+        // Only reached on the web: the Android WebView has neither this
+        // constructor nor speechSynthesis.
         const utter = new SpeechSynthesisUtterance(utterText);
         utter.lang = activeVersion.languageCode || "en";
         utter.rate = prefs.speechRate || 1.0;
@@ -331,7 +412,10 @@ export const AudioReadAlongBar: React.FC = () => {
       prefs.preferredVoiceGender,
       prefs.autoAdvanceChapter,
       languageVoices,
+      voices,
+      voiceLanguagePrefix,
       activeVersion.languageCode,
+      activeVersion.name,
       nextChapter,
       setActiveAudioVerse,
     ]
@@ -517,7 +601,9 @@ export const AudioReadAlongBar: React.FC = () => {
     (voice) => voice.voiceURI === prefs.preferredVoiceURI
   );
   const pickerLabel = voices.length === 0
-    ? "Loading voices…"
+    ? nativeSpeechUnavailable
+      ? "Device voice unavailable"
+      : "Loading voices…"
     : selectedLanguageVoice?.name || `${prefs.preferredVoiceGender === "auto" ? "Auto" : prefs.preferredVoiceGender} voice`;
   const chooseVoiceGender = (gender: "auto" | "female" | "male") => {
     stopAllPlayback();
@@ -558,6 +644,27 @@ export const AudioReadAlongBar: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {(speechError || nativeSpeechUnavailable) && engineMode === "speech" && (
+          <div
+            role="status"
+            className="order-last flex w-full flex-wrap items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-foreground sm:order-none sm:w-auto"
+          >
+            <span>
+              {speechError ||
+                "This device has no speech engine available, so AI Voice cannot play. Studio narration still works where a recording exists."}
+            </span>
+            {needsNativeTts() && (
+              <button
+                type="button"
+                onClick={() => void openNativeTtsInstall()}
+                className="rounded-lg border border-border bg-background px-2 py-1 font-semibold hover:bg-accent"
+              >
+                Text-to-speech settings
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Center: Playback Controls */}
         <div className="flex items-center gap-2">
@@ -631,7 +738,7 @@ export const AudioReadAlongBar: React.FC = () => {
               <button
                 ref={voicePickerButtonRef}
                 type="button"
-                disabled={voices.length === 0}
+                disabled={voices.length === 0 && !nativeSpeechUnavailable}
                 onClick={() => {
                   setVoicePickerPosition(null);
                   setVoicePickerOpen((open) => !open);
@@ -696,6 +803,15 @@ export const AudioReadAlongBar: React.FC = () => {
                     <div className="rounded-xl bg-muted/60 p-3 text-xs leading-relaxed text-muted-foreground">
                       <p className="font-medium text-foreground">No {speechLanguageName} voices are installed on this device.</p>
                       <p className="mt-1">Auto voice can still use the device default. To choose a {speechLanguageName} male or female voice, install voices for this language in your device’s Text-to-speech settings.</p>
+                      {needsNativeTts() && (
+                        <button
+                          type="button"
+                          onClick={() => void openNativeTtsInstall()}
+                          className="mt-2 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
+                        >
+                          Open Text-to-speech settings
+                        </button>
+                      )}
                       {otherLanguageVoiceCount > 0 && (
                         <p className="mt-2">{otherLanguageVoiceCount} installed voice{otherLanguageVoiceCount === 1 ? " is" : "s are"} for other languages, so they’re hidden here to avoid mispronouncing Scripture.</p>
                       )}
