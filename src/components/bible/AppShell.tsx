@@ -94,6 +94,7 @@ export const AppShell: React.FC = () => {
   } = useBibleApp();
 
   const [mobileModalOpen, setMobileModalOpen] = useState(false);
+  const [navigationVisible, setNavigationVisible] = useState(true);
   const [deferredInstallPrompt, setDeferredInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
 
@@ -154,6 +155,47 @@ export const AppShell: React.FC = () => {
     return () => {
       cancelled = true;
       window.clearTimeout(timeoutHandle);
+    };
+  }, []);
+
+  // Reveal the global menus as the reader scrolls, then tuck them away after
+  // the user pauses. Keep focused navigation available for keyboard users.
+  useEffect(() => {
+    let hideTimer: number | undefined;
+    const navigationHasFocus = () =>
+      document.activeElement instanceof Element &&
+      document.activeElement.closest("[data-global-navigation]") !== null;
+    const clearHideTimer = () => {
+      if (hideTimer !== undefined) window.clearTimeout(hideTimer);
+      hideTimer = undefined;
+    };
+    const scheduleHide = () => {
+      clearHideTimer();
+      if (window.scrollY <= 16 || navigationHasFocus()) return;
+      hideTimer = window.setTimeout(() => {
+        if (window.scrollY > 16 && !navigationHasFocus()) setNavigationVisible(false);
+      }, 2600);
+    };
+    const onScroll = () => {
+      setNavigationVisible(true);
+      scheduleHide();
+    };
+    const onFocusIn = (event: FocusEvent) => {
+      if (event.target instanceof Element && event.target.closest("[data-global-navigation]")) {
+        clearHideTimer();
+        setNavigationVisible(true);
+      }
+    };
+    const onFocusOut = () => window.setTimeout(scheduleHide, 0);
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
+    return () => {
+      clearHideTimer();
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
     };
   }, []);
 
@@ -308,7 +350,13 @@ export const AppShell: React.FC = () => {
     <div className="app-shell flex min-h-screen w-full min-w-0 flex-col text-foreground" style={appShellStyle}>
       <ReadingReminderScheduler />
       {/* Top Global Sanctuary Bar (with iPhone Notch / Dynamic Island safe-top padding) */}
-      <header className="safe-top sticky top-0 z-30 w-full border-b border-border bg-sidebar">
+      <header
+        data-global-navigation
+        aria-hidden={!navigationVisible}
+        className={`safe-top sticky top-0 z-30 w-full border-b border-border bg-sidebar transition-transform duration-300 ease-out ${
+          navigationVisible ? "translate-y-0" : "pointer-events-none -translate-y-full"
+        }`}
+      >
         <div className="mx-auto flex h-16 w-full max-w-7xl min-w-0 items-center justify-between gap-2.5 px-3 sm:px-6">
           {/* Brand Identity */}
           <button
@@ -479,8 +527,12 @@ export const AppShell: React.FC = () => {
 
       {/* Persistent bottom navigation (with iPhone Home Indicator safe-bottom padding) */}
       <nav
+        data-global-navigation
         aria-label="Main navigation"
-        className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card pt-1.5 shadow-[0_-8px_24px_rgba(18,34,25,.045)]"
+        aria-hidden={!navigationVisible}
+        className={`safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card pt-1.5 shadow-[0_-8px_24px_rgba(18,34,25,.045)] transition-transform duration-300 ease-out ${
+          navigationVisible ? "translate-y-0" : "pointer-events-none translate-y-full"
+        }`}
       >
         <div className="mx-auto grid w-full max-w-2xl grid-cols-8 items-center gap-0 px-1 sm:gap-1 sm:px-3 lg:gap-2">
           {navItems.map((item) => {
