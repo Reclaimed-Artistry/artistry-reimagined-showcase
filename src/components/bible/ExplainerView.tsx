@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { SelahIcon, type SelahIconName } from "./SelahIcon";
 import { useBibleApp } from "@/context/useBibleApp";
+import { PrivacyPolicyContent } from "@/components/PrivacyPolicyPage";
 
 const FEATURES: { icon: SelahIconName; title: string; body: string }[] = [
   { icon: "read", title: "Read at your pace", body: "Open a passage, choose a translation, and make the page comfortable with adjustable type and reading layouts." },
@@ -39,6 +40,9 @@ export const ExplainerView: React.FC = () => {
   const [supportEmail, setSupportEmail] = React.useState("");
   const [supportLoading, setSupportLoading] = React.useState(false);
   const [supportNotice, setSupportNotice] = React.useState<SupportNotice | null>(null);
+  const [privacyDisclosureOpen, setPrivacyDisclosureOpen] = React.useState(
+    () => typeof window !== "undefined" && window.location.hash === "#privacy-and-advertising"
+  );
   const setTheme = (theme: "parchment" | "night") => updatePrefs({ theme });
 
   React.useEffect(() => {
@@ -77,6 +81,14 @@ export const ExplainerView: React.FC = () => {
     })();
 
     return () => { cancelled = true; };
+  }, []);
+
+  React.useEffect(() => {
+    if (window.location.hash !== "#privacy-and-advertising") return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById("privacy-and-advertising")?.scrollIntoView({ block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   const handleSupportSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -269,6 +281,24 @@ export const ExplainerView: React.FC = () => {
             )}
           </form>
         </div>
+      </section>
+
+      <section id="privacy-and-advertising" className="scroll-mt-20 rounded-[2rem] border border-border bg-card p-5 sm:p-8">
+        <details
+          className="group"
+          open={privacyDisclosureOpen}
+          onToggle={(event) => setPrivacyDisclosureOpen(event.currentTarget.open)}
+        >
+          <summary className="cursor-pointer list-none font-display text-xl font-semibold marker:hidden">
+            <span className="flex items-center justify-between gap-4">
+              Privacy, advertising &amp; third-party policies
+              <span aria-hidden="true" className="text-sm text-muted-foreground transition-transform group-open:rotate-180">⌄</span>
+            </span>
+          </summary>
+          <div className="mt-5 border-t border-border pt-5">
+            <PrivacyPolicyContent />
+          </div>
+        </details>
       </section>
     </div>
   );

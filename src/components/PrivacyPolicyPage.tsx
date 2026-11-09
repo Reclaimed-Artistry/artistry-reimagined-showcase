@@ -27,41 +27,33 @@ const sections = [
   },
 ];
 
-export const PrivacyPolicyPage: React.FC = () => {
-  React.useEffect(() => {
-    document.title = "Privacy & Advertising | Selah Bible";
-    return () => { document.title = "Selah Bible — Read, Reflect & Study"; };
-  }, []);
-
-  return (
-    <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-8 sm:py-12">
-      <article className="mx-auto max-w-3xl">
-        <a href="/" className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline">← Back to Selah</a>
-        <p className="mt-8 text-xs font-bold uppercase tracking-[.18em] text-primary">Selah Bible</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">Privacy &amp; advertising</h1>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">This notice explains how Selah handles information when you use the web app. Features and third-party services may change; this page will be updated when they do.</p>
-        <div className="mt-8 space-y-7">
-          {sections.map(({ title, body }) => {
-            const headingId = `privacy-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-            return (
-              <section key={title} aria-labelledby={headingId}>
-                <h2 id={headingId} className="font-display text-xl font-semibold">{title}</h2>
-                <p className="mt-2 text-sm leading-7 text-muted-foreground">{body}</p>
-              </section>
-            );
-          })}
-        </div>
-        <section className="mt-8 rounded-2xl border border-border bg-card p-5" aria-labelledby="third-party-notices">
-          <h2 id="third-party-notices" className="font-display text-lg font-semibold">Third-party notices</h2>
-          <ul className="mt-3 space-y-2 text-sm text-primary underline decoration-primary/30 underline-offset-4">
-            <li><a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google Privacy Policy</a></li>
-            <li><a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noreferrer">How Google uses information from sites or apps that use its services</a></li>
-            <li><a href="https://myadcenter.google.com/" target="_blank" rel="noreferrer">Google My Ad Center</a></li>
-            <li><a href="https://paystack.com/privacy" target="_blank" rel="noreferrer">Paystack Privacy Notice</a></li>
-          </ul>
-        </section>
-        <p className="mt-8 text-xs leading-5 text-muted-foreground">For privacy questions, use the project’s <a className="text-primary underline underline-offset-4" href="https://github.com/Reclaimed-Artistry/artistry-reimagined-showcase/issues" target="_blank" rel="noreferrer">GitHub contact page</a>. Please do not post private account, payment, or reading information in a public issue.</p>
-      </article>
-    </main>
-  );
-};
+export const PrivacyPolicyContent: React.FC = () => (
+  <div>
+    <p className="text-sm leading-6 text-muted-foreground">
+      This notice explains how Selah handles information when you use the web app. Features and third-party services may change; this notice will be updated when they do.
+    </p>
+    <div className="mt-6 space-y-6">
+      {sections.map(({ title, body }) => {
+        const headingId = `privacy-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+        return (
+          <section key={title} aria-labelledby={headingId}>
+            <h3 id={headingId} className="font-display text-lg font-semibold">{title}</h3>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">{body}</p>
+          </section>
+        );
+      })}
+    </div>
+    <section className="mt-7 rounded-2xl border border-border bg-background p-4 sm:p-5" aria-labelledby="third-party-notices">
+      <h3 id="third-party-notices" className="font-display text-lg font-semibold">Third-party notices</h3>
+      <ul className="mt-3 space-y-2 text-sm text-primary underline decoration-primary/30 underline-offset-4">
+        <li><a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google Privacy Policy</a></li>
+        <li><a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noreferrer">How Google uses information from sites or apps that use its services</a></li>
+        <li><a href="https://myadcenter.google.com/" target="_blank" rel="noreferrer">Google My Ad Center</a></li>
+        <li><a href="https://paystack.com/privacy" target="_blank" rel="noreferrer">Paystack Privacy Notice</a></li>
+      </ul>
+    </section>
+    <p className="mt-6 text-xs leading-5 text-muted-foreground">
+      For privacy questions, use the project’s <a className="text-primary underline underline-offset-4" href="https://github.com/Reclaimed-Artistry/artistry-reimagined-showcase/issues" target="_blank" rel="noreferrer">GitHub contact page</a>. Please do not post private account, payment, or reading information in a public issue.
+    </p>
+  </div>
+);

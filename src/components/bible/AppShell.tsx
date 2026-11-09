@@ -140,8 +140,16 @@ export const AppShell: React.FC = () => {
   useEffect(() => {
     void initMobileRuntime();
 
+    const currentUrl = new URL(window.location.href);
+    const isLegacyPrivacyPath = currentUrl.pathname.replace(/\/+$/, "") === "/privacy";
+    if (isLegacyPrivacyPath) {
+      currentUrl.pathname = "/";
+      currentUrl.searchParams.set("section", "about");
+      currentUrl.hash = "privacy-and-advertising";
+      window.history.replaceState(null, "", `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
+    }
     const params = new URLSearchParams(window.location.search);
-    const sec = params.get("section") as AppSection | null;
+    const sec = (isLegacyPrivacyPath ? "about" : params.get("section")) as AppSection | null;
     if (
       sec &&
       ["home", "reader", "companion", "versions", "plans", "reflection", "study", "kids", "about"].includes(sec)
@@ -565,9 +573,6 @@ export const AppShell: React.FC = () => {
               {activeSection === "about" && <ExplainerView />}
             </Suspense>
           </SectionErrorBoundary>
-          <footer className="mx-auto flex w-full max-w-6xl justify-end px-4 pb-28 pt-4 text-xs text-muted-foreground sm:px-8">
-            <a href="/privacy" className="rounded underline decoration-border underline-offset-4 hover:text-primary">Privacy &amp; advertising</a>
-          </footer>
         </main>
 
         <Suspense fallback={null}>{prefs.showBibleCompanion && <AiCompanionPanel />}</Suspense>
