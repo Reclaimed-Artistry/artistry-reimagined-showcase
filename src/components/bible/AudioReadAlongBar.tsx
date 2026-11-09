@@ -50,7 +50,8 @@ export const AudioReadAlongBar: React.FC = () => {
 
   useEffect(() => {
     if (studioKeys.length > 0 && !studioKeys.includes(studioReaderKey)) {
-      setStudioReaderKey(studioKeys[0]);
+      const maleStudioReader = studioKeys.find((key) => /dan hays/i.test(key));
+      setStudioReaderKey(maleStudioReader || studioKeys[0]);
     } else if (studioKeys.length === 0 && engineMode === "studio") {
       setEngineMode("speech");
     }
@@ -482,11 +483,31 @@ export const AudioReadAlongBar: React.FC = () => {
               onChange={(e) => updatePrefs({ preferredVoiceURI: e.target.value })}
               className="max-w-[135px] truncate rounded-xl border border-border bg-background px-2.5 py-1.5 text-[11px] outline-none"
               title="Choose Reading Voice"
+              aria-label="Choose reading voice"
             >
               <option value="">Auto Smart Voice</option>
               {voices.slice(0, 25).map((vc) => (
                 <option key={vc.voiceURI} value={vc.voiceURI}>
                   {vc.name} ({vc.lang})
+                </option>
+              ))}
+            </select>
+          )}
+
+          {engineMode === "studio" && studioKeys.length > 0 && (
+            <select
+              value={studioReaderKey || studioKeys[0]}
+              onChange={(event) => {
+                stopAllPlayback();
+                setStudioReaderKey(event.target.value);
+              }}
+              className="max-w-[175px] truncate rounded-xl border border-border bg-background px-2.5 py-1.5 text-[11px] outline-none"
+              title="Choose studio reader"
+              aria-label="Choose studio reader"
+            >
+              {studioKeys.map((key) => (
+                <option key={key} value={key}>
+                  {/dan hays/i.test(key) ? "Male Reader — Dan Hays (Studio)" : key}
                 </option>
               ))}
             </select>
