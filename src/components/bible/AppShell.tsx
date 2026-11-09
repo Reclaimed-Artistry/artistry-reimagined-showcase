@@ -12,6 +12,7 @@ import {
 import { SelahIcon } from "./SelahIcon";
 import { TypographyPopover } from "./TypographyPopover";
 import { HomeDashboard } from "./HomeDashboard";
+import { ExplainerView } from "./ExplainerView";
 import { ReadingReminderScheduler } from "./ReadingReminderScheduler";
 import type { AppSection } from "@/types/bible";
 
@@ -27,7 +28,6 @@ const VerseArtModal = lazy(() => import("./VerseArtModal").then((module) => ({ d
 const VerseCompareDrawer = lazy(() => import("./VerseCompareDrawer").then((module) => ({ default: module.VerseCompareDrawer })));
 const VersionVaultView = lazy(() => import("./VersionVaultView").then((module) => ({ default: module.VersionVaultView })));
 const KidsStoriesView = lazy(() => import("./KidsStoriesView").then((module) => ({ default: module.KidsStoriesView })));
-const ExplainerView = lazy(() => import("./ExplainerView").then((module) => ({ default: module.ExplainerView })));
 
 const preloadSectionModules = () => Promise.allSettled([
   import("./BibleReaderView"),
@@ -36,7 +36,6 @@ const preloadSectionModules = () => Promise.allSettled([
   import("./DailyReflectionView"),
   import("./SearchAndStudyView"),
   import("./KidsStoriesView"),
-  import("./ExplainerView"),
 ]);
 
 type SectionErrorBoundaryProps = {
@@ -66,7 +65,7 @@ class SectionErrorBoundary extends React.Component<SectionErrorBoundaryProps, { 
           <h1 className="mt-3 font-display text-2xl font-semibold">We couldn’t open this section.</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">Your saved reading and notes are still here. Try again, or return to Home and open another section.</p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button type="button" onClick={() => this.setState({ hasError: false })} className="min-h-11 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-accent">Try again</button>
+            <button type="button" onClick={() => window.location.reload()} className="min-h-11 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-accent">Reload Selah</button>
             <button type="button" onClick={this.props.onReturnHome} className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:brightness-110">Return to Home</button>
           </div>
         </section>
@@ -75,6 +74,44 @@ class SectionErrorBoundary extends React.Component<SectionErrorBoundaryProps, { 
     return this.props.children;
   }
 }
+
+type SectionLoadingFallbackProps = {
+  onSelectSection: (section: AppSection) => void;
+  onOpenCompanion: () => void;
+};
+
+const SectionLoadingFallback: React.FC<SectionLoadingFallbackProps> = ({
+  onSelectSection,
+  onOpenCompanion,
+}) => {
+  const [loadingTooLong, setLoadingTooLong] = useState(false);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setLoadingTooLong(true), 10000);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  return (
+    <>
+      {loadingTooLong && (
+        <div
+          role="status"
+          className="mx-auto mt-5 flex max-w-5xl flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm"
+        >
+          <span>This section is taking longer than expected. You can use Home while it finishes loading.</span>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="min-h-10 rounded-lg border border-border bg-card px-3 font-semibold hover:bg-accent"
+          >
+            Reload Selah
+          </button>
+        </div>
+      )}
+      <HomeDashboard onSelectSection={onSelectSection} onOpenCompanion={onOpenCompanion} />
+    </>
+  );
+};
 
 export const AppShell: React.FC = () => {
   const {
@@ -498,7 +535,14 @@ export const AppShell: React.FC = () => {
               setActiveSection("home");
             }}
           >
-            <Suspense fallback={<div role="status" className="mx-auto max-w-6xl px-6 py-12 text-sm text-muted-foreground">Opening your Selah space…</div>}>
+            <Suspense
+              fallback={
+                <SectionLoadingFallback
+                  onSelectSection={handleSelectSection}
+                  onOpenCompanion={() => handleSelectSection("companion")}
+                />
+              }
+            >
               {activeSection === "home" && (
                 <HomeDashboard
                   onSelectSection={handleSelectSection}
