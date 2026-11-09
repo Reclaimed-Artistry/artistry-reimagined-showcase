@@ -76,3 +76,38 @@ included."
 On a device with no speech engine or no voice for the selected Bible language,
 the audio bar names the problem and offers an "Open Text-to-speech settings"
 shortcut instead of a play button that silently does nothing.
+
+### The app's own AI voices (Android)
+
+The device engine is only as good as the voice pack the phone happens to have,
+and many phones ship nothing but the robotic compact voice. So on Android the
+read-along offers two narrators the app owns — **Onyx (male)** and
+**Nova (female)** — synthesised by [Puter.js](https://js.puter.com/v2/), listed
+above the device voices in the picker and used by default.
+
+`src/lib/puterVoice.ts` owns that path and is gated on
+`Capacitor.getPlatform() === "android"`, so the web app never downloads the SDK
+and never defines `window.puter`. The script is injected lazily by adding a
+`<script src="https://js.puter.com/v2/">` tag, which also means the production
+Content-Security-Policy (if one is ever added) must allow
+`https://js.puter.com` in `script-src`.
+
+**A data connection is required.** Every verse is synthesised in the cloud, so
+the audio bar states that plainly and, when the connection is missing, offers a
+**Retry AI voice** button that picks the chapter back up from the current verse.
+Nothing is pre-cached: replaying an offline chapter uses the device engine.
+
+The **first use on a device needs a one-time Puter sign-in**. Puter opens it with
+`window.open()`, and the Android System WebView refuses that call unless the app
+answers `WebChromeClient.onCreateWindow` — which is why `MainActivity.java`
+overrides it and shows the sign-in in a dialog. Without that override the popup
+returns `null`, the sign-in never appears, and the AI voice fails with a
+sign-in notice. `MainActivity` extends Capacitor's own `BridgeWebChromeClient`
+so file pickers, permission prompts, and JavaScript dialogs keep working, and
+any pop-up URL outside `puter.com` is handed to the device browser.
+
+If the AI voice fails for any reason (no data, timeout, sign-in cancelled,
+allowance spent), the chapter **continues on the device engine for the very
+verse that failed** and the bar explains what happened. The fallback is never
+silence, and the reader's saved narrator choice is not overwritten by a
+transient failure.
