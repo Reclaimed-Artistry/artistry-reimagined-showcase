@@ -29,6 +29,43 @@ const VersionVaultView = lazy(() => import("./VersionVaultView").then((module) =
 const KidsStoriesView = lazy(() => import("./KidsStoriesView").then((module) => ({ default: module.KidsStoriesView })));
 const ExplainerView = lazy(() => import("./ExplainerView").then((module) => ({ default: module.ExplainerView })));
 
+type SectionErrorBoundaryProps = {
+  resetKey: AppSection;
+  onReturnHome: () => void;
+  children: React.ReactNode;
+};
+
+class SectionErrorBoundary extends React.Component<SectionErrorBoundaryProps, { hasError: boolean }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidUpdate(previousProps: SectionErrorBoundaryProps) {
+    if (previousProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false });
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <section role="alert" className="mx-auto max-w-2xl px-4 py-16 text-center sm:px-8">
+          <p className="text-xs font-semibold uppercase tracking-[.16em] text-primary">Selah space unavailable</p>
+          <h1 className="mt-3 font-display text-2xl font-semibold">We couldn’t open this section.</h1>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">Your saved reading and notes are still here. Try again, or return to Home and open another section.</p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <button type="button" onClick={() => this.setState({ hasError: false })} className="min-h-11 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-accent">Try again</button>
+            <button type="button" onClick={this.props.onReturnHome} className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:brightness-110">Return to Home</button>
+          </div>
+        </section>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export const AppShell: React.FC = () => {
   const {
     activeSection,
@@ -203,6 +240,7 @@ export const AppShell: React.FC = () => {
 
   const handleSelectSection = (id: AppSection) => {
     void triggerHaptic("light");
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "auto" });
     if (id === "companion") {
       if (!prefs.showBibleCompanion) return;
       setActiveSection("companion");
@@ -363,21 +401,29 @@ export const AppShell: React.FC = () => {
       {/* Main Workspace + Selah Bible Companion Sidebar */}
       <div className="flex w-full min-w-0 flex-1">
         <main className="pb-mobile-safe w-full min-w-0 flex-1">
-          <Suspense fallback={<div role="status" className="mx-auto max-w-6xl px-6 py-12 text-sm text-muted-foreground">Opening your Selah space…</div>}>
-            {activeSection === "home" && (
-              <HomeDashboard
-                onSelectSection={handleSelectSection}
-                onOpenCompanion={() => handleSelectSection("companion")}
-              />
-            )}
-            {(activeSection === "reader" || activeSection === "companion") && <BibleReaderView />}
-            {activeSection === "versions" && <VersionVaultView />}
-            {activeSection === "plans" && <ReadingPlansView />}
-            {activeSection === "reflection" && <DailyReflectionView />}
-            {activeSection === "study" && <SearchAndStudyView />}
-            {activeSection === "kids" && <KidsStoriesView />}
-            {activeSection === "about" && <ExplainerView />}
-          </Suspense>
+          <SectionErrorBoundary
+            resetKey={activeSection}
+            onReturnHome={() => {
+              setAiPanelOpen(false);
+              setActiveSection("home");
+            }}
+          >
+            <Suspense fallback={<div role="status" className="mx-auto max-w-6xl px-6 py-12 text-sm text-muted-foreground">Opening your Selah space…</div>}>
+              {activeSection === "home" && (
+                <HomeDashboard
+                  onSelectSection={handleSelectSection}
+                  onOpenCompanion={() => handleSelectSection("companion")}
+                />
+              )}
+              {(activeSection === "reader" || activeSection === "companion") && <BibleReaderView />}
+              {activeSection === "versions" && <VersionVaultView />}
+              {activeSection === "plans" && <ReadingPlansView />}
+              {activeSection === "reflection" && <DailyReflectionView />}
+              {activeSection === "study" && <SearchAndStudyView />}
+              {activeSection === "kids" && <KidsStoriesView />}
+              {activeSection === "about" && <ExplainerView />}
+            </Suspense>
+          </SectionErrorBoundary>
         </main>
 
         <Suspense fallback={null}>{prefs.showBibleCompanion && <AiCompanionPanel />}</Suspense>

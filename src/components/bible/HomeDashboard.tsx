@@ -170,7 +170,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
             <span aria-hidden="true" className="text-border">/</span>
             <span className="font-mono text-[11px] text-primary">{devotionalReference}</span>
           </div>
-          <blockquote className="mt-6 max-w-3xl font-scripture text-2xl leading-relaxed text-foreground sm:text-3xl">
+          <blockquote className="mt-6 max-w-3xl font-scripture text-[14px] leading-6 text-foreground">
             “{verseText}”
           </blockquote>
           <button
