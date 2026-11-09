@@ -1,6 +1,6 @@
 # AdSense setup and policy safeguards
 
-Selah uses the publisher ID `ca-pub-8913201913917754`. The repository now publishes `/ads.txt` for that publisher. The app no longer loads AdSense globally: it requests one labeled manual display unit on Home only, after a TCF consent signal allows storage (Purpose 1) and Google (vendor 755). It does not render an ad unit on Reader, Bible Companion, Kids Storybook, or the privacy page.
+Selah uses the publisher ID `ca-pub-8913201913917754`. The repository now publishes `/ads.txt` for that publisher. The app no longer loads AdSense globally: it requests one labeled manual display unit on Home only, after a TCF consent signal allows storage (Purpose 1) and Google (vendor 755). It does not render an ad unit on Reader, Bible Companion, Kids Storybook, or About.
 
 ## Required account-side steps
 
@@ -14,6 +14,6 @@ Selah uses the publisher ID `ca-pub-8913201913917754`. The repository now publis
 
 - The AdSense library is loaded only after the TCF API reports Purpose 1 consent and Google vendor 755 consent. If the CMP is absent, the user declines, or script loading fails, the app leaves the ad blank and all Bible features usable.
 - The manual unit is labeled “Advertisement” and exists only after the Home content. It is not interleaved with Bible text or app controls.
-- The visible **Privacy & advertising** link opens `/privacy`; that page explains device storage, optional cloud features, advertising technologies, and third-party services.
+- The privacy, advertising, and third-party disclosure lives only on the About page as an expandable section (`/?section=about#privacy-and-advertising`). There is no separate privacy page and no footer link; the legacy `/privacy` URL redirects to that About section.
 
 These source changes improve policy readiness but cannot certify the publisher account, CMP configuration, ad content, or Google's final review. Verify the live account's Policy Center after completing the account-side steps.

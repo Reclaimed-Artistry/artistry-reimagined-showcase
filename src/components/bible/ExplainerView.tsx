@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { SelahIcon, type SelahIconName } from "./SelahIcon";
 import { useBibleApp } from "@/context/useBibleApp";
-import { PrivacyPolicyContent } from "@/components/PrivacyPolicyPage";
+import { PrivacyPolicyContent } from "@/components/PrivacyPolicyContent";
 
 const FEATURES: { icon: SelahIconName; title: string; body: string }[] = [
   { icon: "read", title: "Read at your pace", body: "Open a passage, choose a translation, and make the page comfortable with adjustable type and reading layouts." },
