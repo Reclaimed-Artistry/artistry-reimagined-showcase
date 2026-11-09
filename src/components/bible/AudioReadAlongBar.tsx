@@ -11,9 +11,14 @@ import {
   X,
 } from "lucide-react";
 import { getBookMeta } from "@/data/canonicalBooks";
+import { subscribeToSpeechVoices } from "@/lib/speechVoices";
 import { useBibleApp } from "@/context/useBibleApp";
 
 function getVoiceGender(voice: SpeechSynthesisVoice): "female" | "male" | null {
+  const metadataGender = (voice as SpeechSynthesisVoice & { gender?: string }).gender?.toLowerCase();
+  if (metadataGender && /female|woman|feminine/.test(metadataGender)) return "female";
+  if (metadataGender && /male|man|masculine/.test(metadataGender)) return "male";
+
   const label = `${voice.name} ${voice.voiceURI}`.toLowerCase();
   if (/\b(female|woman|feminine|girl)\b|samantha|victoria|karen|moira|tessa|zira|susan|allison|ava|aria|emma|jenny|hazel/.test(label)) {
     return "female";
@@ -80,21 +85,9 @@ export const AudioReadAlongBar: React.FC = () => {
     }
   }, [studioKeys, studioReaderKey, engineMode]);
 
-  // Load browser neural / speech synthesis voices
-  useEffect(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const updateVoices = () => {
-      const list = window.speechSynthesis.getVoices() || [];
-      setVoices(list);
-    };
-    updateVoices();
-    window.speechSynthesis.onvoiceschanged = updateVoices;
-    return () => {
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.onvoiceschanged = null;
-      }
-    };
-  }, []);
+  // Use the voice list preloaded by AppShell; it includes every voice the
+  // browser/operating system exposes across its installed languages.
+  useEffect(() => subscribeToSpeechVoices(setVoices), []);
 
   // Gentle WebAudio Contemplative Pad
   useEffect(() => {
@@ -522,8 +515,9 @@ export const AudioReadAlongBar: React.FC = () => {
             </div>
           )}
 
-          {engineMode === "speech" && voices.length > 0 && (
+          {engineMode === "speech" && (
             <select
+              disabled={voices.length === 0}
               value={
                 prefs.preferredVoiceURI && voices.some((voice) => voice.voiceURI === prefs.preferredVoiceURI)
                   ? `voice:${prefs.preferredVoiceURI}`
@@ -546,43 +540,49 @@ export const AudioReadAlongBar: React.FC = () => {
                   preferredVoiceGender: selectedVoice ? getVoiceGender(selectedVoice) || "auto" : "auto",
                 });
               }}
-              className="max-w-[185px] truncate rounded-xl border border-border bg-background px-2.5 py-1.5 text-[11px] outline-none"
+              className="max-w-[185px] truncate rounded-xl border border-border bg-background px-2.5 py-1.5 text-[11px] outline-none disabled:opacity-60"
               title="Choose an AI reading voice or voice gender"
               aria-label="Choose AI reading voice or gender"
             >
-              <option value="gender:auto">Auto voice</option>
-              <option value="gender:female" disabled={!hasFemaleVoiceForLanguage}>
-                Female voice{hasFemaleVoiceForLanguage ? "" : " (not available for this language)"}
-              </option>
-              <option value="gender:male" disabled={!hasMaleVoiceForLanguage}>
-                Male voice{hasMaleVoiceForLanguage ? "" : " (not available for this language)"}
-              </option>
-              {femaleVoices.length > 0 && (
-                <optgroup label="Female voices">
-                  {femaleVoices.slice(0, 25).map((voice) => (
-                    <option key={voice.voiceURI} value={`voice:${voice.voiceURI}`}>
-                      {voice.name} ({voice.lang})
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {maleVoices.length > 0 && (
-                <optgroup label="Male voices">
-                  {maleVoices.slice(0, 25).map((voice) => (
-                    <option key={voice.voiceURI} value={`voice:${voice.voiceURI}`}>
-                      {voice.name} ({voice.lang})
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {otherVoices.length > 0 && (
-                <optgroup label="Other device voices">
-                  {otherVoices.slice(0, 25).map((voice) => (
-                    <option key={voice.voiceURI} value={`voice:${voice.voiceURI}`}>
-                      {voice.name} ({voice.lang})
-                    </option>
-                  ))}
-                </optgroup>
+              {voices.length === 0 ? (
+                <option value="gender:auto">Loading device voices…</option>
+              ) : (
+                <>
+                  <option value="gender:auto">Auto voice</option>
+                  <option value="gender:female" disabled={!hasFemaleVoiceForLanguage}>
+                    Female voice{hasFemaleVoiceForLanguage ? "" : " (not available for this language)"}
+                  </option>
+                  <option value="gender:male" disabled={!hasMaleVoiceForLanguage}>
+                    Male voice{hasMaleVoiceForLanguage ? "" : " (not available for this language)"}
+                  </option>
+                  {femaleVoices.length > 0 && (
+                    <optgroup label="Female voices">
+                      {femaleVoices.map((voice) => (
+                        <option key={voice.voiceURI} value={`voice:${voice.voiceURI}`}>
+                          {voice.name} ({voice.lang})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {maleVoices.length > 0 && (
+                    <optgroup label="Male voices">
+                      {maleVoices.map((voice) => (
+                        <option key={voice.voiceURI} value={`voice:${voice.voiceURI}`}>
+                          {voice.name} ({voice.lang})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {otherVoices.length > 0 && (
+                    <optgroup label="Other device voices">
+                      {otherVoices.map((voice) => (
+                        <option key={voice.voiceURI} value={`voice:${voice.voiceURI}`}>
+                          {voice.name} ({voice.lang})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </>
               )}
             </select>
           )}

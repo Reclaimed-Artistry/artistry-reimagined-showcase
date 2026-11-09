@@ -14,6 +14,7 @@ import { TypographyPopover } from "./TypographyPopover";
 import { HomeDashboard } from "./HomeDashboard";
 import { ExplainerView } from "./ExplainerView";
 import { ReadingReminderScheduler } from "./ReadingReminderScheduler";
+import { preloadSpeechVoices } from "@/lib/speechVoices";
 import type { AppSection } from "@/types/bible";
 
 const AiCompanionPanel = lazy(() => import("./AiCompanionPanel").then((module) => ({ default: module.AiCompanionPanel })));
@@ -162,6 +163,12 @@ export const AppShell: React.FC = () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
     };
   }, [prefs.showBibleCompanion, setActiveSection, setAiPanelOpen]);
+
+  // Ask the browser to enumerate its installed TTS voices at app startup so
+  // the AI voice picker is ready before the user opens the audio player.
+  useEffect(() => {
+    preloadSpeechVoices();
+  }, []);
 
   // Warm section modules after first paint so navigation is immediate on
   // normal connections. Respect data-saver and very slow mobile connections.
