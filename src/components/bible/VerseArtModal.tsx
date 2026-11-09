@@ -254,9 +254,9 @@ export const VerseArtModal: React.FC = () => {
 
   return (
     <Dialog open={verseArtModalOpen} onOpenChange={setVerseArtModalOpen}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-xl overflow-y-auto overscroll-contain p-3 sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:p-6">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 font-display text-2xl font-bold">
+          <DialogTitle className="flex items-center gap-2 font-display text-lg font-bold sm:text-2xl">
             <ImageIcon className="h-5 w-5 text-primary" />
             Shareable Scripture Art Studio
           </DialogTitle>
@@ -342,10 +342,10 @@ export const VerseArtModal: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex justify-center rounded-2xl border border-border bg-muted/40 p-3">
+          <div className="flex min-h-0 justify-center overflow-hidden rounded-2xl border border-border bg-muted/40 p-2 sm:p-3">
             <canvas
               ref={canvasRef}
-              className="max-h-[380px] w-auto rounded-xl shadow-md"
+              className="h-auto max-h-[38dvh] max-w-full w-auto rounded-xl object-contain shadow-md sm:max-h-[min(42dvh,380px)]"
             />
           </div>
 
