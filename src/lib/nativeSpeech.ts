@@ -41,11 +41,25 @@ export function isNativeTtsPlatform(): boolean {
   }
 }
 
-/** True when the platform has to speak through the native engine instead of Web Speech. */
+/**
+ * True when the platform has to speak through the native engine instead of
+ * Web Speech.
+ *
+ * The important case is the Android WebView: it usually *does* expose
+ * `window.speechSynthesis`, but as an empty stub whose voice list is always
+ * length 0. Checking only for the missing API is not enough — the stub reports
+ * `speak()` succeeded and produces no sound, so the app looks like it is
+ * playing while nothing is heard.
+ */
 export function needsNativeTts(): boolean {
   if (!isNativeTtsPlatform()) return false;
   if (typeof window === "undefined") return false;
-  return !("speechSynthesis" in window);
+  if (!("speechSynthesis" in window)) return true;
+  try {
+    return (window.speechSynthesis.getVoices() || []).length === 0;
+  } catch {
+    return true;
+  }
 }
 
 async function loadPlugin(): Promise<NativeTextToSpeech | null> {
@@ -110,6 +124,23 @@ export async function isNativeLanguageSupported(lang: string): Promise<boolean> 
  * Speaks one chunk and resolves when the engine finishes. Rejects when the
  * engine is missing, the language is not installed, or synthesis fails.
  */
+/**
+ * A bare code like "en" is not reliably supported by Android engines, which
+ * expect a region ("en-US"). Expand it using the device locale.
+ */
+export function normalizeSpeechLang(lang: string): string {
+  const value = (lang || "en").trim().replace(/_/g, "-");
+  if (!value) return "en-US";
+  if (value.includes("-")) return value;
+  try {
+    const region = new Intl.Locale(value).maximize().region;
+    if (region) return `${value}-${region}`;
+  } catch {
+    // Intl.Locale is unavailable on older WebViews.
+  }
+  return value.toLowerCase() === "en" ? "en-US" : value;
+}
+
 export async function speakNative(
   text: string,
   lang: string,
@@ -122,7 +153,7 @@ export async function speakNative(
   try {
     await plugin.speak({
       text,
-      lang,
+      lang: normalizeSpeechLang(lang),
       rate: Math.min(4, Math.max(0.1, rate || 1)),
       pitch: 1,
       volume: 1,

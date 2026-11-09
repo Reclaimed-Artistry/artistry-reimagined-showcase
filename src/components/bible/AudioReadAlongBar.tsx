@@ -300,6 +300,17 @@ export const AudioReadAlongBar: React.FC = () => {
       if (useNative) {
         void stopNativeSpeech();
       } else {
+        // Keep the browser list fresh: a mobile browser may have populated it
+        // since the bar opened. If it is still empty, Web Speech will be silent,
+        // so say so instead of appearing to play.
+        const availableVoices = window.speechSynthesis.getVoices() || [];
+        if (availableVoices.length === 0) {
+          setIsPlaying(false);
+          setSpeechError(
+            "This browser has no speech voices available. Open the app version, or install a text-to-speech engine for your device.",
+          );
+          return;
+        }
         window.speechSynthesis.cancel();
       }
       const sessionId = ++speechSessionRef.current;
@@ -640,7 +651,9 @@ export const AudioReadAlongBar: React.FC = () => {
             <div className="text-[11px] text-muted-foreground">
               {engineMode === "studio"
                 ? `Human Studio Narration (${studioReaderKey})`
-                : "AI Voice Read-Along • Synced Verse Highlighting"}
+                : needsNativeTts()
+                  ? "AI Voice Read-Along · device speech engine"
+                  : `AI Voice Read-Along · ${voices.length} browser voice${voices.length === 1 ? "" : "s"}`}
             </div>
           </div>
         </div>

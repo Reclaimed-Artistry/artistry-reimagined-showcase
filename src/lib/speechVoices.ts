@@ -23,18 +23,19 @@ function publish(voices: AppSpeechVoice[]) {
 function refreshSpeechVoices() {
   if (typeof window === "undefined") return;
 
-  if (!("speechSynthesis" in window)) {
-    // Native app: Web Speech does not exist in the Android WebView, so ask the
-    // operating system's engine for its installed voices instead.
-    if (needsNativeTts()) {
-      void getNativeVoices().then((voices) => {
-        if (voices.length > 0 || cachedVoices.length === 0) {
-          publish(voices as unknown as AppSpeechVoice[]);
-        }
-      });
-    }
+  // In the native app ask the operating system engine for its installed
+  // voices. The Android WebView usually exposes speechSynthesis as an empty
+  // stub, so its own voice list must not be trusted.
+  if (needsNativeTts()) {
+    void getNativeVoices().then((voices) => {
+      if (voices.length > 0 || cachedVoices.length === 0) {
+        publish(voices as unknown as AppSpeechVoice[]);
+      }
+    });
     return;
   }
+
+  if (!("speechSynthesis" in window)) return;
 
   try {
     publish((window.speechSynthesis.getVoices() || []) as AppSpeechVoice[]);
