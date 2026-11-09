@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark,
   Brain,
@@ -277,6 +277,8 @@ export const BibleReaderView: React.FC = () => {
   const [noteTags, setNoteTags] = useState("reflection");
 
   const verseRefs = useRef<Record<number, HTMLElement | null>>({});
+  const verseActionBarRef = useRef<HTMLDivElement | null>(null);
+  const [verseActionBarPosition, setVerseActionBarPosition] = useState<{ top: number; left: number } | null>(null);
   const bookMeta = getBookMeta(bookNumber);
   const isChapterMarkedRead = readChapters.includes(`${bookNumber}:${chapter}`);
 
@@ -298,6 +300,81 @@ export const BibleReaderView: React.FC = () => {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [activeAudioVerse, focusedVerse, primaryChapterData]);
+
+  // Keep the selected-verse tools beside the passage selection rather than
+  // pinning them to the bottom of the screen.
+  useLayoutEffect(() => {
+    if (selectedVerses.length === 0) {
+      setVerseActionBarPosition(null);
+      return;
+    }
+
+    let frame = 0;
+    const updatePosition = () => {
+      const firstSelectedVerse = Math.min(...selectedVerses);
+      const anchor = verseRefs.current[firstSelectedVerse];
+      const actionBar = verseActionBarRef.current;
+      if (!anchor || !actionBar) return;
+
+      const anchorRect = anchor.getBoundingClientRect();
+      const actionBarRect = actionBar.getBoundingClientRect();
+      const padding = 12;
+      const gap = 10;
+      const bottomMenuSpace = 92;
+      const maxTop = Math.max(
+        padding,
+        window.innerHeight - actionBarRect.height - bottomMenuSpace
+      );
+      let top = anchorRect.bottom + gap;
+      if (top > maxTop) {
+        const topAboveAnchor = anchorRect.top - actionBarRect.height - gap;
+        top = topAboveAnchor >= padding ? topAboveAnchor : maxTop;
+      }
+      top = Math.min(Math.max(top, padding), maxTop);
+
+      const halfWidth = actionBarRect.width / 2;
+      const minLeft = halfWidth + padding;
+      const maxLeft = Math.max(minLeft, window.innerWidth - halfWidth - padding);
+      const left = Math.min(
+        Math.max(anchorRect.left + anchorRect.width / 2, minLeft),
+        maxLeft
+      );
+      const nextPosition = { top: Math.round(top), left: Math.round(left) };
+      setVerseActionBarPosition((current) =>
+        current?.top === nextPosition.top && current.left === nextPosition.left
+          ? current
+          : nextPosition
+      );
+    };
+    const schedulePositionUpdate = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(updatePosition);
+    };
+
+    updatePosition();
+    window.addEventListener("scroll", schedulePositionUpdate, { capture: true, passive: true });
+    window.addEventListener("resize", schedulePositionUpdate);
+    const resizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(schedulePositionUpdate)
+      : null;
+    const anchor = verseRefs.current[Math.min(...selectedVerses)];
+    if (anchor) resizeObserver?.observe(anchor);
+    if (verseActionBarRef.current) resizeObserver?.observe(verseActionBarRef.current);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedulePositionUpdate, true);
+      window.removeEventListener("resize", schedulePositionUpdate);
+      resizeObserver?.disconnect();
+    };
+  }, [
+    selectedVerses,
+    bookNumber,
+    chapter,
+    prefs.fontSize,
+    prefs.lineHeight,
+    prefs.layoutMode,
+  ]);
 
   // Active plan context if launched from Reading Plans
   const activePlanDetails = useMemo(() => {
@@ -986,7 +1063,18 @@ export const BibleReaderView: React.FC = () => {
 
       {/* Floating Selected Verses Action Bar */}
       {selectedVerses.length > 0 && (
-        <div className="fixed bottom-5 left-1/2 z-30 w-[95vw] max-w-2xl -translate-x-1/2 animate-fade-in rounded-2xl border border-border bg-popover/95 p-3 shadow-2xl backdrop-blur-md">
+        <div
+          ref={verseActionBarRef}
+          role="toolbar"
+          aria-label="Selected Scripture actions"
+          className="fixed z-40 max-h-[calc(100dvh-7rem)] w-[95vw] max-w-2xl overflow-y-auto overscroll-contain animate-fade-in rounded-2xl border border-border bg-popover/95 p-3 shadow-2xl backdrop-blur-md"
+          style={{
+            top: verseActionBarPosition?.top ?? 12,
+            left: verseActionBarPosition?.left ?? "50%",
+            transform: "translateX(-50%)",
+            visibility: verseActionBarPosition ? "visible" : "hidden",
+          }}
+        >
           <div className="mb-2.5 flex items-center justify-between border-b border-border/60 pb-2">
             <div className="flex items-center gap-2">
               <span className="rounded-md bg-primary/15 px-2 py-0.5 font-mono text-xs font-bold text-primary">
