@@ -188,13 +188,20 @@ export function resolveNativeVoiceIndex(
   return preferredFirst(pool).nativeIndex;
 }
 
+const HIGH_QUALITY_VOICE = /natural|neural|enhanced|premium|network/i;
+
+/**
+ * Android's engine usually lists several voices per language. The higher
+ * quality ones (`*-network`, `#female_2-local` on newer engines) sound far
+ * closer to natural speech than the compact fallback, so prefer them and only
+ * drop to a local voice when the device has no enhanced one installed.
+ */
 function preferredFirst(voices: NativeSpeechVoice[]): NativeSpeechVoice {
+  const enhanced = voices.find((voice) => HIGH_QUALITY_VOICE.test(voice.voiceURI));
+  if (enhanced) return enhanced;
+
   const local = voices.filter((voice) => voice.localService);
-  const pool = local.length > 0 ? local : voices;
-  return (
-    pool.find((voice) => /natural|neural|enhanced|premium|network/i.test(voice.voiceURI)) ||
-    pool[0]
-  );
+  return (local.length > 0 ? local : voices)[0];
 }
 
 /**
