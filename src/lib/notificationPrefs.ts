@@ -11,12 +11,15 @@ import { supabase } from "./cloudWorkspace";
 export interface NotificationPreferences {
   groupActivity: boolean;
   dailyVerse: boolean;
+  /** The "continue where you stopped" nudge, three times a day. */
+  readingReminder: boolean;
   verseTimeZone: string;
 }
 
 export const DEFAULT_PREFERENCES: NotificationPreferences = {
   groupActivity: true,
   dailyVerse: true,
+  readingReminder: true,
   verseTimeZone: localZone(),
 };
 
@@ -32,7 +35,7 @@ export async function loadNotificationPreferences(userId: string): Promise<Notif
   if (!supabase) return { ...DEFAULT_PREFERENCES, verseTimeZone: localZone() };
   const { data, error } = await supabase
     .from("notification_preferences")
-    .select("group_activity,daily_verse,verse_time_zone")
+    .select("group_activity,daily_verse,reading_reminder,verse_time_zone")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -40,12 +43,14 @@ export async function loadNotificationPreferences(userId: string): Promise<Notif
   const row = data as {
     group_activity?: boolean;
     daily_verse?: boolean;
+    reading_reminder?: boolean;
     verse_time_zone?: string | null;
   } | null;
 
   return {
     groupActivity: row?.group_activity ?? true,
     dailyVerse: row?.daily_verse ?? true,
+    readingReminder: row?.reading_reminder ?? true,
     // A reader who has never set one gets their device zone, which is what the
     // 06:00 and 21:00 slots are measured against.
     verseTimeZone: row?.verse_time_zone || localZone(),
@@ -62,6 +67,7 @@ export async function saveNotificationPreferences(
       user_id: userId,
       group_activity: preferences.groupActivity,
       daily_verse: preferences.dailyVerse,
+      reading_reminder: preferences.readingReminder,
       verse_time_zone: preferences.verseTimeZone,
       updated_at: new Date().toISOString(),
     },

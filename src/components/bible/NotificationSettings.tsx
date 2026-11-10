@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { BellOff, BellRing, Loader2, Moon, Sun } from "lucide-react";
+import { BellOff, BellRing, BookOpen, Loader2, Moon, Sun } from "lucide-react";
 import { toast } from "sonner";
 import {
   DEFAULT_PREFERENCES,
@@ -158,7 +158,7 @@ export const NotificationSettings: React.FC<{
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold">Notifications</h3>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Group activity and a verse every morning and evening.
+            Group activity, a verse every morning and evening, and three gentle nudges to keep reading.
           </p>
         </div>
       </div>
@@ -218,6 +218,23 @@ export const NotificationSettings: React.FC<{
             type="checkbox"
             checked={prefs.groupActivity}
             onChange={(event) => void updatePrefs({ groupActivity: event.target.checked })}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--primary))]"
+          />
+        </label>
+
+        <label className="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-border/70 bg-card p-3">
+          <span className="min-w-0">
+            <span className="block text-xs font-semibold">Continue where you stopped</span>
+            <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] leading-4 text-muted-foreground">
+              <BookOpen className="h-3 w-3 text-primary" /> 8:00 am
+              <span aria-hidden>·</span> 1:00 pm
+              <span aria-hidden>·</span> 7:00 pm
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={prefs.readingReminder}
+            onChange={(event) => void updatePrefs({ readingReminder: event.target.checked })}
             className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--primary))]"
           />
         </label>

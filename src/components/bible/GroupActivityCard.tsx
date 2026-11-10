@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { BookOpen, Check, Flame, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
+import { loadVerseOfTheDay, type DailyVerse } from "@/lib/notificationPrefs";
 import {
   activityPassageLabel,
   lastReadLabel,
@@ -49,6 +50,7 @@ export const GroupActivityCard: React.FC<{
   onRecorded?: () => void;
 }> = ({ groupId, groupTitle, currentUserId, onRecorded }) => {
   const [activity, setActivity] = useState<GroupActivity | null>(null);
+  const [verse, setVerse] = useState<DailyVerse | null>(null);
   const [members, setMembers] = useState<MemberStreak[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,11 +59,12 @@ export const GroupActivityCard: React.FC<{
   const refresh = useCallback(() => {
     let cancelled = false;
     setLoading(true);
-    void Promise.all([loadGroupActivity(groupId), loadActivitySummary(groupId)])
-      .then(([nextActivity, nextMembers]) => {
+    void Promise.all([loadGroupActivity(groupId), loadActivitySummary(groupId), loadVerseOfTheDay()])
+      .then(([nextActivity, nextMembers, nextVerse]) => {
         if (cancelled) return;
         setActivity(nextActivity);
         setMembers(nextMembers);
+        setVerse(nextVerse);
         setError(null);
       })
       .catch((loadError: unknown) => {
@@ -151,6 +154,23 @@ export const GroupActivityCard: React.FC<{
               <p className="mt-2 line-clamp-2 text-[11px] leading-4 text-muted-foreground">
                 {activity.note}
               </p>
+            )}
+
+            {/*
+              The same verse the rest of Selah shows today. It is identical for
+              every member because it is chosen by date, not per group — the
+              group reading is a separate selection and belongs above it.
+            */}
+            {verse && (
+              <div className="mt-3 rounded-xl border border-primary/20 bg-card/70 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                  Verse of the day
+                </p>
+                <p className="mt-1 text-xs font-semibold">{verse.reference}</p>
+                <p className="mt-0.5 line-clamp-3 text-[11px] leading-4 text-muted-foreground">
+                  {verse.text}
+                </p>
+              </div>
             )}
 
             {/* Start / done. */}

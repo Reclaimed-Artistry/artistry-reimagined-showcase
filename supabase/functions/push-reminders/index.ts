@@ -255,7 +255,10 @@ async function sendApns(
 // --------------------------------------------------------- group delivery ---
 type PendingNotice = {
   id: string;
-  recipient_id: string;
+  /** Set when the notice belongs to an account; null for an unlinked device. */
+  recipient_id: string | null;
+  /** Set when the notice is addressed to one installation with no account. */
+  device_id: string | null;
   // Null for the daily verse, which is addressed to a person, not a group.
   group_id: string | null;
   kind: string;
@@ -275,7 +278,10 @@ type PendingNotice = {
  */
 function noticeTag(notice: PendingNotice): string {
   if (notice.group_id) return `selah-group-${notice.group_id}`;
-  return `selah-verse-${notice.slot || "daily"}`;
+  // One tag per kind and slot, so the morning verse is not replaced by the
+  // afternoon reading nudge, but yesterday's evening verse *is* replaced by
+  // today's rather than stacking up.
+  return `selah-${notice.kind}-${notice.slot || "daily"}`;
 }
 
 /** Deliver queued group notices to every registered device of each recipient. */
@@ -292,25 +298,37 @@ async function deliverGroupNotifications(limit = 100) {
   const account = serviceAccount();
   const apnsReady = Boolean(apnsKeyId && apnsTeamId && apnsPrivateKey);
 
-  const byRecipient = new Map<string, PendingNotice[]>();
+  // Group every notice by the thing that receives it: an account, or a single
+  // installation when that device has never linked an account.
+  type Target = { userId: string | null; deviceId: string | null; notices: PendingNotice[] };
+  const targets = new Map<string, Target>();
   for (const notice of notices) {
-    const list = byRecipient.get(notice.recipient_id) ?? [];
-    list.push(notice);
-    byRecipient.set(notice.recipient_id, list);
+    const key = notice.device_id ? `device:${notice.device_id}` : `user:${notice.recipient_id}`;
+    const entry = targets.get(key) ?? {
+      userId: notice.device_id ? null : notice.recipient_id,
+      deviceId: notice.device_id,
+      notices: [],
+    };
+    entry.notices.push(notice);
+    targets.set(key, entry);
   }
 
   let sent = 0;
   let failed = 0;
   let nativeSkipped = 0;
 
-  for (const [recipientId, recipientNotices] of byRecipient) {
+  for (const target of targets.values()) {
+    const recipientId = target.userId;
+    const recipientNotices = target.notices;
     const unread = recipientNotices.length;
 
     // Web push: one notice per subscription, newest first per group.
-    const { data: subscriptions } = await supabase
+    const subscriptionsQuery = supabase
       .from("device_push_reminders")
-      .select("id, endpoint, p256dh, auth")
-      .eq("user_id", recipientId);
+      .select("id, endpoint, p256dh, auth");
+    const { data: subscriptions } = await (target.deviceId
+      ? subscriptionsQuery.eq("id", target.deviceId)
+      : subscriptionsQuery.eq("user_id", recipientId!));
 
     for (const notice of recipientNotices) {
       const tag = noticeTag(notice);
@@ -346,10 +364,11 @@ async function deliverGroupNotifications(limit = 100) {
       }
 
       // Native delivery, when credentials exist.
-      const { data: tokens } = await supabase
-        .from("device_push_tokens")
-        .select("token, platform")
-        .eq("user_id", recipientId);
+      // Native tokens are registered against an account, so an unlinked
+      // installation is reached through its web push subscription only.
+      const { data: tokens } = recipientId
+        ? await supabase.from("device_push_tokens").select("token, platform").eq("user_id", recipientId)
+        : { data: [] as { token: string; platform: string }[] };
 
       if ((tokens || []).length > 0 && !account && !apnsReady) nativeSkipped += tokens!.length;
 
