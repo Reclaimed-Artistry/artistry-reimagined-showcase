@@ -230,47 +230,94 @@ export async function closeSignInBrowser(): Promise<void> {
 }
 
 /**
+ * Completes a native sign-in from a URL the OS handed back, once.
+ *
+ * Both entry points funnel through here so a code is never exchanged twice:
+ * Android delivers the return trip as a deep link to a running app *or* as the
+ * launch intent of a killed one, and the same URL can otherwise arrive on both
+ * channels. A spent PKCE code fails the second exchange, which would overwrite
+ * a successful sign-in with an error.
+ */
+const exchanged = new Set<string>();
+
+async function completeOnce(
+  url: string,
+  onResult: (error: AuthError | null) => void,
+): Promise<void> {
+  if (!isAuthCallbackUrl(url)) return;
+
+  // Keyed on the code rather than the whole URL: the fragment can carry extra
+  // state that differs between deliveries of the same sign-in.
+  const key = readAuthCallback(url).code || url;
+  if (exchanged.has(key)) return;
+  exchanged.add(key);
+  if (exchanged.size > 20) exchanged.clear();
+
+  try {
+    const signedIn = await completeNativeSignIn(url);
+    onResult(signedIn ? null : new AuthError("exchange", "Sign-in did not return a session."));
+  } catch (error) {
+    void closeSignInBrowser();
+    onResult(
+      error instanceof AuthError
+        ? error
+        : new AuthError("unknown", "Could not finish signing in."),
+    );
+  }
+}
+
+/** The pending `appUrlOpen` registration, created at module load. */
+let listenerPromise: Promise<() => void> | null = null;
+
+/**
+ * Attaches the `appUrlOpen` listener as early as possible.
+ *
+ * This deliberately does not wait for a component to mount. Tapping "Continue
+ * with Google" switches the app to the system browser, and Android may stop or
+ * kill the activity while the reader is choosing an account. A listener that
+ * was only being registered at that moment could be torn down before it
+ * attached, and then the deep link would open the app with nothing listening
+ * for it — a sign-in that silently never finishes.
+ *
+ * Registering at import time means the listener exists before the first render,
+ * whether the reader came from a deep link or a cold start.
+ */
+function ensureNativeListener(): Promise<() => void> {
+  if (listenerPromise) return listenerPromise;
+
+  listenerPromise = import("@capacitor/app")
+    .then(({ App }) =>
+      App.addListener("appUrlOpen", ({ url }) => {
+        void completeOnce(url, (error) => {
+          for (const sink of resultSinks) sink(error);
+        });
+      }).then((handle) => () => void handle.remove()),
+    )
+    .catch(() => () => {});
+
+  return listenerPromise;
+}
+
+/** Mounted components that want to hear the outcome of a deep-link sign-in. */
+const resultSinks = new Set<(error: AuthError | null) => void>();
+
+/**
  * Registers the deep-link listener that completes an Android/iOS sign-in.
  * Returns an unsubscribe function.
+ *
+ * Safe to call from a component effect: the underlying OS listener is shared
+ * and outlives any single mount, so remounting the panel cannot lose a result.
  */
 export function listenForAuthCallback(
   onResult: (error: AuthError | null) => void,
 ): () => void {
   if (!isNative()) return () => {};
 
-  let disposed = false;
-  let remove: (() => void) | undefined;
-
-  const handleUrl = (url: string) => {
-    if (!isAuthCallbackUrl(url)) return;
-    void completeNativeSignIn(url)
-      .then((signedIn) => {
-        onResult(signedIn ? null : new AuthError("exchange", "Sign-in did not return a session."));
-      })
-      .catch((error: unknown) => {
-        void closeSignInBrowser();
-        onResult(
-          error instanceof AuthError
-            ? error
-            : new AuthError("unknown", "Could not finish signing in."),
-        );
-      });
-  };
-
-  void import("@capacitor/app").then(({ App }) => {
-    if (disposed) return;
-    const listener = App.addListener("appUrlOpen", ({ url }) => handleUrl(url));
-    // `addListener` resolves to a handle that removes it.
-    void listener.then((handle) => {
-      if (disposed) void handle.remove();
-      else remove = () => void handle.remove();
-    });
-
-  });
+  resultSinks.add(onResult);
+  void ensureNativeListener();
 
   return () => {
-    disposed = true;
-    remove?.();
+    resultSinks.delete(onResult);
   };
 }
 
@@ -312,11 +359,22 @@ export { platform as authPlatform };
  */
 export async function resumeLaunchSignIn(): Promise<boolean> {
   if (!isNative()) return false;
+  // The deep-link listener has to exist even when this is not a launch-intent
+  // sign-in, because the next return trip may arrive while the app is running.
+  void ensureNativeListener();
   try {
     const { App } = await import("@capacitor/app");
     const launch = await App.getLaunchUrl();
     if (!launch?.url || !isAuthCallbackUrl(launch.url)) return false;
-    return await completeNativeSignIn(launch.url);
+    // Share the dedupe with the listener: a killed app can be handed the same
+    // URL through both channels.
+    let failure: AuthError | null = null;
+    await completeOnce(launch.url, (error) => {
+      failure = error;
+    });
+    if (failure) throw failure;
+    const { data } = await supabase.auth.getSession();
+    return Boolean(data.session);
   } catch (error) {
     // A spent or tampered code throws here. Staying quiet is right: the reader
     // sees the signed-out panel and can simply sign in again.

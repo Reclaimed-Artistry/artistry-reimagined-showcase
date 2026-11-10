@@ -25,6 +25,20 @@ Visit the live Vercel deployment on your phone:
 npm install
 npm run mobile:android
 ```
+
+`npm run mobile:android` runs `npm run build` before syncing, and that build
+now fails immediately if `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` are
+missing. Both live in the committed `.env` whose values are public, so a fresh
+clone works with no extra setup.
+
+Do not skip the build step and open `android/` directly in Android Studio. The
+APK bundles the compiled web app from `dist/`, so edits to `src/` reach the app
+only after `npm run build && npx cap sync android`. Opening the folder and
+pressing Run repackages whatever was last synced, and a checkout that was never
+built carries no Supabase configuration at all — Google sign-in then has
+nothing to talk to and fails with no error.
+
+See `docs/ANDROID_GOOGLE_SIGN_IN.md` for how the sign-in return trip works.
 Inside Android Studio:
 1. Choose **Build → Generate Signed App Bundle / APK…** → select **Android App Bundle (`.aab`)**.
 2. Create or select your upload keystore (`.jks`), choose **release**, and build `app-release.aab`.

@@ -9,6 +9,12 @@ lerna-debug.log*
 
 node_modules
 dist
+
+# The Supabase URL and publishable key are public and must be present for a
+# native build to be able to sign in, so .env is committed. Keep every other
+# env file, and any local override, out of git.
+.env.local
+.env.*.local
 dist-ssr
 *.local
 

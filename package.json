@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/generate-icons.mjs && node scripts/ensure-bibles.mjs && vite build && node scripts/generate-bible-chapters.mjs && node scripts/stamp-service-worker.mjs",
+    "build": "node scripts/check-cloud-config.mjs && node scripts/generate-icons.mjs && node scripts/ensure-bibles.mjs && vite build && node scripts/generate-bible-chapters.mjs && node scripts/stamp-service-worker.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
