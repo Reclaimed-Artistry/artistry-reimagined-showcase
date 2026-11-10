@@ -22,6 +22,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!--
+                Google sign-in returns to the app on this scheme. The system
+                browser renders the consent screen (Google refuses to sign in
+                from an embedded WebView), then redirects here, and Capacitor
+                forwards the URL to the appUrlOpen listener that exchanges the
+                code for a session.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="@string/custom_url_scheme" android:host="auth-callback" />
+            </intent-filter>
+
         </activity>
 
         <provider
