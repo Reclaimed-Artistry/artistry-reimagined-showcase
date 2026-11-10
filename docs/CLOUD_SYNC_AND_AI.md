@@ -50,3 +50,47 @@ Account sign-in remains available separately under **Study → Sync & Groups** f
 ## Audio behavior
 
 Audio uses browser speech synthesis or streams the Bible provider's studio narration. Media Session metadata and lock-screen controls are registered when the browser supports them. Sleep timer choices cycle through 15, 30, 45, and 60 minutes. Studio narration is not cached or offered as an offline download because third-party recording redistribution licenses are not verified.
+
+## Group forum
+
+After signing in with Google, every reading group has a conversation: **Study → Sync & Groups → open a group → Open conversation**. Anyone in the group can ask a question, and anyone can answer it. Questions and answers live in `reading_group_posts`; a reply carries a `parent_id` pointing at the question it answers, and a database trigger refuses a reply whose parent is in a different group.
+
+Display names come from `group_member_names()`, a security-definer function that returns names only for a group the caller already belongs to. `auth.users` is never exposed to the browser.
+
+## Notifications
+
+Every group event is written to `group_notifications`, once per recipient, by database triggers — a member can never forge a notice for somebody else:
+
+| Event | Trigger |
+|---|---|
+| Someone asks a question or answers one | `notify_group_post` |
+| A member completes another day of the shared plan | `notify_group_progress` |
+| A member joins | `notify_group_membership` |
+
+The author is excluded from their own notice. Recipients can read only their own rows, and a trigger limits them to changing the `read_at` flag — the text of a notice already queued cannot be rewritten from a browser.
+
+Delivery is a cron job that runs every minute (`selah-push-reminders-every-minute`), calling the `push-reminders` edge function with `action: "send-due"`. It claims the queue atomically with `FOR UPDATE SKIP LOCKED`, so overlapping runs never send twice, then delivers to:
+
+- **Web** — the reader's `PushSubscription`, stored in `device_push_reminders` (the same row the daily reading reminder uses, now carrying `user_id`). Tapping opens the group.
+- **Android** — FCM HTTP v1 via `device_push_tokens`.
+- **iOS/iPadOS** — APNs token auth via `device_push_tokens`.
+
+### Enabling mobile delivery
+
+Web push works with no further setup; VAPID keys are already configured. Native delivery stays dormant until these secrets exist on the Supabase project, after which no code change is needed:
+
+| Secret | Where it comes from |
+|---|---|
+| `FCM_SERVICE_ACCOUNT_JSON` | Firebase console → Project settings → Service accounts → Generate new private key. Paste the whole JSON file. |
+| `APNS_KEY_ID` | Apple Developer → Keys → a key with "Apple Push Notifications service (APNs)" enabled. |
+| `APNS_TEAM_ID` | Apple Developer → Membership. |
+| `APNS_PRIVATE_KEY` | Contents of the downloaded `.p8` file, including the BEGIN/END lines. |
+| `APNS_TOPIC` | Optional. Defaults to `app.selahbible.multiversion`. |
+| `APNS_ENVIRONMENT` | `sandbox` for development builds, otherwise leave unset for production. |
+
+Two native files also need to be in place before a build:
+
+- `android/app/google-services.json` — downloaded from the Firebase project. `android/app/build.gradle` applies the Google services plugin automatically when the file exists.
+- iOS signing: `ios/App/App/App.entitlements` carries `aps-environment`. Xcode needs the Push Notifications capability enabled on the App ID, plus the same Firebase APNs key uploaded to the Firebase console (Firebase is what queues iOS messages when it sends through FCM).
+
+`MainActivity` creates the `selah_group` notification channel, because Android 8+ silently drops a notification that names a channel which does not exist.

@@ -8,6 +8,7 @@ import {
   Loader2,
   LockKeyhole,
   LogOut,
+  MessagesSquare,
   RefreshCw,
   Share2,
   ShieldCheck,
@@ -33,6 +34,8 @@ import {
   listenForAuthCallback,
   startGoogleSignIn,
 } from "@/lib/googleAuth";
+import { GroupForum } from "@/components/bible/GroupForum";
+import { GroupNotificationBell } from "@/components/bible/GroupNotificationBell";
 import type { ReadingPlanDefinition } from "@/types/bible";
 
 type GroupProgress = {
@@ -112,6 +115,8 @@ export const CloudWorkspacePanel: React.FC = () => {
   const [syncReady, setSyncReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState("On this device only");
   const [groupTitle, setGroupTitle] = useState("My reading group");
+  /** Which group's conversation is expanded; one at a time keeps the panel calm. */
+  const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState(allPlans[0]?.id || "");
   const [inviteCode, setInviteCode] = useState(() => new URLSearchParams(window.location.search).get("group") || "");
   const [groups, setGroups] = useState<ReadingGroup[]>([]);
@@ -508,9 +513,24 @@ export const CloudWorkspacePanel: React.FC = () => {
                     <div className="mt-0.5 text-[11px] text-muted-foreground">{syncStatus}</div>
                   </div>
                 </div>
+                <div className="flex items-center gap-1">
+                <GroupNotificationBell
+                  userId={session.user.id}
+                  onOpenGroup={(groupId) => {
+                    setOpenGroupId(groupId);
+                    // The bell lives at the top of the panel; bring the open
+                    // conversation into view instead of leaving it offscreen.
+                    window.requestAnimationFrame(() => {
+                      document
+                        .getElementById(`group-${groupId}`)
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    });
+                  }}
+                />
                 <button type="button" onClick={handleSignOut} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs font-semibold hover:bg-accent disabled:opacity-50">
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />} Sign out
                 </button>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
@@ -586,17 +606,41 @@ export const CloudWorkspacePanel: React.FC = () => {
                 No groups yet. Create one above, or join with an invite code someone shared with you.
               </p>
             )}
-            {groups.length > 0 && <div className="mt-5 space-y-3"><div className="flex items-center justify-between"><h3 className="font-semibold">Your groups ({groups.length})</h3><button type="button" onClick={() => void refreshGroups()} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"><RefreshCw className="h-3.5 w-3.5" />Refresh</button></div>
-              {groups.map((group) => {
-                const myProgress = group.progress.find((item) => item.user_id === session.user.id);
-                return <article key={group.id} className="rounded-2xl border border-border/70 bg-background/60 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3"><div><h4 className="font-semibold">{group.title}</h4><p className="text-xs text-muted-foreground">{group.plan?.title || "Shared plan"} • {group.progress.length} member{group.progress.length === 1 ? "" : "s"}</p></div>
-                    <button type="button" onClick={() => void shareGroup(group)} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold hover:bg-accent"><Share2 className="h-3.5 w-3.5" />Invite</button></div>
-                  <div className="mt-3 flex flex-wrap gap-2">{group.progress.map((item) => <span key={item.user_id} className="rounded-lg bg-primary/10 px-2.5 py-1.5 text-[11px]"><strong>{item.user_id === session.user.id ? "You" : `Reader ${item.user_id.slice(0, 5)}`}</strong> • {item.completed_days.length}/{group.plan.durationDays} days</span>)}{!myProgress && <span className="text-xs text-muted-foreground">Progress appears after you start this plan.</span>}</div>
-                  {group.plan?.id && <button type="button" onClick={() => { if (group.plan.isCustom && !allPlans.some((plan) => plan.id === group.plan.id)) addCustomPlan(group.plan); if (!enrollments.some((entry) => entry.planId === group.plan.id)) enrollInPlan(group.plan.id); }} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"><CheckCircle2 className="h-3.5 w-3.5" />Add shared plan to my plans</button>}
-                </article>;
-              })}
-            </div>}
+            {groups.length > 0 && (
+              <div className="mt-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">Your groups ({groups.length})</h3>
+                  <button type="button" onClick={() => void refreshGroups()} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"><RefreshCw className="h-3.5 w-3.5" />Refresh</button>
+                </div>
+                {groups.map((group) => {
+                  const myProgress = group.progress.find((item) => item.user_id === session.user.id);
+                  const open = openGroupId === group.id;
+                  return (
+                    <article id={`group-${group.id}`} key={group.id} className="scroll-mt-4 rounded-2xl border border-border/70 bg-background/60 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h4 className="font-semibold">{group.title}</h4>
+                          <p className="text-xs text-muted-foreground">{group.plan?.title || "Shared plan"} • {group.progress.length} member{group.progress.length === 1 ? "" : "s"}</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <button type="button" onClick={() => setOpenGroupId(open ? null : group.id)} aria-expanded={open} className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${open ? "bg-primary text-primary-foreground" : "border border-border bg-card hover:bg-accent"}`}><MessagesSquare className="h-3.5 w-3.5" />{open ? "Hide conversation" : "Open conversation"}</button>
+                          <button type="button" onClick={() => void shareGroup(group)} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold hover:bg-accent"><Share2 className="h-3.5 w-3.5" />Invite</button>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">{group.progress.map((item) => <span key={item.user_id} className="rounded-lg bg-primary/10 px-2.5 py-1.5 text-[11px]"><strong>{item.user_id === session.user.id ? "You" : `Reader ${item.user_id.slice(0, 5)}`}</strong> • {item.completed_days.length}/{group.plan.durationDays} days</span>)}{!myProgress && <span className="text-xs text-muted-foreground">Progress appears after you start this plan.</span>}</div>
+                      {group.plan?.id && <button type="button" onClick={() => { if (group.plan.isCustom && !allPlans.some((plan) => plan.id === group.plan.id)) addCustomPlan(group.plan); if (!enrollments.some((entry) => entry.planId === group.plan.id)) enrollInPlan(group.plan.id); }} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"><CheckCircle2 className="h-3.5 w-3.5" />Add shared plan to my plans</button>}
+                      {open && (
+                        <GroupForum
+                          groupId={group.id}
+                          groupTitle={group.title}
+                          currentUserId={session.user.id}
+                        />
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
       </section>

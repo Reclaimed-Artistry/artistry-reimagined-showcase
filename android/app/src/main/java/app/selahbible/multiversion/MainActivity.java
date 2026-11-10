@@ -2,9 +2,12 @@ package app.selahbible.multiversion;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Message;
 import android.view.ViewGroup;
@@ -45,6 +48,12 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Android 8+ delivers no notification at all unless the channel it is
+        // posted to exists first, and FCM payloads that name a channel are
+        // dropped silently when it is missing. Group notices specify
+        // "selah_group", so it has to be created by the app itself.
+        createNotificationChannels();
+
         if (bridge == null || bridge.getWebView() == null) {
             return;
         }
@@ -65,6 +74,39 @@ public class MainActivity extends BridgeActivity {
         } catch (Exception ignored) {
             // Cookie storage is unavailable; the pop-up still works.
         }
+    }
+
+    /**
+     * Notification channels for Android 8+.
+     *
+     * "selah_group" is the one the push service targets. It is high importance
+     * so a question or answer is visible as a heads-up rather than buried, with
+     * vibration kept on. Creating it twice is harmless: the OS ignores the
+     * second call and preserves whatever the reader set in system settings.
+     */
+    private void createNotificationChannels() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return;
+        }
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager == null) {
+            return;
+        }
+        NotificationChannel group = new NotificationChannel(
+                "selah_group",
+                "Reading group",
+                NotificationManager.IMPORTANCE_HIGH);
+        group.setDescription("Questions, answers, progress, and new members in your reading groups.");
+        group.enableVibration(true);
+        group.setShowBadge(true);
+        manager.createNotificationChannel(group);
+
+        NotificationChannel reminder = new NotificationChannel(
+                "selah_reminders",
+                "Reading reminders",
+                NotificationManager.IMPORTANCE_DEFAULT);
+        reminder.setDescription("Your daily reminder to read Scripture.");
+        manager.createNotificationChannel(reminder);
     }
 
     /** The Puter pages that may host the AI-voice sign-in. */
