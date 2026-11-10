@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, BellRing } from "lucide-react";
 import {
   countUnreadNotifications,
@@ -28,6 +28,7 @@ export const GroupNotificationBell: React.FC<{ userId: string; onOpenGroup?: (gr
   onOpenGroup,
 }) => {
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [unread, setUnread] = useState(0);
   const [items, setItems] = useState<GroupNotification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -40,6 +41,24 @@ export const GroupNotificationBell: React.FC<{ userId: string; onOpenGroup?: (gr
     refreshCount();
     return watchNotifications(userId, refreshCount);
   }, [userId, refreshCount]);
+
+  // The panel is a popover, so it needs a way out that does not depend on a
+  // keyboard: tapping anywhere else dismisses it, and Escape still works.
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   const handleOpen = async () => {
     const next = !open;
@@ -58,7 +77,7 @@ export const GroupNotificationBell: React.FC<{ userId: string; onOpenGroup?: (gr
   };
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <button
         type="button"
         onClick={() => void handleOpen()}
@@ -75,8 +94,18 @@ export const GroupNotificationBell: React.FC<{ userId: string; onOpenGroup?: (gr
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-2 shadow-xl">
-          <div className="flex items-center justify-between px-2 py-1.5">
+        /*
+         * Anchored to the bell, the panel ran off the left edge on a phone: the
+         * bell sits near the middle of the account card because Sign out is to
+         * its right, so a 320px panel dropped ~120px off screen at 375px wide.
+         *
+         * Below `sm` the panel is taken out of the bell's flow entirely and
+         * pinned to the viewport instead (inset-x-4, fixed), which is always
+         * fully visible regardless of where the bell lands. From `sm` up there
+         * is room to hang it off the bell.
+         */
+        <div className="fixed inset-x-4 top-24 z-50 rounded-2xl border border-border bg-card p-2 shadow-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80">
+          <div className="flex items-center justify-between gap-2 px-2 py-1.5">
             <span className="text-xs font-semibold">Group activity</span>
             <button
               type="button"
