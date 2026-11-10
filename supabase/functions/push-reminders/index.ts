@@ -256,12 +256,27 @@ async function sendApns(
 type PendingNotice = {
   id: string;
   recipient_id: string;
-  group_id: string;
+  // Null for the daily verse, which is addressed to a person, not a group.
+  group_id: string | null;
   kind: string;
+  slot: string | null;
   title: string;
   body: string;
   url: string;
 };
+
+/**
+ * Notification tag.
+ *
+ * Android and the Notifications API both collapse notices that share a tag. A
+ * verse has no group, so tagging it with one would make every verse on a device
+ * overwrite the previous one; the slot keeps morning and evening separate while
+ * still replacing yesterday's unread verse of the same slot.
+ */
+function noticeTag(notice: PendingNotice): string {
+  if (notice.group_id) return `selah-group-${notice.group_id}`;
+  return `selah-verse-${notice.slot || "daily"}`;
+}
 
 /** Deliver queued group notices to every registered device of each recipient. */
 async function deliverGroupNotifications(limit = 100) {
@@ -298,12 +313,13 @@ async function deliverGroupNotifications(limit = 100) {
       .eq("user_id", recipientId);
 
     for (const notice of recipientNotices) {
+      const tag = noticeTag(notice);
       const payload = JSON.stringify({
         title: notice.title,
         body: notice.body,
         url: notice.url,
         groupId: notice.group_id,
-        tag: `selah-group-${notice.group_id}`,
+        tag,
         unreadCount: unread,
       });
 
@@ -344,7 +360,7 @@ async function deliverGroupNotifications(limit = 100) {
               title: notice.title,
               body: notice.body,
               url: notice.url,
-              tag: `selah-group-${notice.group_id}`,
+              tag,
             });
             ok ? (sent += 1) : void 0;
           } else if (device.platform === "ios" && apnsReady) {
@@ -352,7 +368,7 @@ async function deliverGroupNotifications(limit = 100) {
               title: notice.title,
               body: notice.body,
               url: notice.url,
-              tag: `selah-group-${notice.group_id}`,
+              tag,
             });
             ok ? (sent += 1) : void 0;
           }
@@ -430,6 +446,20 @@ Deno.serve(async (request) => {
       }
     }
 
+    // Queue anything the schedule says is due (daily verse at 06:00 and 21:00
+    // local, owner reminders at their chosen time). This runs here rather than
+    // in a separate cron job so a single every-minute tick covers everything,
+    // and it is idempotent: delivery_key makes a re-run a no-op.
+    let scheduled: unknown = null;
+    try {
+      const { data, error: scheduleError } = await supabase.rpc("run_notification_schedulers");
+      if (scheduleError) throw scheduleError;
+      scheduled = data;
+    } catch (error) {
+      // Never block delivery of what is already queued because queueing failed.
+      scheduled = { error: String((error as Error).message || error) };
+    }
+
     // Group notifications.
     let group = { attempted: 0, sent: 0, failed: 0, nativeSkipped: 0 };
     try {
@@ -445,6 +475,7 @@ Deno.serve(async (request) => {
     return json(
       {
         ok: true,
+        scheduled,
         reminders: { sent: remindersSent, removed: remindersRemoved },
         group,
       },

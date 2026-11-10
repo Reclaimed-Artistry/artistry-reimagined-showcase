@@ -101,3 +101,68 @@ Two native files also need to be in place before a build:
 **iOS does not use Firebase.** `@capacitor/push-notifications` returns the raw APNs device token (hex), not an FCM token, and the edge function posts straight to `api.push.apple.com/3/device/<token>` signed with the `.p8` key. Uploading the key to Firebase would do nothing here — only Android goes through FCM.
 
 `MainActivity` creates the `selah_group` notification channel, because Android 8+ silently drops a notification that names a channel which does not exist.
+
+## The reading journey
+
+Each group card shows every member by name, with when they started, the day they
+are on, days completed, and when they last read. The roster comes from
+`group_member_overview(group_id)`, a SECURITY DEFINER function that re-checks
+membership itself, so it cannot be used to enumerate a group the caller is not
+in.
+
+Progress was previously rendered as `Reader 3f8a2 • 12/30 days` because the
+card only had progress rows, which carry a user id and nothing else.
+
+## Owner reminders
+
+Owners can nudge the whole group, either on demand or on a daily schedule:
+
+- **On demand** — `send_group_reminder(group_id, note, passage)`. The message is
+  composed from an optional note plus the owner's current reading, and fanned out
+  through the existing notification queue. Only the owner can call it; a member
+  attempting it raises an error and writes nothing.
+- **Scheduled** — `set_group_reminder(group_id, enabled, time, time_zone)`, then
+  `queue_scheduled_group_reminders()` dispatches at the owner's local time each
+  day. `last_reminder_sent_on` claims the day first, so a slow loop cannot
+  double-send.
+
+Passage labels are built in the app, not the database: the canon (book number to
+name) ships in the bundle and has no server-side table.
+
+## Verse of the day
+
+`daily_verses` holds a curated set with the full text, and `verse_of_the_day(date)`
+rotates through it by `(days since 2026-01-01) mod count`. Every member sees the
+same verse on the same date, and the list only repeats once every verse has had
+its turn.
+
+Delivery is at **06:00 and 21:00 in each member's own time zone**:
+
+- `queue_daily_verse_notifications()` runs every minute and queues a notice for
+  members whose local clock has just reached either slot.
+- One row per member per local day per slot, enforced by a unique index on
+  `(recipient_id, delivery_key)` where `delivery_key` is
+  `verse:<local-date>:<slot>`. This is why re-running is harmless.
+- The reader's zone comes from `notification_preferences.verse_time_zone`, which
+  is written at sign-in from the device, falling back to their most recent
+  `device_push_reminders` row, then UTC.
+
+Verse notices have `group_id = NULL` — they are addressed to a person, not a
+group — which is why that column is nullable and the unique index is partial.
+
+## Notification settings
+
+`notification_preferences` stores opt-*outs*: group activity and the daily verse
+both default to on, so a member who never opens the screen still hears from their
+group. The screen shows device permission separately from these preferences,
+because a reader who switches "Verse of the day" on while the device itself is
+blocked would otherwise never receive anything and assume the switch was broken.
+
+Seeding the verse list (57 verses, already applied):
+
+```sql
+-- regenerate from public/bibles/en_bsb.json if the list ever needs replacing
+insert into public.daily_verses (reference, book, chapter, verse_start, verse_end, text)
+values (...)
+on conflict (reference) do nothing;
+```

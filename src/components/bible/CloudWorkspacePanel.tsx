@@ -35,6 +35,11 @@ import {
   startGoogleSignIn,
 } from "@/lib/googleAuth";
 import { GroupForum } from "@/components/bible/GroupForum";
+import { GroupJourney } from "@/components/bible/GroupJourney";
+import { NotificationSettings } from "@/components/bible/NotificationSettings";
+import { describePassage, localTimeZone } from "@/lib/groupJourney";
+import { DEFAULT_PREFERENCES, saveNotificationPreferences } from "@/lib/notificationPrefs";
+import { BOOK_BY_NUMBER } from "@/data/canonicalBooks";
 import { GroupNotificationBell } from "@/components/bible/GroupNotificationBell";
 import type { ReadingPlanDefinition } from "@/types/bible";
 
@@ -132,6 +137,41 @@ export const CloudWorkspacePanel: React.FC = () => {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  /*
+   * Record this device's time zone as soon as a session exists.
+   *
+   * The daily verse is queued at 06:00 and 21:00 in the reader's own zone. With
+   * no stored preference the scheduler falls back to UTC, so someone in Lagos
+   * would get 7am and 10pm instead. Writing the row at sign-in means the very
+   * first verse is already correctly timed, without requiring a visit to the
+   * notifications screen.
+   */
+  useEffect(() => {
+    const userId = session?.user.id;
+    if (!userId || !supabase) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("notification_preferences")
+          .select("verse_time_zone")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (cancelled) return;
+        if (data?.verse_time_zone) return;
+        await saveNotificationPreferences(userId, {
+          ...DEFAULT_PREFERENCES,
+          verseTimeZone: localTimeZone(),
+        });
+      } catch {
+        // The scheduler falls back to UTC; nothing here is worth interrupting.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user.id]);
 
   const uploadSnapshot = useCallback(async (userId: string, payload: StudySnapshot) => {
     if (!supabase) return;
@@ -473,6 +513,22 @@ export const CloudWorkspacePanel: React.FC = () => {
     }
   };
 
+  /**
+   * The reading the owner's reminder should point at.
+   *
+   * Each member sits on a different day, so "today's scripture" is the owner's
+   * own position in the plan. When they have not started, day one is the honest
+   * answer — it is what everyone is about to read.
+   */
+  const todayPassageFor = (group: ReadingGroup, mine: GroupProgress | undefined): string => {
+    const days = group.plan?.days ?? [];
+    if (days.length === 0) return "";
+    const dayIndex = Math.min(Math.max((mine?.current_day ?? 1) - 1, 0), days.length - 1);
+    return describePassage(days[dayIndex]?.passages ?? [], (bookNumber) =>
+      BOOK_BY_NUMBER.get(bookNumber)?.name ?? "",
+    );
+  };
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-border/80 bg-card p-5 shadow-sm sm:p-7">
@@ -563,6 +619,10 @@ export const CloudWorkspacePanel: React.FC = () => {
             {backupError && <p role="alert" className="mt-3 text-xs text-destructive">{backupError}</p>}
           </div>
 
+          {session && (
+            <NotificationSettings userId={session.user.id} />
+          )}
+
           <div className="rounded-2xl border border-border/70 bg-background/60 p-4">
             <h3 className="font-semibold">Manual backup &amp; transfer</h3>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">Export a portable copy, then import it on another device. Imports merge by item and keep the newest edits.</p>
@@ -627,7 +687,16 @@ export const CloudWorkspacePanel: React.FC = () => {
                           <button type="button" onClick={() => void shareGroup(group)} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold hover:bg-accent"><Share2 className="h-3.5 w-3.5" />Invite</button>
                         </div>
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-2">{group.progress.map((item) => <span key={item.user_id} className="rounded-lg bg-primary/10 px-2.5 py-1.5 text-[11px]"><strong>{item.user_id === session.user.id ? "You" : `Reader ${item.user_id.slice(0, 5)}`}</strong> • {item.completed_days.length}/{group.plan.durationDays} days</span>)}{!myProgress && <span className="text-xs text-muted-foreground">Progress appears after you start this plan.</span>}</div>
+                      <GroupJourney
+                        groupId={group.id}
+                        groupTitle={group.title}
+                        currentUserId={session.user.id}
+                        isOwner={group.owner_id === session.user.id}
+                        planDays={group.plan?.durationDays ?? 0}
+                        todayPassage={todayPassageFor(group, myProgress)}
+                        refreshKey={group.progress.length}
+                      />
+                      {!myProgress && <p className="mt-2 text-xs text-muted-foreground">Your own progress appears here once you start this plan.</p>}
                       {group.plan?.id && <button type="button" onClick={() => { if (group.plan.isCustom && !allPlans.some((plan) => plan.id === group.plan.id)) addCustomPlan(group.plan); if (!enrollments.some((entry) => entry.planId === group.plan.id)) enrollInPlan(group.plan.id); }} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"><CheckCircle2 className="h-3.5 w-3.5" />Add shared plan to my plans</button>}
                       {open && (
                         <GroupForum
