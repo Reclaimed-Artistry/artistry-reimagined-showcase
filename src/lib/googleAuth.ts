@@ -241,28 +241,31 @@ export function listenForAuthCallback(
   let disposed = false;
   let remove: (() => void) | undefined;
 
+  const handleUrl = (url: string) => {
+    if (!isAuthCallbackUrl(url)) return;
+    void completeNativeSignIn(url)
+      .then((signedIn) => {
+        onResult(signedIn ? null : new AuthError("exchange", "Sign-in did not return a session."));
+      })
+      .catch((error: unknown) => {
+        void closeSignInBrowser();
+        onResult(
+          error instanceof AuthError
+            ? error
+            : new AuthError("unknown", "Could not finish signing in."),
+        );
+      });
+  };
+
   void import("@capacitor/app").then(({ App }) => {
     if (disposed) return;
-    const listener = App.addListener("appUrlOpen", ({ url }) => {
-      if (!isAuthCallbackUrl(url)) return;
-      void completeNativeSignIn(url)
-        .then((signedIn) => {
-          onResult(signedIn ? null : new AuthError("exchange", "Sign-in did not return a session."));
-        })
-        .catch((error: unknown) => {
-          void closeSignInBrowser();
-          onResult(
-            error instanceof AuthError
-              ? error
-              : new AuthError("unknown", "Could not finish signing in."),
-          );
-        });
-    });
+    const listener = App.addListener("appUrlOpen", ({ url }) => handleUrl(url));
     // `addListener` resolves to a handle that removes it.
     void listener.then((handle) => {
       if (disposed) void handle.remove();
       else remove = () => void handle.remove();
     });
+
   });
 
   return () => {
@@ -292,3 +295,33 @@ export function accountAvatar(user: {
 }
 
 export { platform as authPlatform };
+
+/**
+ * Finish a sign-in that arrived as the app's *launch* intent.
+ *
+ * `appUrlOpen` only fires for an intent delivered to an app that is already
+ * running. Android is free to kill Selah while the reader is away in the
+ * browser picking an account, and then the return trip launches the app
+ * instead. Nothing would exchange the code and the sign-in would stall with no
+ * error at all.
+ *
+ * This runs once at startup rather than inside a section component, because a
+ * relaunched app opens on whatever screen it was told to, and the Sync panel
+ * may never mount. Resolves `true` when it did exchange a session, so the
+ * caller can take the reader to the screen that shows they are signed in.
+ */
+export async function resumeLaunchSignIn(): Promise<boolean> {
+  if (!isNative()) return false;
+  try {
+    const { App } = await import("@capacitor/app");
+    const launch = await App.getLaunchUrl();
+    if (!launch?.url || !isAuthCallbackUrl(launch.url)) return false;
+    return await completeNativeSignIn(launch.url);
+  } catch (error) {
+    // A spent or tampered code throws here. Staying quiet is right: the reader
+    // sees the signed-out panel and can simply sign in again.
+    void closeSignInBrowser();
+    if (error instanceof AuthError) return false;
+    return false;
+  }
+}
