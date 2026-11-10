@@ -136,24 +136,51 @@ rotates through it by `(days since 2026-01-01) mod count`. Every member sees the
 same verse on the same date, and the list only repeats once every verse has had
 its turn.
 
-Delivery is at **06:00 and 21:00 in each member's own time zone**:
+Delivery is at **06:00 and 21:00 in each reader's own time zone**:
 
-- `queue_daily_verse_notifications()` runs every minute and queues a notice for
-  members whose local clock has just reached either slot.
-- One row per member per local day per slot, enforced by a unique index on
-  `(recipient_id, delivery_key)` where `delivery_key` is
-  `verse:<local-date>:<slot>`. This is why re-running is harmless.
-- The reader's zone comes from `notification_preferences.verse_time_zone`, which
-  is written at sign-in from the device, falling back to their most recent
-  `device_push_reminders` row, then UTC.
+- `queue_daily_verse_notifications()` runs every minute from
+  `run_notification_schedulers()` and queues a notice for every installation
+  whose local clock has passed either slot since its last one.
+- Slots are a *window*, not an exact minute: `due_verse_slots()` returns
+  `morning` before local noon and `evening` after it. The first version matched
+  the clock against exactly `'06:00'` and `'21:00'`, so a delayed or skipped cron
+  tick silently lost that day's verse. A window plus a `delivery_key` unique
+  index catches up without double-sending.
+- The reader's zone comes from `notification_preferences.verse_time_zone`, then
+  their most recent `device_push_reminders` row, then UTC.
+- **A device does not need an account.** The schedulers drive off
+  `device_push_reminders`, not `auth.users`; an unlinked installation is
+  addressed directly through `group_notifications.device_id`. This was the bug
+  that made the verse never arrive: six installations were subscribed and none
+  had a `user_id`, so every one was unreachable.
+- `claim_undelivered_group_notifications()` only claims a notice that has a live
+  subscription or token to go to, so a device that unsubscribed cannot consume
+  its own verse and mark it delivered.
 
-Verse notices have `group_id = NULL` — they are addressed to a person, not a
-group — which is why that column is nullable and the unique index is partial.
+Verse notices have `group_id = NULL` — they are addressed to a person or device,
+not a group — which is why that column is nullable and the unique index is
+partial. The tag is `selah-verse-<slot>`, so today's evening verse replaces
+yesterday's unread one instead of stacking.
+
+**The group view shows this same verse**, read through the same
+`verse_of_the_day()` call, so a group can never drift onto a different passage.
+
+## Continue-reading reminder
+
+Three times a day, at **08:00, 13:00 and 19:00 local**: `reading_reminder_slots`
+holds the hours and `queue_reading_reminders()` queues one `reading` notice per
+device per slot, with `delivery_key = reading:<device>:<local-date>:<slot>`.
+
+This replaces the single `reminder_time` nudge, which could not express three
+times a day. A reader can turn it off with
+`notification_preferences.reading_reminder`, which the settings screen exposes as
+"Continue where you stopped". The body names the day they stopped on when the app
+has synced it, otherwise it stays general.
 
 ## Notification settings
 
-`notification_preferences` stores opt-*outs*: group activity and the daily verse
-both default to on, so a member who never opens the screen still hears from their
+`notification_preferences` stores opt-*outs*: group activity, the daily verse and
+the three reading nudges all default to on, so a member who never opens the screen still hears from their
 group. The screen shows device permission separately from these preferences,
 because a reader who switches "Verse of the day" on while the device itself is
 blocked would otherwise never receive anything and assume the switch was broken.
