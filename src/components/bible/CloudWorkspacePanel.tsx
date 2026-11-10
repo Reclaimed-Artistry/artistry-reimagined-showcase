@@ -35,6 +35,7 @@ import {
   startGoogleSignIn,
 } from "@/lib/googleAuth";
 import { GroupForum } from "@/components/bible/GroupForum";
+import { GroupActivityCard } from "@/components/bible/GroupActivityCard";
 import { GroupJourney } from "@/components/bible/GroupJourney";
 import { NotificationSettings } from "@/components/bible/NotificationSettings";
 import { describePassage, localTimeZone } from "@/lib/groupJourney";
@@ -687,6 +688,12 @@ export const CloudWorkspacePanel: React.FC = () => {
                           <button type="button" onClick={() => void shareGroup(group)} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold hover:bg-accent"><Share2 className="h-3.5 w-3.5" />Invite</button>
                         </div>
                       </div>
+                      <GroupActivityCard
+                        groupId={group.id}
+                        groupTitle={group.title}
+                        currentUserId={session.user.id}
+                        onRecorded={() => void refreshGroups()}
+                      />
                       <GroupJourney
                         groupId={group.id}
                         groupTitle={group.title}

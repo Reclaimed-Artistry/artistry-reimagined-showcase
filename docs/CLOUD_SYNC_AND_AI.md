@@ -166,3 +166,34 @@ insert into public.daily_verses (reference, book, chapter, verse_start, verse_en
 values (...)
 on conflict (reference) do nothing;
 ```
+
+## Group activity and streaks
+
+`reading_group_progress.completed_days` is an array of day numbers: it says how
+much of a plan is done, but not *when*, so a streak cannot be computed from it.
+`group_activity_days` adds the missing dimension — one row per member per local
+date they read.
+
+- **Today's activity** — `group_current_activity(group_id)` resolves the plan day
+  from the group's start date and returns the passage plus its reflection prompt.
+  "Today" is the requesting member's date, so a group spread across zones still
+  agrees on one reading.
+- **Streaks** — `group_activity_summary(group_id)` uses gaps-and-islands: each
+  date minus its row number is constant across a consecutive run, so the newest
+  run's size is the streak. The run counts while it ends **today or yesterday**,
+  so a streak is not shown as broken during the hours before someone reads.
+- **Recording** — `record_group_activity(group_id, ...)` is idempotent on
+  `(group_id, user_id, activity_date)`; pressing the button twice updates one row
+  rather than inflating the streak. It notifies the group once, with the streak
+  in the body ("That is 3 days in a row").
+- **The card** — `GroupActivityCard` shows the passage, a start/join button, and
+  who has read today with their flame count.
+
+Two bugs worth remembering:
+
+- The notify trigger originally called `group_activity_summary()`, which raises
+  without `auth.uid()`. **A trigger has no JWT**, so the streak is computed
+  inline in the trigger instead. Do not call auth-dependent functions from
+  triggers.
+- `row_number()` returns `bigint`, so `date - row_number()` fails with
+  `operator does not exist: date - bigint`. Cast to `int`.
