@@ -79,18 +79,25 @@ Delivery is a cron job that runs every minute (`selah-push-reminders-every-minut
 
 Web push works with no further setup; VAPID keys are already configured. Native delivery stays dormant until these secrets exist on the Supabase project, after which no code change is needed:
 
-| Secret | Where it comes from |
+| Secret | Exact path in the console |
 |---|---|
-| `FCM_SERVICE_ACCOUNT_JSON` | Firebase console → Project settings → Service accounts → Generate new private key. Paste the whole JSON file. |
-| `APNS_KEY_ID` | Apple Developer → Keys → a key with "Apple Push Notifications service (APNs)" enabled. |
-| `APNS_TEAM_ID` | Apple Developer → Membership. |
-| `APNS_PRIVATE_KEY` | Contents of the downloaded `.p8` file, including the BEGIN/END lines. |
-| `APNS_TOPIC` | Optional. Defaults to `app.selahbible.multiversion`. |
-| `APNS_ENVIRONMENT` | `sandbox` for development builds, otherwise leave unset for production. |
+| `FCM_SERVICE_ACCOUNT_JSON` | Firebase console → gear icon → **Project settings** → **Service accounts** tab → **Generate new private key** → **Generate key**. Paste the entire downloaded JSON, braces and all, as one line. |
+| `APNS_KEY_ID` | Apple Developer → **Certificates, Identifiers & Profiles** → **Keys** → create a key with **Apple Push Notifications service (APNs)** ticked → the 10-character Key ID on the confirmation screen. |
+| `APNS_TEAM_ID` | Apple Developer → **Account** → **Membership details** → Team ID (10 characters). |
+| `APNS_PRIVATE_KEY` | The downloaded `AuthKey_XXXXXXXXXX.p8` file, opened in a text editor, including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines. |
+| `APNS_TOPIC` | Optional. Defaults to `app.selahbible.multiversion`. Must equal the bundle ID. |
+| `APNS_ENVIRONMENT` | `sandbox` when testing on a device from Xcode, otherwise leave unset for TestFlight and App Store builds. |
+
+Two different Firebase files are involved for Android, and they are not interchangeable:
+
+- **Service account JSON** — a private credential for the *server*. Goes into the `FCM_SERVICE_ACCOUNT_JSON` secret. Never commit it.
+- **`google-services.json`** — client configuration for the *app*. Goes at `android/app/google-services.json`. Safe to commit.
 
 Two native files also need to be in place before a build:
 
 - `android/app/google-services.json` — downloaded from the Firebase project. `android/app/build.gradle` applies the Google services plugin automatically when the file exists.
-- iOS signing: `ios/App/App/App.entitlements` carries `aps-environment`. Xcode needs the Push Notifications capability enabled on the App ID, plus the same Firebase APNs key uploaded to the Firebase console (Firebase is what queues iOS messages when it sends through FCM).
+- iOS signing: `ios/App/App/App.entitlements` carries `aps-environment`. Xcode needs the Push Notifications capability enabled on the App ID.
+
+**iOS does not use Firebase.** `@capacitor/push-notifications` returns the raw APNs device token (hex), not an FCM token, and the edge function posts straight to `api.push.apple.com/3/device/<token>` signed with the `.p8` key. Uploading the key to Firebase would do nothing here — only Android goes through FCM.
 
 `MainActivity` creates the `selah_group` notification channel, because Android 8+ silently drops a notification that names a channel which does not exist.
