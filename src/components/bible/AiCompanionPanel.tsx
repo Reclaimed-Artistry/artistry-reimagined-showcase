@@ -163,7 +163,12 @@ export const AiCompanionPanel: React.FC = () => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const scrollEndRef = useRef<HTMLDivElement | null>(null);
+  const streamRef = useRef<HTMLDivElement | null>(null);
+  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  /** The answer the reader has not seen yet, if any. */
+  const pendingAnchorRef = useRef<string | null>(null);
+  /** Answers already scrolled to, so a re-render never yanks the reader away. */
+  const anchoredRef = useRef<Set<string>>(new Set());
   const bookMeta = getBookMeta(bookNumber);
   const availableOfflineVersions = catalog.filter(
     (version) => version.provider === "bundled" || offlineSummaries.some((summary) => summary.versionId === version.id)
@@ -188,8 +193,31 @@ export const AiCompanionPanel: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aiPanelOpen, primaryChapterData, messages.length]);
 
+  // Show a fresh answer from its beginning.
+  //
+  // This used to scroll a sentinel at the very bottom of the stream, so a long
+  // walkthrough opened on its final paragraph and the reader had to scroll back
+  // up to read what was said. Each assistant reply is now anchored to the top of
+  // the visible stream once, when it first appears. The "Thinking…" bubble is
+  // deliberately not an anchor: it sits above the answer, and anchoring to it
+  // would push the answer out of view.
   useEffect(() => {
-    scrollEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const anchorId = pendingAnchorRef.current;
+    if (!anchorId || anchoredRef.current.has(anchorId)) return;
+
+    const stream = streamRef.current;
+    const node = messageRefs.current[anchorId];
+    if (!stream || !node) return;
+
+    anchoredRef.current.add(anchorId);
+    pendingAnchorRef.current = null;
+
+    // Measure against the stream rather than assuming a shared offsetParent, and
+    // add back the current scroll so the result is a scrollTop, not a delta.
+    const top =
+      node.getBoundingClientRect().top - stream.getBoundingClientRect().top + stream.scrollTop - 8;
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    stream.scrollTo({ top: Math.max(0, top), behavior: reducedMotion ? "auto" : "smooth" });
   }, [messages, loading]);
 
   const handleTriggerAction = async (actionOrText: AiQuickAction | string, userLabel?: string) => {
@@ -214,10 +242,12 @@ export const AiCompanionPanel: React.FC = () => {
         conversationHistory: messages.slice(-6).map(({ role, content }) => ({ role, content })),
       });
 
+      const replyId = `a-${Date.now()}`;
+      pendingAnchorRef.current = replyId;
       setMessages((prev) => [
         ...prev,
         {
-          id: `a-${Date.now()}`,
+          id: replyId,
           role: "assistant",
           ...reply,
           source: "knowledge",
@@ -225,10 +255,12 @@ export const AiCompanionPanel: React.FC = () => {
         },
       ]);
     } catch {
+      const failureId = `a-${Date.now()}`;
+      pendingAnchorRef.current = failureId;
       setMessages((prev) => [
         ...prev,
         {
-          id: `a-${Date.now()}`,
+          id: failureId,
           role: "assistant",
           content: "I couldn’t complete that study just now. Please try again; your question is still here, and your reading progress is unchanged.",
           timestamp: Date.now(),
@@ -244,6 +276,11 @@ export const AiCompanionPanel: React.FC = () => {
     const q = input.trim();
     if (!q || loading) return;
     setInput("");
+    if (messages.length === 0) {
+      window.requestAnimationFrame(() => {
+        streamRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
     handleTriggerAction(q);
   };
 
@@ -361,10 +398,13 @@ export const AiCompanionPanel: React.FC = () => {
       </div>
 
       {/* Conversation Stream */}
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+      <div ref={streamRef} className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.map((m) => (
           <div
             key={m.id}
+            ref={(node) => {
+              messageRefs.current[m.id] = node;
+            }}
             className={`rounded-2xl p-3.5 ${
               m.role === "user"
                 ? "ml-8 bg-primary text-primary-foreground text-xs font-medium"
@@ -434,7 +474,6 @@ export const AiCompanionPanel: React.FC = () => {
           </div>
         )}
 
-        <div ref={scrollEndRef} />
       </div>
 
       {/* Input Footer */}
