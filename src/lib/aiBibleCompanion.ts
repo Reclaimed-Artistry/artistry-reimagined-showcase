@@ -49,6 +49,8 @@ export interface AiCompanionMessage {
   content: string;
   citations?: AiCitationLink[];
   quiz?: AiQuizQuestion[];
+  /** 1-based set number, so a later set can say "Set 2 complete". */
+  quizSetNumber?: number;
   clarifyingQuestion?: string | null;
   suggestions?: string[];
   source?: "knowledge";
@@ -64,6 +66,12 @@ export interface AiContextPayload {
   availableOfflineVersions?: BibleVersionMeta[];
   userPrompt?: string;
   conversationHistory?: { role: "user" | "assistant"; content: string }[];
+  /**
+   * Which set of questions to build for a quiz. The reader can ask for another
+   * set after finishing one, and without this the same three verses would be
+   * picked again and the "new" quiz would repeat the old one verbatim.
+   */
+  quizRound?: number;
 }
 
 const STOP_WORDS = new Set([
@@ -442,17 +450,21 @@ function simplifyArchaicPhrasing(text: string): string {
 function buildQuizFromChapter(
   bookName: string,
   chapter: number,
-  verses: { verse: number; text: string }[]
+  verses: { verse: number; text: string }[],
+  round = 0
 ): AiQuizQuestion[] {
   if (verses.length < 4) return [];
   const quiz: AiQuizQuestion[] = [];
 
-  // Question 1: Cloze key word from an impactful verse
-  const targetIndices = [
-    0,
-    Math.floor(verses.length / 2),
-    verses.length - 1,
-  ];
+  // Each round walks the chapter from a different starting point, so asking for
+  // another set asks about verses the reader has not just been quizzed on. The
+  // stride is coprime with the verse count often enough that consecutive rounds
+  // rarely collide; when they do, the reader still gets fresh wording.
+  const askCount = Math.min(3, verses.length);
+  const offset = ((round * askCount) % verses.length + verses.length) % verses.length;
+  const targetIndices = Array.from({ length: askCount }, (_, i) =>
+    (offset + Math.floor((i * verses.length) / askCount)) % verses.length
+  ).sort((a, b) => a - b);
 
   const distractorsPool = [
     "wilderness", "covenant", "sanctuary", "inheritance", "compassion",
@@ -595,7 +607,9 @@ export async function generateAiBibleResponse(
   const isWordStudy = actionOrPrompt === "word_study" || /original language|greek|hebrew|word study|strong.?s number/.test(qLower) || asksLexiconQuestion;
   const isCrossRefs = actionOrPrompt === "cross_refs" || /cross.?references|related passages|other verses about|connected passages/.test(qLower);
   const isPrayer = actionOrPrompt === "prayer" || /\b(prayer|pray with me|help me pray)\b/.test(qLower);
-  const isQuiz = actionOrPrompt === "quiz" || /\b(quiz me|test me on|make .* quiz)\b/.test(qLower);
+  const isQuiz =
+    actionOrPrompt === "quiz" ||
+    /\b(quiz me|test me on|make .* quiz|another (set|round) of quiz|one more quiz)\b/.test(qLower);
   const isSermon = isSermonRequest(effectivePrompt, actionOrPrompt);
 
   if (isSermon) {
@@ -885,11 +899,28 @@ Tap any reference pill below to jump straight to that passage:`,
 
   // 7. INTERACTIVE CHAPTER QUIZ
   if (isQuiz) {
-    const quiz = buildQuizFromChapter(book.name, ctx.chapter, verses);
+    const round = Math.max(0, Math.floor(ctx.quizRound ?? 0));
+    const quiz = buildQuizFromChapter(book.name, ctx.chapter, verses, round);
+    if (quiz.length === 0) {
+      // Under four verses there is nothing to blank out, and an empty quiz card
+      // would look like a broken answer. Say so and offer what is available.
+      return {
+        content: `### This chapter is too short for a quiz\n**${book.name} ${ctx.chapter}** has too few verses to build a reading check from. Try a longer chapter, or ask me to explain one of these verses instead.`,
+        suggestions: [
+          `Explain ${book.name} ${ctx.chapter} in simple words`,
+          `Walk me through ${book.name} ${ctx.chapter}`,
+          `Historical context of ${book.name}`,
+        ],
+      };
+    }
     return {
-      content: `### Interactive Reading Check: ${book.name} ${ctx.chapter}
+      content: round > 0
+        ? `### Interactive Reading Check: ${book.name} ${ctx.chapter} · Set ${round + 1}
+A fresh set from the same chapter. Take your time with each line:`
+        : `### Interactive Reading Check: ${book.name} ${ctx.chapter}
 Test what stood out from your reading of **${book.name} ${ctx.chapter}** below:`,
       quiz,
+      quizSetNumber: round + 1,
     };
   }
 
