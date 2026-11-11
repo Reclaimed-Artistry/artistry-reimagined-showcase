@@ -106,6 +106,31 @@ $function$;
 revoke all on function public.claim_undelivered_group_notifications(integer) from public;
 grant execute on function public.claim_undelivered_group_notifications(integer) to service_role;
 
+-- ------------------------------------------------------- delivery once ------
+-- The original dedupe index was (recipient_id, delivery_key). A notice addressed
+-- to a device has recipient_id NULL, and a unique index treats NULLs as
+-- distinct, so that index never constrained those rows: every cron tick wrote
+-- another copy of the same verse and pushed it. One device received 847 pushes
+-- in a day instead of two.
+--
+-- delivery_key already embeds the device or account id, so it is unique on its
+-- own and needs no second column.
+delete from public.group_notifications n
+ where n.delivery_key is not null
+   and n.id in (
+     select id from (
+       select id, row_number() over (partition by delivery_key order by created_at) as dup
+         from public.group_notifications
+        where delivery_key is not null
+     ) ranked where ranked.dup > 1
+   );
+
+drop index if exists public.group_notifications_delivery_once_idx;
+
+create unique index group_notifications_delivery_once_idx
+  on public.group_notifications (delivery_key)
+  where delivery_key is not null;
+
 -- ------------------------------------------------------------ verse queue ----
 -- Every installation is a target, linked or not. A device with no account still
 -- gets the verse; it falls back to UTC until the app reports a time zone.
