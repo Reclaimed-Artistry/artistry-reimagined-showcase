@@ -28,6 +28,32 @@ export const ADSENSE_CLIENT = "ca-pub-8913201913917754";
 const SCRIPT_FLAG = "data-selah-adsense";
 const GOOGLE_TCF_VENDOR_ID = "755";
 
+/**
+ * Sections that may carry ads, and therefore may have the AdSense script loaded.
+ *
+ * This is a hard gate, not a styling preference. Auto ads (switched on in the
+ * AdSense dashboard) serve wherever the script is present, with no slot id
+ * involved — so a script left loaded across a single-page app will place ads on
+ * whatever screen the reader happens to open. Google flags that as "ads on
+ * screens without publisher content".
+ *
+ * Kids is written for children; About carries the privacy policy that explains
+ * the ads. Neither may load it.
+ */
+const AD_ELIGIBLE_SECTIONS = new Set([
+  "home",
+  "reader",
+  "companion",
+  "versions",
+  "plans",
+  "reflection",
+  "study",
+]);
+
+export function isAdEligibleSection(section: string): boolean {
+  return AD_ELIGIBLE_SECTIONS.has(section);
+}
+
 declare global {
   interface Window {
     adsbygoogle?: Record<string, unknown>[];
@@ -134,6 +160,19 @@ export function loadAdSenseScript(): Promise<void> {
       reject(new Error("AdSense did not load."));
     };
     document.head.appendChild(script);
+  });
+}
+
+/**
+ * Remove the publisher script.
+ *
+ * Called when the reader leaves an ad-eligible section. It stops any further
+ * auto-ad placement; it cannot retract a unit the script already rendered.
+ */
+export function unloadAdSenseScript(): void {
+  if (typeof document === "undefined") return;
+  document.querySelectorAll<HTMLScriptElement>(`script[${SCRIPT_FLAG}]`).forEach((script) => {
+    script.remove();
   });
 }
 

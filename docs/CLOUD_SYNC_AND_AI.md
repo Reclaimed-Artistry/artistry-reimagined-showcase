@@ -257,14 +257,27 @@ not AdSense, so `adsAllowed()` returns false whenever
 `Capacitor.isNativePlatform()` is true and every entry point checks it first.
 Shipping AdSense in the APK would put the account at risk.
 
-**One request path.** `AdSenseBoot` (mounted in `AppShell`) loads the publisher
-script once per session for the whole app, and `AdSlot` renders a manual unit on
-any page. There is one `index.html` — every "page" is a section rendered into it
-— so the script is loaded from the app rather than a `<script>` tag in the
-document. That keeps it off the critical path and out of the native build.
+**The script follows the section, it is not loaded globally.** `AdSenseBoot`
+takes the active section and loads the publisher script only while an eligible
+one is open, removing it on leaving. This matters more than it looks: Auto ads
+are switched on in the AdSense dashboard, and they serve wherever the *script*
+is present, not only where a manual `<ins>` sits. A script loaded once and never
+unloaded would let Google place units on the Kids stories or the privacy policy —
+"ads on screens without publisher content" is a real policy flag, and a
+children's page is the wrong place for an ad regardless.
 
-**Where units appear.** Home, Reader, Versions, Plans, Reflection, Study. Not
-Kids, and not About:
+There is one `index.html` and every "page" is a section rendered into it, so the
+script is loaded from the app rather than a `<script>` tag in the document. That
+keeps it off the critical path and out of the native build.
+
+`AdSlot` then renders a manual unit on any eligible page. **Slot ids are
+optional**: with none configured no manual unit renders, but the publisher
+script still enables Auto ads. So the eligibility gate, not the slot id, is what
+decides where ads may appear.
+
+**Where ads may appear.** Home, Reader, Companion, Versions, Plans, Reflection,
+Study. Not Kids, and not About — enforced by `isAdEligibleSection()`, which gates
+the script itself rather than only the manual units:
 
 - Kids is a story surface written for children; ads there are the wrong
   audience and the wrong context.

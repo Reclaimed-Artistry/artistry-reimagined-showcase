@@ -558,7 +558,7 @@ export const AppShell: React.FC = () => {
                 />
               }
             >
-              <AdSenseBoot />
+              <AdSenseBoot section={activeSection} />
               {activeSection === "home" && (
                 <HomeDashboard
                   onSelectSection={handleSelectSection}
