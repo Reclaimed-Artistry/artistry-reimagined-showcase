@@ -13,7 +13,6 @@ import { SelahIcon } from "./SelahIcon";
 import { TypographyPopover } from "./TypographyPopover";
 import { HomeDashboard } from "./HomeDashboard";
 import { ExplainerView } from "./ExplainerView";
-import { ReadingReminderScheduler } from "./ReadingReminderScheduler";
 import { preloadSpeechVoices } from "@/lib/speechVoices";
 import type { AppSection } from "@/types/bible";
 
@@ -400,7 +399,6 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="app-shell flex min-h-screen w-full min-w-0 flex-col text-foreground" style={appShellStyle}>
-      <ReadingReminderScheduler />
       {/* Top Global Sanctuary Bar (with iPhone Notch / Dynamic Island safe-top padding) */}
       <header
         data-global-navigation

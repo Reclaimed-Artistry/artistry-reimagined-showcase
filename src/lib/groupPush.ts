@@ -144,11 +144,13 @@ async function registerWeb(userId: string): Promise<PushRegistrationResult> {
       endpoint: subscription.endpoint,
       p256dh: subscription.toJSON().keys?.p256dh,
       auth: subscription.toJSON().keys?.auth,
-      // No daily reminder was asked for; park it on today's date so the cron
-      // never treats it as due.
+      // `reminder_time` is a leftover from the old single daily reminder and is
+      // no longer read. Leaving `last_sent_local_date` null is what matters: it
+      // tells the scheduler this device has never been nudged, so it starts
+      // with the current slot instead of skipping the rest of the day.
       reminder_time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
       time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-      last_sent_local_date: now.toISOString().slice(0, 10),
+      last_sent_local_date: null,
       user_id: userId,
     });
     if (error) return { status: "error", reason: "Could not save this device's subscription." };

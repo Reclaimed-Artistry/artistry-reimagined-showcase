@@ -4,13 +4,16 @@ import webpush from "npm:web-push@3.6.7";
 /**
  * Selah push delivery.
  *
- * Two jobs share this function because they share the VAPID configuration:
+ * One cron tick calls this with `action: "send-due"` every minute. Each tick
+ * queues whatever the schedule says is due and then delivers the queue:
  *
- * 1. **Daily reading reminders** — the original behaviour, driven by a cron
- *    that calls `action: "send-due"` with the shared secret.
- * 2. **Group notifications** — rows written by database triggers into
- *    `group_notifications`, delivered here to web push subscriptions and, when
- *    configured, to Android (FCM) and iOS (APNs) device tokens.
+ * 1. **Queueing** — `run_notification_schedulers()` writes the verse of the day,
+ *    the three continue-reading nudges, and owner reminders into
+ *    `group_notifications`, each keyed so a re-run is a no-op.
+ * 2. **Delivery** — queued rows go to web push subscriptions, and to Android
+ *    (FCM) or iOS (APNs) tokens when credentials are configured. A notice is
+ *    addressed to an account or, for a device that never signed in, to the
+ *    installation itself.
  *
  * Native delivery is optional by design. Without FCM_SERVICE_ACCOUNT_JSON or
  * APNS_* secrets the function simply skips those tokens and records why on the
@@ -432,43 +435,14 @@ Deno.serve(async (request) => {
 
     webpush.setVapidDetails(vapidSubject, publicKey, privateKey);
 
-    // Daily reading reminders (unchanged behaviour).
-    const { data: reminders, error: claimError } = await supabase.rpc("claim_due_push_reminders");
-    if (claimError) return json({ error: "Could not claim scheduled reminders" }, 500, origin);
-
-    let remindersSent = 0;
-    let remindersRemoved = 0;
-    for (const reminder of reminders || []) {
-      try {
-        await webpush.sendNotification(
-          {
-            endpoint: reminder.endpoint,
-            keys: { p256dh: reminder.p256dh, auth: reminder.auth },
-          },
-          JSON.stringify({
-            title: "A quiet moment with Scripture",
-            body: "Your daily reading reminder is ready. Open Selah to continue where you left off.",
-            url: "https://selah-bible-alpha.vercel.app/?section=reader",
-            tag: `selah-reading-reminder-${reminder.last_sent_local_date}`,
-          }),
-          { TTL: 3600 },
-        );
-        remindersSent += 1;
-      } catch (error) {
-        const statusCode = (error as { statusCode?: number }).statusCode;
-        if (statusCode === 404 || statusCode === 410) {
-          await supabase.from("device_push_reminders").delete().eq("id", reminder.id);
-          remindersRemoved += 1;
-        } else {
-          await supabase.from("device_push_reminders").update({ last_sent_local_date: null }).eq("id", reminder.id);
-        }
-      }
-    }
-
-    // Queue anything the schedule says is due (daily verse at 06:00 and 21:00
-    // local, owner reminders at their chosen time). This runs here rather than
-    // in a separate cron job so a single every-minute tick covers everything,
-    // and it is idempotent: delivery_key makes a re-run a no-op.
+    // Everything that goes out on a schedule is queued here: the verse at 06:00
+    // and 21:00 local, the three reading nudges, and owner reminders. This runs
+    // inside the one every-minute tick rather than in separate cron jobs, and it
+    // is idempotent -- delivery_key makes a re-run a no-op.
+    //
+    // The old single reminder at the reader's chosen time used to be sent
+    // separately just above. It is retired: it and the three nudges would both
+    // fire, which is four pushes where the reader asked for three.
     let scheduled: unknown = null;
     try {
       const { data, error: scheduleError } = await supabase.rpc("run_notification_schedulers");
@@ -495,7 +469,6 @@ Deno.serve(async (request) => {
       {
         ok: true,
         scheduled,
-        reminders: { sent: remindersSent, removed: remindersRemoved },
         group,
       },
       200,

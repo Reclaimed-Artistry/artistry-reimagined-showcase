@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { ArrowRight, BellRing } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { formatReference, getBookMeta } from "@/data/canonicalBooks";
 import { getDevotionalForDate } from "@/data/dailyReflections";
@@ -8,7 +8,6 @@ import type { AppSection } from "@/types/bible";
 import { Switch } from "@/components/ui/switch";
 import { SelahIcon, type SelahIconName } from "./SelahIcon";
 import { AdSenseSlot } from "@/components/ads/AdSenseSlot";
-import { disableRemotePushReminder, enableRemotePushReminder, REMOTE_PUSH_ACTIVE_KEY, updateRemotePushReminder } from "@/lib/webPushReminders";
 
 type HomeDashboardProps = {
   onSelectSection: (section: AppSection) => void;
@@ -42,7 +41,6 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
     chapter,
     navigateTo,
     prefs,
-    updatePrefs,
   } = useBibleApp();
   const dateKey = todayKey();
   const displayDate = useMemo(() => new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date()), []);
@@ -54,81 +52,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
     devotional.verseEnd,
   );
   const verseText = devotional.fallbackText;
-  const [notificationPermission, setNotificationPermission] = useState<string>(() =>
-    typeof window !== "undefined" && "Notification" in window
-      ? Notification.permission
-      : "unsupported",
-  );
-  const [remotePushActive, setRemotePushActive] = useState(() =>
-    typeof window !== "undefined" && localStorage.getItem(REMOTE_PUSH_ACTIVE_KEY) === "true",
-  );
   const lastBook = getBookMeta(bookNumber);
-
-  const setReminderEnabled = async (enabled: boolean) => {
-    if (!enabled) {
-      try {
-        await disableRemotePushReminder();
-      } catch {
-        toast.info("Reminder turned off on this device", {
-          description: "If this device is offline, its saved push subscription will expire automatically when the service next contacts it.",
-        });
-      } finally {
-        setRemotePushActive(false);
-        updatePrefs({ dailyStudyReminderEnabled: false });
-      }
-      return;
-    }
-
-    if (typeof window !== "undefined" && "Notification" in window) {
-      let permission = Notification.permission;
-      if (permission === "default") {
-        try {
-          permission = await Notification.requestPermission();
-        } catch {
-          permission = "denied";
-        }
-      }
-      setNotificationPermission(permission);
-      if (permission === "granted") {
-        try {
-          await enableRemotePushReminder(prefs.dailyStudyReminderTime);
-          setRemotePushActive(true);
-          toast.success("Device push reminders enabled", {
-            description: "Selah can now send your daily reminder to this device, even when the app is closed.",
-          });
-        } catch (error) {
-          setRemotePushActive(false);
-          toast.info("Local reminder saved", {
-            description: error instanceof Error
-              ? `${error.message} The reminder will still appear while Selah is open.`
-              : "Remote push could not be configured. The reminder will still appear while Selah is open.",
-          });
-        }
-      } else {
-        toast.info("In-app reminder saved", {
-          description: "Notifications are blocked in device settings. Selah can still remind you while it is open.",
-        });
-      }
-    } else {
-      setNotificationPermission("unsupported");
-      setRemotePushActive(false);
-      toast.info("In-app reminder saved", {
-        description: "This device does not support push notifications. Selah can still remind you while it is open.",
-      });
-    }
-    updatePrefs({ dailyStudyReminderEnabled: true });
-  };
-
-  const handleReminderTimeChange = (reminderTime: string) => {
-    updatePrefs({ dailyStudyReminderTime: reminderTime });
-    if (remotePushActive) {
-      void updateRemotePushReminder(reminderTime).catch((error: unknown) => {
-        localStorage.removeItem(REMOTE_PUSH_ACTIVE_KEY);
-        setRemotePushActive(false);
-        toast.error(error instanceof Error ? error.message : "Could not update your push reminder time.");
-      });
-    }
-  };
 
   const handleReadVerse = () => {
     navigateTo(devotional.bookNumber, devotional.chapter, devotional.verse, devotional.verseEnd);
@@ -203,50 +127,6 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onSelectSection, o
         </div>
       </section>
 
-      <section aria-labelledby="reading-reminder-heading" className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600"><BellRing className="h-5 w-5" /></span>
-          <div>
-            <h2 id="reading-reminder-heading" className="font-semibold">A gentle daily reading reminder</h2>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
-              {prefs.dailyStudyReminderEnabled
-                ? remotePushActive
-                  ? "Device push is on. Selah will send this reminder to your notification panel at the chosen time, even when the app is closed, as long as this device is online and notifications remain allowed."
-                  : "Your local reminder is on. It can notify you while Selah is open or running in the background; turn on device notifications below to receive reminders while it is closed."
-                : "Choose a time for a quiet nudge to read Scripture. Enable device notifications to receive the reminder even while Selah is closed."}
-            </p>
-            <label className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground">
-              Reminder time
-              <input
-                type="time"
-                aria-label="Daily reading reminder time"
-                value={prefs.dailyStudyReminderTime}
-                onChange={(event) => handleReminderTimeChange(event.target.value)}
-                className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-foreground"
-              />
-            </label>
-            <p className="mt-2 text-[10px] text-muted-foreground">
-              {remotePushActive
-                ? "Device notification permission is granted and the daily push subscription is active."
-                : notificationPermission === "granted"
-                ? "Device notifications are allowed. Turn this reminder on to register daily push delivery."
-                : notificationPermission === "denied"
-                ? "Notifications are blocked in device settings; an in-app reminder will still appear while Selah is open."
-                : notificationPermission === "unsupported"
-                ? "This device does not support web push; an in-app reminder will still appear while Selah is open."
-                : "Turning on the reminder will ask whether Selah may send device notifications."}
-            </p>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-3 self-end sm:self-center">
-          <span className="text-xs font-semibold">{prefs.dailyStudyReminderEnabled ? "On" : "Off"}</span>
-          <Switch
-            aria-label="Enable daily reading reminder"
-            checked={prefs.dailyStudyReminderEnabled}
-            onCheckedChange={(enabled) => void setReminderEnabled(enabled)}
-          />
-        </div>
-      </section>
       <AdSenseSlot />
     </div>
   );
