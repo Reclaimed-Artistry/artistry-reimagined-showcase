@@ -10,6 +10,8 @@ import {
   triggerHaptic,
 } from "@/lib/nativeMobile";
 import { SelahIcon } from "./SelahIcon";
+import { AdSenseBoot } from "@/components/ads/AdSenseBoot";
+import { AdSlot } from "@/components/ads/AdSlot";
 import { TypographyPopover } from "./TypographyPopover";
 import { HomeDashboard } from "./HomeDashboard";
 import { ExplainerView } from "./ExplainerView";
@@ -556,17 +558,55 @@ export const AppShell: React.FC = () => {
                 />
               }
             >
+              <AdSenseBoot />
               {activeSection === "home" && (
                 <HomeDashboard
                   onSelectSection={handleSelectSection}
                   onOpenCompanion={() => handleSelectSection("companion")}
                 />
               )}
-              {(activeSection === "reader" || activeSection === "companion") && <BibleReaderView />}
-              {activeSection === "versions" && <VersionVaultView />}
-              {activeSection === "plans" && <ReadingPlansView />}
-              {activeSection === "reflection" && <DailyReflectionView />}
-              {activeSection === "study" && <SearchAndStudyView />}
+              {(activeSection === "reader" || activeSection === "companion") && (
+                <>
+                  <BibleReaderView />
+                  {/* After the passage, never between verses: an ad inside the
+                      text would split Scripture and invite a stray click. */}
+                  <div className="px-4 pb-6 sm:px-8">
+                    <AdSlot placement="reader" />
+                  </div>
+                </>
+              )}
+              {activeSection === "versions" && (
+                <>
+                  <VersionVaultView />
+                  <div className="px-4 pb-6 sm:px-8">
+                    <AdSlot placement="versions" />
+                  </div>
+                </>
+              )}
+              {activeSection === "plans" && (
+                <>
+                  <ReadingPlansView />
+                  <div className="px-4 pb-6 sm:px-8">
+                    <AdSlot placement="plans" />
+                  </div>
+                </>
+              )}
+              {activeSection === "reflection" && (
+                <>
+                  <DailyReflectionView />
+                  <div className="px-4 pb-6 sm:px-8">
+                    <AdSlot placement="reflection" />
+                  </div>
+                </>
+              )}
+              {activeSection === "study" && (
+                <>
+                  <SearchAndStudyView />
+                  <div className="px-4 pb-6 sm:px-8">
+                    <AdSlot placement="study" />
+                  </div>
+                </>
+              )}
               {activeSection === "kids" && <KidsStoriesView />}
               {activeSection === "about" && <ExplainerView />}
             </Suspense>

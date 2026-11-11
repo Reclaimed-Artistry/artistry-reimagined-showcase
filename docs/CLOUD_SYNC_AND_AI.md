@@ -244,3 +244,47 @@ Two bugs worth remembering:
   triggers.
 - `row_number()` returns `bigint`, so `date - row_number()` fails with
   `operator does not exist: date - bigint`. Cast to `int`.
+
+## Advertising
+
+AdSense runs on the **web build only**. The publisher id
+(`ca-pub-8913201913917754`) lives in `src/lib/adsense.ts`; it is public and is
+present in every ad request anyway.
+
+**Never in the native app.** The same bundle ships to Android and iOS via
+Capacitor. Google's publisher terms require app ad inventory to go through AdMob,
+not AdSense, so `adsAllowed()` returns false whenever
+`Capacitor.isNativePlatform()` is true and every entry point checks it first.
+Shipping AdSense in the APK would put the account at risk.
+
+**One request path.** `AdSenseBoot` (mounted in `AppShell`) loads the publisher
+script once per session for the whole app, and `AdSlot` renders a manual unit on
+any page. There is one `index.html` — every "page" is a section rendered into it
+— so the script is loaded from the app rather than a `<script>` tag in the
+document. That keeps it off the critical path and out of the native build.
+
+**Where units appear.** Home, Reader, Versions, Plans, Reflection, Study. Not
+Kids, and not About:
+
+- Kids is a story surface written for children; ads there are the wrong
+  audience and the wrong context.
+- About carries the privacy and advertising policy. Putting an ad on the page
+  that explains the ads is a bad look.
+- The Reader unit sits *after* the passage, never inside it, so an ad never
+  splits Scripture or sits where a next-verse tap might land.
+
+**Slot ids come from the dashboard.** `VITE_ADSENSE_SLOT_ID` covers every page;
+per-page overrides (`VITE_ADSENSE_HOME_SLOT_ID` and friends) win when a page has
+its own unit. With none set, `AdSlot` renders nothing at all — no empty frame, no
+failed request.
+
+**Non-personalized by default.** No certified CMP is configured, so there is no
+lawful basis for personalized advertising in the EEA or UK.
+`markAdsNonPersonalized()` sets `requestNonPersonalizedAds = 1` before the first
+push, so ads are chosen from page context rather than a profile. If a CMP is
+added later, `readPersonalizedConsent()` is the hook that would allow a
+personalized request.
+
+**Labelling.** The unit is labelled "Advertisement", which is one of only two
+labels Google permits (the other is "Sponsored Links"). Nothing on the page
+invites a click.
