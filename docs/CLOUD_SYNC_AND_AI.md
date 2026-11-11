@@ -179,11 +179,31 @@ has synced it, otherwise it stays general.
 
 ## Notification settings
 
-`notification_preferences` stores opt-*outs*: group activity, the daily verse and
-the three reading nudges all default to on, so a member who never opens the screen still hears from their
-group. The screen shows device permission separately from these preferences,
-because a reader who switches "Verse of the day" on while the device itself is
-blocked would otherwise never receive anything and assume the switch was broken.
+**There is one control: on or off for this device.** Turning it on is the whole
+setup — the verse, the three nudges and group activity all start arriving.
+
+An earlier version put a checkbox beside each kind of notification and showed a
+preview of today's verse underneath. That was paperwork: everyone wants all of
+it, and asking someone to tick three boxes for the thing they just asked for
+makes a one-tap action look like a decision. `notification_preferences` still
+holds the individual flags and they still default to on, so the switch that
+matters is the device permission and nothing else.
+
+Two older reminder systems were removed at the same time, because each one
+competed with the schedule rather than feeding it:
+
+- the home screen's "gentle daily reading reminder" card, with its own time
+  picker and its own push subscription (`src/lib/webPushReminders.ts`);
+- `ReadingReminderScheduler`, an in-app timer that fired at a chosen minute.
+
+Either one plus the three nudges meant four pushes a day from schedulers that
+never knew about each other. `claim_due_push_reminders()` is dropped for the same
+reason, so the retired path cannot be called back into service by accident.
+
+`device_push_reminders.last_sent_local_date` is **not** stamped when a device
+registers. It starts null, which is how the scheduler knows to begin with the
+current slot; stamping today's date at registration used to suppress every nudge
+for the rest of the day on a brand-new device.
 
 Seeding the verse list (57 verses, already applied):
 
