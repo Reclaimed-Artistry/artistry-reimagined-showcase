@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ADSENSE_CLIENT,
   adsAllowed,
+  isAdEligibleSection,
   loadAdSenseScript,
   markAdsNonPersonalized,
   slotIdFor,
@@ -30,13 +31,18 @@ type AdSlotProps = {
  *   page gets its own request instead of trying to reuse a filled unit.
  */
 export const AdSlot: React.FC<AdSlotProps> = ({ placement, className }) => {
-  const slotId = slotIdFor(placement);
+  // Two independent gates, and both must pass:
+  //  - the placement must be a section that may carry ads at all, so a unit can
+  //    never be dropped onto Kids or About and quietly load the script there;
+  //  - the platform must be the web build, never the Capacitor shell.
+  const eligible = isAdEligibleSection(placement) && adsAllowed();
+  const slotId = eligible ? slotIdFor(placement) : undefined;
   const [ready, setReady] = useState(false);
   const slotRef = useRef<HTMLModElement | null>(null);
   const requestSent = useRef(false);
 
   useEffect(() => {
-    if (!slotId || !adsAllowed()) return;
+    if (!slotId || !eligible) return;
     let active = true;
 
     void (async () => {
@@ -52,7 +58,15 @@ export const AdSlot: React.FC<AdSlotProps> = ({ placement, className }) => {
     return () => {
       active = false;
     };
-  }, [slotId]);
+  }, [slotId, eligible]);
+
+  // Every placement resolves to the same unit id, so React could hand this
+  // component instance from one page to the next. Reset the guard when the
+  // placement changes, or the second page would mount an <ins> that is never
+  // pushed and so never fills.
+  useEffect(() => {
+    requestSent.current = false;
+  }, [placement]);
 
   useEffect(() => {
     if (!ready || requestSent.current || !slotRef.current) return;
@@ -70,7 +84,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({ placement, className }) => {
     return () => window.cancelAnimationFrame(frame);
   }, [ready]);
 
-  if (!slotId || !adsAllowed()) return null;
+  if (!slotId || !eligible) return null;
 
   return (
     <aside

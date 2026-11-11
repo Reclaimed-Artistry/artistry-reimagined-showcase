@@ -26,6 +26,16 @@ import { Capacitor } from "@capacitor/core";
 export const ADSENSE_CLIENT = "ca-pub-8913201913917754";
 
 const SCRIPT_FLAG = "data-selah-adsense";
+
+/**
+ * The display unit created in the AdSense dashboard ("Unit").
+ *
+ * Kept in source rather than only in an env var so ads work on a plain deploy
+ * with no extra configuration. It is public in the same way the publisher id
+ * is: it appears in the rendered markup of every page showing the unit. An env
+ * var still wins, for pointing a deployment at a different unit.
+ */
+const DEFAULT_SLOT_ID = "2468757292";
 const GOOGLE_TCF_VENDOR_ID = "755";
 
 /**
@@ -196,5 +206,5 @@ const PLACEMENT_ENV: Record<string, string | undefined> = {
 export function slotIdFor(placement: string): string | undefined {
   const shared = import.meta.env.VITE_ADSENSE_SLOT_ID?.trim();
   const specific = PLACEMENT_ENV[placement]?.trim();
-  return specific || shared || undefined;
+  return specific || shared || DEFAULT_SLOT_ID;
 }

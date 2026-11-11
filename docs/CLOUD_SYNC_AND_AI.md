@@ -286,10 +286,16 @@ the script itself rather than only the manual units:
 - The Reader unit sits *after* the passage, never inside it, so an ad never
   splits Scripture or sits where a next-verse tap might land.
 
-**Slot ids come from the dashboard.** `VITE_ADSENSE_SLOT_ID` covers every page;
-per-page overrides (`VITE_ADSENSE_HOME_SLOT_ID` and friends) win when a page has
-its own unit. With none set, `AdSlot` renders nothing at all — no empty frame, no
-failed request.
+**One unit, many pages.** The display unit (`data-ad-slot` **2468757292**) is
+the default in `src/lib/adsense.ts`, so ads work on a plain deploy with no env
+configuration. Reusing one unit across *different pages* is fine and is how
+AdSense is designed — one unit per page, not one unit per site. The trade-off is
+reporting: revenue is attributed to the unit, not to the page it appeared on. Add
+`VITE_ADSENSE_READER_SLOT_ID` (or any per-page override) when you want that
+breakdown; env values always win over the source default.
+
+**One unit per page.** Two `AdSlot`s in the same section would render two `<ins>`
+of the same unit, and the second fills blank. Keep it to one per page.
 
 **Non-personalized by default.** No certified CMP is configured, so there is no
 lawful basis for personalized advertising in the EEA or UK.
