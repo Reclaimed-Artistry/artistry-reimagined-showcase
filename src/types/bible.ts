@@ -215,6 +215,12 @@ export interface ReaderPreferences {
   speechRate: number;
   preferredVoiceURI: string;
   preferredVoiceGender: "auto" | "female" | "male";
+  /**
+   * Whether the app's own neural narrators (Android, needs data) are used for
+   * read-along. Turned off when the reader picks a device voice or asks not to
+   * use the AI one; the device engine is always the fallback.
+   */
+  aiVoiceEnabled: boolean;
   autoAdvanceChapter: boolean;
   ambientSound: boolean;
   showBibleCompanion: boolean;

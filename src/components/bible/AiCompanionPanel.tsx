@@ -9,6 +9,7 @@ import {
   Languages,
   Link2,
   Loader2,
+  RefreshCw,
   Send,
   Sparkles,
   Volume2,
@@ -92,8 +93,67 @@ function renderInlineBold(text: string): React.ReactNode {
   });
 }
 
-const QuizInteractiveWidget: React.FC<{ quiz: AiQuizQuestion[] }> = ({ quiz }) => {
+/**
+ * A short, warm verdict for a finished quiz.
+ *
+ * The remarks avoid scolding a low score: this is a reading check inside a
+ * devotional app, and someone who missed two of three is still someone who read
+ * the chapter carefully. Each band also names what to do next.
+ */
+const quizRemark = (score: number, total: number): { title: string; line: string } => {
+  if (total > 0 && score === total) {
+    return {
+      title: "A perfect run",
+      line: "Every answer landed. You were reading closely, and it shows.",
+    };
+  }
+  // A quiz is three questions, so compare in whole questions rather than
+  // percentages: 2/3 is 0.667, which a ">= 0.67" test would reject and demote a
+  // near-perfect run to the middle band.
+  const remaining = total - score;
+  if (total > 0 && remaining === 1) {
+    return {
+      title: "Beautifully done",
+      line: "You caught the heart of the passage. The one you missed is worth a second look.",
+    };
+  }
+  if (score > 0) {
+    return {
+      title: "A good start",
+      line: "The chapter is starting to settle. Read those lines once more and the details will hold.",
+    };
+  }
+  return {
+    title: "You showed up, and that counts",
+    line: "This chapter has more to give. Sit with the verses again, then try a fresh set.",
+  };
+};
+
+type QuizInteractiveWidgetProps = {
+  quiz: AiQuizQuestion[];
+  /** Seed so the final set number can be shown; the panel tracks the runs. */
+  setNumber?: number;
+  /** Ask for a new set of questions from the same chapter. */
+  onAnotherSet?: () => void;
+  /** Close the quiz and stop asking. */
+  onQuit?: () => void;
+};
+
+const QuizInteractiveWidget: React.FC<QuizInteractiveWidgetProps> = ({
+  quiz,
+  setNumber,
+  onAnotherSet,
+  onQuit,
+}) => {
   const [answers, setAnswers] = useState<Record<number, number>>({});
+
+  const answeredCount = Object.keys(answers).length;
+  const complete = quiz.length > 0 && answeredCount === quiz.length;
+  const score = quiz.reduce(
+    (total, question, index) => total + (answers[index] === question.correctIndex ? 1 : 0),
+    0,
+  );
+  const remark = complete ? quizRemark(score, quiz.length) : null;
 
   return (
     <div className="mt-3 space-y-3">
@@ -140,6 +200,52 @@ const QuizInteractiveWidget: React.FC<{ quiz: AiQuizQuestion[] }> = ({ quiz }) =
           </div>
         );
       })}
+
+      {complete && remark && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="rounded-xl border border-primary/25 bg-primary/5 p-3.5"
+        >
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="font-display text-base font-bold text-foreground">{remark.title}</p>
+            <p className="shrink-0 text-sm font-semibold text-primary">
+              {score}/{quiz.length}
+            </p>
+          </div>
+          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{remark.line}</p>
+          {typeof setNumber === "number" && setNumber > 1 && (
+            <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+              Set {setNumber} complete
+            </p>
+          )}
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {onAnotherSet && (
+              <button
+                type="button"
+                onClick={onAnotherSet}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-95"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Another set
+              </button>
+            )}
+            {onQuit && (
+              <button
+                type="button"
+                onClick={onQuit}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-accent"
+              >
+                Quit quiz
+              </button>
+            )}
+          </div>
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            Another set stays in {`this chapter`} and asks about different verses.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
@@ -162,8 +268,19 @@ export const AiCompanionPanel: React.FC = () => {
   const [messages, setMessages] = useState<AiCompanionMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  /**
+   * How many quiz sets have been asked for in this session. Every new set uses
+   * a different slice of the chapter, so this is what stops "Another set" from
+   * handing back the same three questions.
+   */
+  const quizRoundRef = useRef(0);
 
-  const scrollEndRef = useRef<HTMLDivElement | null>(null);
+  const streamRef = useRef<HTMLDivElement | null>(null);
+  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  /** The answer the reader has not seen yet, if any. */
+  const pendingAnchorRef = useRef<string | null>(null);
+  /** Answers already scrolled to, so a re-render never yanks the reader away. */
+  const anchoredRef = useRef<Set<string>>(new Set());
   const bookMeta = getBookMeta(bookNumber);
   const availableOfflineVersions = catalog.filter(
     (version) => version.provider === "bundled" || offlineSummaries.some((summary) => summary.versionId === version.id)
@@ -188,11 +305,38 @@ export const AiCompanionPanel: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aiPanelOpen, primaryChapterData, messages.length]);
 
+  // Show a fresh answer from its beginning.
+  //
+  // This used to scroll a sentinel at the very bottom of the stream, so a long
+  // walkthrough opened on its final paragraph and the reader had to scroll back
+  // up to read what was said. Each assistant reply is now anchored to the top of
+  // the visible stream once, when it first appears. The "Thinking…" bubble is
+  // deliberately not an anchor: it sits above the answer, and anchoring to it
+  // would push the answer out of view.
   useEffect(() => {
-    scrollEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const anchorId = pendingAnchorRef.current;
+    if (!anchorId || anchoredRef.current.has(anchorId)) return;
+
+    const stream = streamRef.current;
+    const node = messageRefs.current[anchorId];
+    if (!stream || !node) return;
+
+    anchoredRef.current.add(anchorId);
+    pendingAnchorRef.current = null;
+
+    // Measure against the stream rather than assuming a shared offsetParent, and
+    // add back the current scroll so the result is a scrollTop, not a delta.
+    const top =
+      node.getBoundingClientRect().top - stream.getBoundingClientRect().top + stream.scrollTop - 8;
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    stream.scrollTo({ top: Math.max(0, top), behavior: reducedMotion ? "auto" : "smooth" });
   }, [messages, loading]);
 
-  const handleTriggerAction = async (actionOrText: AiQuickAction | string, userLabel?: string) => {
+  const handleTriggerAction = async (
+    actionOrText: AiQuickAction | string,
+    userLabel?: string,
+    options?: { quizRound?: number },
+  ) => {
     const userMsg: AiCompanionMessage = {
       id: `u-${Date.now()}`,
       role: "user",
@@ -212,12 +356,15 @@ export const AiCompanionPanel: React.FC = () => {
         availableOfflineVersions,
         userPrompt: userLabel || actionOrText,
         conversationHistory: messages.slice(-6).map(({ role, content }) => ({ role, content })),
+        quizRound: options?.quizRound,
       });
 
+      const replyId = `a-${Date.now()}`;
+      pendingAnchorRef.current = replyId;
       setMessages((prev) => [
         ...prev,
         {
-          id: `a-${Date.now()}`,
+          id: replyId,
           role: "assistant",
           ...reply,
           source: "knowledge",
@@ -225,10 +372,12 @@ export const AiCompanionPanel: React.FC = () => {
         },
       ]);
     } catch {
+      const failureId = `a-${Date.now()}`;
+      pendingAnchorRef.current = failureId;
       setMessages((prev) => [
         ...prev,
         {
-          id: `a-${Date.now()}`,
+          id: failureId,
           role: "assistant",
           content: "I couldn’t complete that study just now. Please try again; your question is still here, and your reading progress is unchanged.",
           timestamp: Date.now(),
@@ -239,11 +388,49 @@ export const AiCompanionPanel: React.FC = () => {
     }
   };
 
+  /** Swap a finished quiz for a fresh set of questions from the same chapter. */
+  const handleAnotherQuizSet = async (finishedMessageId: string) => {
+    if (loading) return;
+    quizRoundRef.current += 1;
+    // Retire the finished set so the conversation does not fill up with old
+    // score cards; the new questions land where the old ones were.
+    setMessages((prev) => prev.filter((message) => message.id !== finishedMessageId));
+    await handleTriggerAction("quiz", `Quiz me on ${bookMeta.name} ${chapter} again, please`, {
+      quizRound: quizRoundRef.current,
+    });
+  };
+
+  /**
+   * End the quiz. The answer point was spent on the questions, so what is left
+   * is a short closing word rather than a score repeated back to them.
+   */
+  const handleQuitQuiz = () => {
+    const closingId = `a-${Date.now()}`;
+    pendingAnchorRef.current = closingId;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: closingId,
+        role: "assistant",
+        content:
+          "No pressure at all. Whenever you want to test yourself again, just say **quiz me** and I will build a new set.",
+        source: "knowledge",
+        timestamp: Date.now(),
+      },
+    ]);
+    quizRoundRef.current = 0;
+  };
+
   const handleSubmitForm = (e: React.FormEvent) => {
     e.preventDefault();
     const q = input.trim();
     if (!q || loading) return;
     setInput("");
+    if (messages.length === 0) {
+      window.requestAnimationFrame(() => {
+        streamRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
     handleTriggerAction(q);
   };
 
@@ -361,10 +548,13 @@ export const AiCompanionPanel: React.FC = () => {
       </div>
 
       {/* Conversation Stream */}
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+      <div ref={streamRef} className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.map((m) => (
           <div
             key={m.id}
+            ref={(node) => {
+              messageRefs.current[m.id] = node;
+            }}
             className={`rounded-2xl p-3.5 ${
               m.role === "user"
                 ? "ml-8 bg-primary text-primary-foreground text-xs font-medium"
@@ -405,7 +595,14 @@ export const AiCompanionPanel: React.FC = () => {
                   </div>
                 )}
 
-                {m.quiz && m.quiz.length > 0 && <QuizInteractiveWidget quiz={m.quiz} />}
+                {m.quiz && m.quiz.length > 0 && (
+                  <QuizInteractiveWidget
+                    quiz={m.quiz}
+                    setNumber={m.quizSetNumber}
+                    onAnotherSet={() => void handleAnotherQuizSet(m.id)}
+                    onQuit={handleQuitQuiz}
+                  />
+                )}
 
                 {m.citations && m.citations.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border/60 pt-2.5">
@@ -434,7 +631,6 @@ export const AiCompanionPanel: React.FC = () => {
           </div>
         )}
 
-        <div ref={scrollEndRef} />
       </div>
 
       {/* Input Footer */}

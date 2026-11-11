@@ -50,7 +50,22 @@ self.addEventListener("push", (event) => {
     tag: payload.tag || "selah-daily-reading-reminder",
     data: { url: payload.url || "/?section=reader" },
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  // A group notice is worth interrupting for: it is another person writing to
+  // you, so it re-alerts and stays on screen instead of replacing the last one.
+  if (payload.groupId || String(payload.tag || "").startsWith("selah-group-")) {
+    options.renotify = true;
+    options.requireInteraction = false;
+    options.tag = payload.tag || `selah-group-${Date.now()}`;
+  }
+  event.waitUntil(
+    self.registration.showNotification(title, options).then(() => {
+      // Keep the app badge in step so an installed Selah shows the count even
+      // when the reader has the app closed.
+      if (typeof payload.unreadCount === "number" && "setAppBadge" in self.navigator) {
+        return self.setAppBadge(payload.unreadCount).catch(() => {});
+      }
+    })
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {

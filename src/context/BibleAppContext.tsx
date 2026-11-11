@@ -76,6 +76,7 @@ const DEFAULT_PREFS: ReaderPreferences = {
   speechRate: 1.0,
   preferredVoiceURI: "",
   preferredVoiceGender: "auto",
+  aiVoiceEnabled: true,
   autoAdvanceChapter: true,
   ambientSound: false,
   showBibleCompanion: true,
