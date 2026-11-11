@@ -211,6 +211,7 @@ declare
   slot_row record;
   v_progress text;
   v_body text;
+  v_newest date;
 begin
   for target in
     select d.id as device_id, d.user_id, coalesce(d.time_zone, 'UTC') as tz,
@@ -235,17 +236,17 @@ begin
                 then 'You were on ' || v_progress || '. A few minutes is enough to keep going.'
                 else 'A few quiet minutes with Scripture — pick up where you left off.' end;
 
+    v_newest := null;
+
     -- An installation that has never received a nudge only gets the most recent
     -- elapsed slot. Otherwise a brand-new device on its first run would receive
     -- every slot of the day at once.
     for slot_row in
       select * from public.due_reading_slots(target.last_sent_local_date, target.tz)
     loop
-      if target.last_sent_local_date is null and slot_row.local_date <> (
-           select min(s2.local_date) from public.due_reading_slots(null, target.tz) s2
-         ) then
-        continue;
-      end if;
+      continue when target.last_sent_local_date is null and slot_row.local_date <> (
+        select min(s2.local_date) from public.due_reading_slots(null, target.tz) s2
+      );
 
       insert into public.group_notifications
         (recipient_id, device_id, group_id, kind, slot, delivery_key, title, body, url)
@@ -253,8 +254,23 @@ begin
         'reading:' || target.device_id::text || ':' || slot_row.local_date::text || ':' || slot_row.slot,
         'Continue where you stopped', v_body, '/?section=reader')
       on conflict do nothing;
-      if found then queued := queued + 1; end if;
+
+      v_newest := greatest(coalesce(v_newest, slot_row.local_date), slot_row.local_date);
+      queued := queued + 1;
     end loop;
+
+    -- Advance the high-water mark. `due_reading_slots` measures against this: it
+    -- returns slots at or below the local hour *on a date after the mark*. The
+    -- old claim function used to move it and no longer exists, so leaving it
+    -- frozen would make the next day queue the morning and afternoon nudges
+    -- together. Only move forward, and only after the rows exist, so a failed
+    -- insert cannot swallow the rest of the day.
+    if v_newest is not null
+       and (target.last_sent_local_date is null or v_newest > target.last_sent_local_date) then
+      update public.device_push_reminders
+         set last_sent_local_date = v_newest
+       where id = target.device_id;
+    end if;
   end loop;
 
   return queued;
