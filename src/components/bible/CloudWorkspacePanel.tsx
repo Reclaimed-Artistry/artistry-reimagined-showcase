@@ -117,6 +117,9 @@ export const CloudWorkspacePanel: React.FC = () => {
 
   const [session, setSession] = useState<Session | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  /** The authorization URL opened in the system browser, while we wait for it back. */
+  const [pendingAuthUrl, setPendingAuthUrl] = useState<string | null>(null);
+  const [authStalled, setAuthStalled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [syncReady, setSyncReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState("On this device only");
@@ -393,10 +396,14 @@ export const CloudWorkspacePanel: React.FC = () => {
     setBusy(true);
     setAuthError(null);
     setBackupError(null);
+    setPendingAuthUrl(null);
+    setAuthStalled(false);
     try {
-      await startGoogleSignIn();
-      // The browser navigates away here; on Android the system browser opened
-      // and the deep link listener finishes the exchange.
+      const url = await startGoogleSignIn();
+      // On the web the page navigates away here. On a phone the system browser
+      // has opened, and the return trip may or may not find its way back — see
+      // `awaitingReturn` below.
+      setPendingAuthUrl(url);
     } catch (error) {
       setAuthError(describeAuthFailure(error));
     } finally {
@@ -411,9 +418,28 @@ export const CloudWorkspacePanel: React.FC = () => {
         setAuthError(describeAuthFailure(error));
         return;
       }
+      setPendingAuthUrl(null);
+      setAuthStalled(false);
       toast.success("Signed in with Google");
     });
   }, []);
+
+  /*
+   * If the return trip never arrives, say so and offer a way out.
+   *
+   * This is the failure that was reported: the consent screen completed, the
+   * app came back to the foreground, and the panel still showed "Continue with
+   * Google" with no error — so it read as "the button does nothing". Silence is
+   * the worst possible outcome here, because the code the reader just earned
+   * expires in minutes. After a short grace period the panel admits it has not
+   * heard back and gives them the sign-in link to finish in Chrome, which
+   * returns through the ordinary https callback.
+   */
+  useEffect(() => {
+    if (!pendingAuthUrl || session) return;
+    const timer = window.setTimeout(() => setAuthStalled(true), 45_000);
+    return () => window.clearTimeout(timer);
+  }, [pendingAuthUrl, session]);
 
   const handleSignOut = async () => {
     if (!supabase) return;
@@ -424,6 +450,8 @@ export const CloudWorkspacePanel: React.FC = () => {
     if (error) setBackupError(error.message);
     else {
       setAuthError(null);
+      setPendingAuthUrl(null);
+      setAuthStalled(false);
       setSession(null);
       setSyncReady(false);
       setSyncStatus("Signed out • your data remains on this device");
@@ -608,6 +636,23 @@ export const CloudWorkspacePanel: React.FC = () => {
                 </button>
                 {authError && (
                   <p role="alert" className="text-xs text-destructive">{authError}</p>
+                )}
+                {!authError && authStalled && pendingAuthUrl && (
+                  <div role="status" className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 text-[11px] leading-4 text-muted-foreground">
+                    <p className="font-semibold text-foreground">Still waiting for Google</p>
+                    <p className="mt-1">
+                      Selah did not hear back from the browser. Finish the sign-in by opening the
+                      link below, then tap <span className="font-semibold">Return to Selah</span>.
+                    </p>
+                    <a
+                      href={pendingAuthUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1.5 font-semibold text-primary underline underline-offset-2"
+                    >
+                      Open the sign-in link again
+                    </a>
+                  </div>
                 )}
                 <p className="flex items-start gap-1.5 text-[11px] leading-4 text-muted-foreground">
                   <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />

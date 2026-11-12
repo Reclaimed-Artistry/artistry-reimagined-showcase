@@ -16,12 +16,35 @@ import { supabase } from "./cloudWorkspace";
  * - **Android app** — the system browser. The Android WebView is a separate
  *   cookie jar from Chrome, so a Google consent screen rendered inside it can
  *   never complete, and Google blocks sign-in from embedded webviews outright.
- *   The redirect therefore comes back to the app with a deep link
- *   (`app.selahbible.multiversion://auth-callback`) instead.
- * - **iOS app** — the same deep-link flow, through a SFSafariViewController tab.
+ *   The consent screen therefore opens outside the app.
+ * - **iOS app** — the same out-of-app flow, through an SFSafariViewController tab.
  *
- * The deep-link return carries a `code` that has to be exchanged for a session
- * by hand: `detectSessionInUrl` only understands http(s) URLs.
+ * ## Why the return trip is https and not a custom scheme
+ *
+ * The obvious design is to redirect back to `app.selahbible.multiversion://auth-callback`
+ * and catch it with `appUrlOpen`. In practice that handoff is unreliable: a
+ * navigation that no human tapped (Google's automatic redirect to our
+ * redirect_uri) does not always leave a Chrome Custom Tab for another app's
+ * scheme, so the tab simply sits on a URL nothing renders, and the app is never
+ * told the sign-in finished. The reader sees the browser close back onto a
+ * signed-out panel with no error at all — which is exactly the bug that was
+ * reported.
+ *
+ * Chrome's own routing says so: it sends an unfamiliar scheme to whichever app
+ * claims it "but doesn't do so when there is not an accompanying user gesture"
+ * (crbug.com/41328386). A Custom Tab renders nothing for a scheme it will not
+ * route, so the tab just sits there.
+ *
+ * So on native the redirect goes to the *website's* https callback page
+ * (`/auth/callback/native`). An ordinary https page always loads, and that page
+ * asks for the one tap the platform requires before handing the code back to
+ * the app, which then finishes the PKCE exchange against the verifier its own
+ * WebView already stored.
+ *
+ * The custom scheme is still registered and still understood
+ * (`isAuthCallbackUrl`), so builds that already have it baked into a published
+ * OAuth redirect keep working, and a delivery that arrives as a launch intent is
+ * still completed. It is a fallback, not the primary path.
  */
 
 /** Must match the intent filter in AndroidManifest.xml and the iOS URL scheme. */
@@ -65,22 +88,44 @@ function platform(): "android" | "ios" | "web" {
   }
 }
 
+/** The deployed site that hosts `/auth/callback` for native builds. */
+const PUBLIC_WEB_ORIGIN = "https://selah-bible-alpha.vercel.app/";
+
+/**
+ * Path the app's sign-in returns to, on the public site.
+ *
+ * A path segment rather than a query parameter on purpose: Supabase appends
+ * `?code=...` to whatever it is given, and a query string already in the
+ * redirect would make that ambiguous. `/auth/callback/native` cannot collide.
+ */
+export const NATIVE_CALLBACK_PATH = `${AUTH_CALLBACK_PATH}/native`;
+
 /** Where the app is served from, with a trailing slash for `new URL`. */
 function appOrigin(): string {
-  if (typeof window === "undefined") return "https://selah-bible-alpha.vercel.app";
-  // A Capacitor app serves the bundled files from these hosts; the public site
-  // is what Supabase has to send the browser back to.
+  if (typeof window === "undefined") return PUBLIC_WEB_ORIGIN;
+  // A Capacitor app serves the bundled files from a local host
+  // (`https://localhost` on Android), which only exists inside that WebView.
+  // The OAuth redirect has to be a real, publicly reachable page, so native
+  // builds always use the deployed site. A browser uses whatever origin it is
+  // actually served from, unless that is a dev server.
   const { protocol, hostname } = window.location;
-  if (protocol === "https:" && hostname && !hostname.startsWith("localhost")) {
+  if (!isNative() && protocol === "https:" && hostname && !hostname.startsWith("localhost")) {
     return `${window.location.origin}/`;
   }
-  return "https://selah-bible-alpha.vercel.app/";
+  return PUBLIC_WEB_ORIGIN;
 }
 
-/** The URL Supabase sends the browser back to. */
+/**
+ * The URL Supabase sends the browser back to.
+ *
+ * Native builds use the website's https callback rather than the custom scheme
+ * — see the note at the top of this file for why the deep link alone was not
+ * enough. The `/native` path tells that page to hand the code back to the app
+ * with a tap instead of trying to finish a web sign-in it has no verifier for.
+ */
 export function authRedirectUrl(): string {
-  if (isNative()) return APP_AUTH_REDIRECT;
-  return new URL(AUTH_CALLBACK_PATH.replace(/^\//, ""), appOrigin()).toString();
+  const path = isNative() ? NATIVE_CALLBACK_PATH : AUTH_CALLBACK_PATH;
+  return new URL(path.replace(/^\//, ""), appOrigin()).toString();
 }
 
 export function isAuthCallbackUrl(url: string): boolean {
@@ -88,7 +133,8 @@ export function isAuthCallbackUrl(url: string): boolean {
   if (url.startsWith(APP_AUTH_REDIRECT)) return true;
   try {
     const parsed = new URL(url);
-    return parsed.pathname.replace(/\/$/, "") === AUTH_CALLBACK_PATH;
+    const path = parsed.pathname.replace(/\/$/, "");
+    return path === AUTH_CALLBACK_PATH || path === NATIVE_CALLBACK_PATH;
   } catch {
     return false;
   }
@@ -145,12 +191,13 @@ async function openExternal(url: string): Promise<void> {
 /**
  * Starts Google sign-in.
  *
- * Resolves once the provider page has been opened (the browser navigates away
- * on the web, so the promise resolving is not a sign-in result). The session
- * arrives through `onAuthStateChange`, or through `completeNativeSignIn` on
- * Android/iOS.
+ * Resolves with the authorization URL it opened. On the web the page is about
+ * to navigate away, so the value is only useful for diagnostics; on native the
+ * promise resolving means the system browser was opened, not that the reader
+ * signed in. The session arrives through `onAuthStateChange`, or through
+ * `completeNativeSignIn` when the return trip reaches the app.
  */
-export async function startGoogleSignIn(): Promise<void> {
+export async function startGoogleSignIn(): Promise<string> {
   if (!supabase) {
     throw new AuthError("not-configured", "Cloud sync is not configured in this build.");
   }
@@ -162,7 +209,7 @@ export async function startGoogleSignIn(): Promise<void> {
     options: {
       redirectTo,
       // The native app opens the URL itself so the consent screen leaves the
-      // WebView and the return trip can be caught as a deep link.
+      // WebView (Google refuses sign-in from embedded webviews).
       skipBrowserRedirect: isNative(),
       queryParams: {
         // Let the reader pick which Google account to sync with, rather than
@@ -179,7 +226,7 @@ export async function startGoogleSignIn(): Promise<void> {
     // Letting the browser follow the URL is what the SDK intends; the page is
     // about to navigate, so nothing after this matters.
     window.location.assign(data.url);
-    return;
+    return data.url;
   }
 
   try {
@@ -187,6 +234,8 @@ export async function startGoogleSignIn(): Promise<void> {
   } catch (error) {
     throw new AuthError("popup", googleError(error).message);
   }
+
+  return data.url;
 }
 
 /**

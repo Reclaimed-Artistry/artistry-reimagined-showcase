@@ -4,17 +4,19 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { BibleAppProvider } from "@/context/BibleAppContext";
 import { AppShell } from "@/components/bible/AppShell";
 import { AuthCallbackPage } from "@/components/auth/AuthCallbackPage";
-import { resumeLaunchSignIn } from "@/lib/googleAuth";
+import { NATIVE_CALLBACK_PATH, resumeLaunchSignIn } from "@/lib/googleAuth";
 
 /**
- * The Google sign-in redirect lands on `/auth/callback`, which has to be
- * handled before the reader shell mounts: the shell would parse the callback
- * URL as an ordinary deep link and drop the reader into the reader view while
- * the session was still being exchanged.
+ * The Google sign-in redirect lands on `/auth/callback` (or
+ * `/auth/callback/native` for the app's return trip), which has to be handled
+ * before the reader shell mounts: the shell would parse the callback URL as an
+ * ordinary deep link and drop the reader into the reader view while the
+ * session was still being exchanged.
  */
 const isAuthCallbackPath = () => {
   if (typeof window === "undefined") return false;
-  return window.location.pathname.replace(/\/+$/, "") === "/auth/callback";
+  const path = window.location.pathname.replace(/\/+$/, "");
+  return path === "/auth/callback" || path === NATIVE_CALLBACK_PATH;
 };
 
 /**
